@@ -1,4 +1,5 @@
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
 @inject IWorkItemsClient WorkItemsClient
@@ -143,7 +144,8 @@ else if (!_isLoading && !_hasAttemptedLoad)
         try
         {
             ClearError();
-            _timelineData = await WorkItemsClient.GetStateTimelineAsync(_selectedWorkItemId.Value);
+            var response = await WorkItemsClient.GetStateTimelineAsync(_selectedWorkItemId.Value);
+            _timelineData = GeneratedCacheEnvelopeHelper.GetDataOrDefault<WorkItemStateTimelineDto>(response);
         }
         catch (Exception ex)
         {

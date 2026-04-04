@@ -1,4 +1,5 @@
 using PoTool.Client.ApiClient;
+using PoTool.Client.Helpers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using PoTool.Shared.DataState;
@@ -56,7 +57,8 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetAllAsync()
     {
-        return await _client.GetAllAsync();
+        var response = await _client.GetAllAsync();
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
     }
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetAllStateAsync(
@@ -71,7 +73,8 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter)
     {
-        return await _client.GetFilteredAsync(filter);
+        var response = await _client.GetFilteredAsync(filter);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
     }
 
     /// <summary>
@@ -83,26 +86,14 @@ public class WorkItemService
     {
         try
         {
-            // Build the URL with optional product IDs
-            var url = $"/api/workitems/validated/{tfsId}";
+            string? productIdsParam = null;
             if (productIds != null && productIds.Length > 0)
             {
-                var productIdsParam = string.Join(",", productIds);
-                url += $"?productIds={productIdsParam}";
+                productIdsParam = string.Join(",", productIds);
             }
 
-            // Make the HTTP request to get a single work item with validation
-            var response = await _httpClient.GetAsync(url);
-            
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                return null;
-            }
-            
-            response.EnsureSuccessStatusCode();
-            
-            var workItem = await response.Content.ReadFromJsonAsync<WorkItemWithValidationDto>(_jsonOptions);
-            return workItem;
+            var response = await _client.GetByIdWithValidationAsync(tfsId, productIdsParam);
+            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<WorkItemWithValidationDto>(response);
         }
         catch (Exception ex)
         {
@@ -136,7 +127,8 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemDto>> GetAllGoalsAsync()
     {
-        return await _client.GetAllGoalsAsync();
+        var response = await _client.GetAllGoalsAsync();
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
     }
 
     /// <summary>
@@ -145,7 +137,8 @@ public class WorkItemService
     public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(List<int> goalIds)
     {
         var goalIdsParam = string.Join(",", goalIds);
-        return await _client.GetGoalHierarchyAsync(goalIdsParam);
+        var response = await _client.GetGoalHierarchyAsync(goalIdsParam);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
     }
 
     /// <summary>
@@ -153,7 +146,8 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync()
     {
-        return await _client.GetAllWithValidationAsync(null);
+        var response = await _client.GetAllWithValidationAsync(null);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemWithValidationDto>());
     }
 
     /// <summary>
@@ -167,7 +161,8 @@ public class WorkItemService
         {
             productIdsParam = string.Join(",", productIds);
         }
-        return await _client.GetAllWithValidationAsync(productIdsParam);
+        var response = await _client.GetAllWithValidationAsync(productIdsParam);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemWithValidationDto>());
     }
 
     /// <summary>
@@ -184,7 +179,8 @@ public class WorkItemService
             productIdsParam = string.Join(",", productIds);
         }
 
-        return await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken);
+        var response = await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemWithValidationDto>());
     }
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemWithValidationDto>>?> GetAllWithValidationStateAsync(
@@ -212,15 +208,9 @@ public class WorkItemService
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
     {
-        var url = ValidationTriageEndpoint;
-        if (productIds != null && productIds.Length > 0)
-        {
-            url += $"?productIds={string.Join(",", productIds)}";
-        }
-
-        var response = await _httpClient.GetAsync(url, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<SharedValidationTriageSummaryDto>(_jsonOptions, cancellationToken);
+        var productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
+        var response = await _client.GetValidationTriageAsync(productIdsParam, cancellationToken);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<SharedValidationTriageSummaryDto>(response);
     }
 
     public async Task<DataStateResponseDto<SharedValidationTriageSummaryDto>?> GetValidationTriageSummaryStateAsync(
@@ -246,14 +236,8 @@ public class WorkItemService
         int productId,
         CancellationToken cancellationToken = default)
     {
-        var response = await _httpClient.GetAsync($"/api/workitems/health-summary/{productId}", cancellationToken);
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            return null;
-        }
-
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<HealthWorkspaceProductSummaryDto>(_jsonOptions, cancellationToken);
+        var response = await _client.GetHealthSummaryAsync(productId, cancellationToken);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<HealthWorkspaceProductSummaryDto>(response);
     }
 
     /// <summary>
@@ -265,15 +249,9 @@ public class WorkItemService
     /// <param name="productIds">Optional list of product IDs to filter by.</param>
     public async Task<SharedValidationQueueDto?> GetValidationQueueAsync(string categoryKey, int[]? productIds = null)
     {
-        var url = $"{ValidationQueueEndpoint}?category={Uri.EscapeDataString(categoryKey)}";
-        if (productIds != null && productIds.Length > 0)
-        {
-            url += $"&productIds={string.Join(",", productIds)}";
-        }
-
-        var response = await _httpClient.GetAsync(url);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<SharedValidationQueueDto>(_jsonOptions);
+        var productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
+        var response = await _client.GetValidationQueueAsync(categoryKey, productIdsParam);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<SharedValidationQueueDto>(response);
     }
 
     public async Task<DataStateResponseDto<SharedValidationQueueDto>?> GetValidationQueueStateAsync(
@@ -304,15 +282,9 @@ public class WorkItemService
     public async Task<SharedValidationFixSessionDto?> GetValidationFixSessionAsync(
         string ruleId, string categoryKey, int[]? productIds = null)
     {
-        var url = $"{ValidationFixEndpoint}?ruleId={Uri.EscapeDataString(ruleId)}&category={Uri.EscapeDataString(categoryKey)}";
-        if (productIds != null && productIds.Length > 0)
-        {
-            url += $"&productIds={string.Join(",", productIds)}";
-        }
-
-        var response = await _httpClient.GetAsync(url);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<SharedValidationFixSessionDto>(_jsonOptions);
+        var productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
+        var response = await _client.GetValidationFixSessionAsync(ruleId, categoryKey, productIdsParam);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<SharedValidationFixSessionDto>(response);
     }
 
     public async Task<DataStateResponseDto<SharedValidationFixSessionDto>?> GetValidationFixSessionStateAsync(
@@ -338,8 +310,8 @@ public class WorkItemService
     /// </summary>
     public async Task<IEnumerable<WorkItemRevisionDto>> GetRevisionsAsync(int workItemId)
     {
-        var revisions = await _client.GetWorkItemRevisionsAsync(workItemId);
-        return revisions;
+        var response = await _client.GetWorkItemRevisionsAsync(workItemId);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemRevisionDto>());
     }
 
     /// <summary>
@@ -445,7 +417,8 @@ public class WorkItemService
     public async Task<IEnumerable<string>> GetDistinctAreaPathsAsync()
     {
         var allWorkItems = await _client.GetAllAsync();
-        return allWorkItems
+        var availableWorkItems = GeneratedCacheEnvelopeHelper.GetDataOrDefault(allWorkItems, Array.Empty<WorkItemDto>());
+        return availableWorkItems
             .Select(wi => wi.AreaPath)
             .Distinct()
             .OrderBy(ap => ap)
@@ -496,11 +469,8 @@ public class WorkItemService
         var rootIdsParam = string.Join(",", rootIds);
         var url = $"{ByRootIdsEndpoint}?rootIds={rootIdsParam}";
         
-        var response = await _httpClient.GetAsync(url);
-        response.EnsureSuccessStatusCode();
-
-        var workItems = await response.Content.ReadFromJsonAsync<IEnumerable<WorkItemDto>>(_jsonOptions);
-        return workItems ?? Enumerable.Empty<WorkItemDto>();
+        var response = await _client.GetByRootIdsAsync(rootIdsParam);
+        return GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<WorkItemDto>());
     }
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetByRootIdsStateAsync(

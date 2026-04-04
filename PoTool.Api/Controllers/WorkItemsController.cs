@@ -236,8 +236,10 @@ public class WorkItemsController : ControllerBase
     /// <param name="tfsId">The TFS work item ID to refresh.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("{tfsId:int}/refresh-from-tfs")]
-    [AllowUntypedResponse]
-    public async Task<IActionResult> RefreshFromTfs(int tfsId, CancellationToken cancellationToken)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult> RefreshFromTfs(int tfsId, CancellationToken cancellationToken)
     {
         try
         {
@@ -327,8 +329,10 @@ public class WorkItemsController : ControllerBase
     /// <param name="request">The new backlog priority value.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("{tfsId:int}/backlog-priority")]
-    [AllowUntypedResponse]
-    public async Task<IActionResult> UpdateBacklogPriority(int tfsId, [FromBody] UpdateBacklogPriorityRequest request, CancellationToken cancellationToken)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult> UpdateBacklogPriority(int tfsId, [FromBody] UpdateBacklogPriorityRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -352,8 +356,10 @@ public class WorkItemsController : ControllerBase
     /// <param name="request">The new iteration path.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("{tfsId:int}/iteration-path")]
-    [AllowUntypedResponse]
-    public async Task<IActionResult> UpdateIterationPath(int tfsId, [FromBody] UpdateIterationPathRequest request, CancellationToken cancellationToken)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult> UpdateIterationPath(int tfsId, [FromBody] UpdateIterationPathRequest request, CancellationToken cancellationToken)
     {
         try
         {

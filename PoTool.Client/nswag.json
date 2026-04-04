@@ -53,6 +53,7 @@
         "PoTool.Shared.Settings",
         "PoTool.Shared.WorkItems",
         "PoTool.Shared.ReleasePlanning",
+        "PoTool.Shared.DataState",
         "PoTool.Shared.Contracts.TfsVerification",
         "PoTool.Shared.Statistics"
       ],

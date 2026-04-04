@@ -40,13 +40,24 @@ public class SprintDeliveryMetricsService
 
         try
         {
-            var envelope = await _metricsClient.GetSprintTrendMetricsEnvelopeAsync(
+            var response = await _metricsClient.GetSprintTrendMetricsAsync(
                 productOwnerId,
                 sprintIdList,
                 productIds,
                 recompute,
                 includeDetails,
                 cancellationToken);
+
+            var envelope = GeneratedCacheEnvelopeHelper.GetDataOrDefault<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>(response);
+            if (envelope is null)
+            {
+                return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(
+                    new GetSprintTrendMetricsResponse
+                    {
+                        Success = false,
+                        ErrorMessage = "Sprint metrics are not currently available from the cache-backed endpoint."
+                    });
+            }
 
             return CanonicalClientResponseFactory.Create(envelope);
         }

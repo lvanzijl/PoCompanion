@@ -1,4 +1,6 @@
 using System.Text.Json;
+using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 
 namespace PoTool.Client.ApiClient;
 
@@ -16,6 +18,30 @@ internal static class ApiClientJsonSettings
     {
         settings.PropertyNameCaseInsensitive = true;
     }
+}
+
+internal static class CacheBackedGeneratedClientHelper
+{
+    internal static TData RequireData<TEnvelope, TData>(TEnvelope envelope, string operationName)
+        where TEnvelope : class
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+
+        var result = GeneratedCacheEnvelopeHelper.ToCacheBackedResult(envelope, current => GetData<TEnvelope, TData>(current));
+        return result.State switch
+        {
+            CacheBackedClientState.Success when result.Data is not null => result.Data,
+            CacheBackedClientState.Empty => throw new InvalidOperationException($"{operationName} returned an empty cache-backed payload."),
+            CacheBackedClientState.NotReady => throw new InvalidOperationException($"{operationName} is not ready: {result.Reason ?? "Cache not ready."}"),
+            CacheBackedClientState.Failed => throw new InvalidOperationException($"{operationName} failed: {result.Reason ?? "Cache-backed request failed."}"),
+            CacheBackedClientState.Unavailable => throw new InvalidOperationException($"{operationName} is unavailable: {result.Reason ?? "Cache-backed request unavailable."}"),
+            _ => throw new InvalidOperationException($"{operationName} did not contain usable cache-backed data.")
+        };
+    }
+
+    private static TData? GetData<TEnvelope, TData>(TEnvelope envelope)
+        where TEnvelope : class
+        => GeneratedCacheEnvelopeHelper.GetDataOrDefault<TData>(envelope);
 }
 
 public partial class Client

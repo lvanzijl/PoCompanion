@@ -16,6 +16,7 @@ using PoTool.Shared.BuildQuality;
 using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 using PoTool.Shared.ReleasePlanning;
+using PoTool.Shared.DataState;
 using PoTool.Shared.Contracts.TfsVerification;
 using PoTool.Shared.Statistics;
 
@@ -1362,26 +1363,32 @@ namespace PoTool.Client.ApiClient
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial interface IBuildQualityClient
     {
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfBuildQualityPageDto> GetRollingAsync(int? productOwnerId, System.DateTimeOffset? windowStartUtc, System.DateTimeOffset? windowEndUtc);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfBuildQualityPageDto> GetRollingAsync(int? productOwnerId, System.DateTimeOffset? windowStartUtc, System.DateTimeOffset? windowEndUtc);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfBuildQualityPageDto> GetRollingAsync(int? productOwnerId, System.DateTimeOffset? windowStartUtc, System.DateTimeOffset? windowEndUtc, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfBuildQualityPageDto> GetRollingAsync(int? productOwnerId, System.DateTimeOffset? windowStartUtc, System.DateTimeOffset? windowEndUtc, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfDeliveryBuildQualityDto> GetSprintAsync(int? productOwnerId, int? sprintId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfDeliveryBuildQualityDto> GetSprintAsync(int? productOwnerId, int? sprintId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineBuildQualityDto> GetPipelineAsync(int? productOwnerId, int? sprintId, int? pipelineDefinitionId, int? repositoryId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfDeliveryBuildQualityDto> GetSprintAsync(int? productOwnerId, int? sprintId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineBuildQualityDto> GetPipelineAsync(int? productOwnerId, int? sprintId, int? pipelineDefinitionId, int? repositoryId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfDeliveryBuildQualityDto> GetSprintAsync(int? productOwnerId, int? sprintId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineBuildQualityDto> GetPipelineAsync(int? productOwnerId, int? sprintId, int? pipelineDefinitionId, int? repositoryId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineBuildQualityDto> GetPipelineAsync(int? productOwnerId, int? sprintId, int? pipelineDefinitionId, int? repositoryId, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -1433,15 +1440,17 @@ namespace PoTool.Client.ApiClient
         partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
         partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfBuildQualityPageDto> GetRollingAsync(int? productOwnerId, System.DateTimeOffset? windowStartUtc, System.DateTimeOffset? windowEndUtc)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfBuildQualityPageDto> GetRollingAsync(int? productOwnerId, System.DateTimeOffset? windowStartUtc, System.DateTimeOffset? windowEndUtc)
         {
             return GetRollingAsync(productOwnerId, windowStartUtc, windowEndUtc, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfBuildQualityPageDto> GetRollingAsync(int? productOwnerId, System.DateTimeOffset? windowStartUtc, System.DateTimeOffset? windowEndUtc, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfBuildQualityPageDto> GetRollingAsync(int? productOwnerId, System.DateTimeOffset? windowStartUtc, System.DateTimeOffset? windowEndUtc, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1496,7 +1505,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<DeliveryQueryResponseDtoOfBuildQualityPageDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfDeliveryQueryResponseDtoOfBuildQualityPageDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -1523,15 +1532,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfDeliveryBuildQualityDto> GetSprintAsync(int? productOwnerId, int? sprintId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfDeliveryBuildQualityDto> GetSprintAsync(int? productOwnerId, int? sprintId)
         {
             return GetSprintAsync(productOwnerId, sprintId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfDeliveryBuildQualityDto> GetSprintAsync(int? productOwnerId, int? sprintId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfDeliveryBuildQualityDto> GetSprintAsync(int? productOwnerId, int? sprintId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1582,7 +1593,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<DeliveryQueryResponseDtoOfDeliveryBuildQualityDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfDeliveryQueryResponseDtoOfDeliveryBuildQualityDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -1609,15 +1620,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PipelineBuildQualityDto> GetPipelineAsync(int? productOwnerId, int? sprintId, int? pipelineDefinitionId, int? repositoryId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineBuildQualityDto> GetPipelineAsync(int? productOwnerId, int? sprintId, int? pipelineDefinitionId, int? repositoryId)
         {
             return GetPipelineAsync(productOwnerId, sprintId, pipelineDefinitionId, repositoryId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PipelineBuildQualityDto> GetPipelineAsync(int? productOwnerId, int? sprintId, int? pipelineDefinitionId, int? repositoryId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineBuildQualityDto> GetPipelineAsync(int? productOwnerId, int? sprintId, int? pipelineDefinitionId, int? repositoryId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -1676,7 +1689,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PipelineBuildQualityDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPipelineBuildQualityDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -3245,40 +3258,50 @@ namespace PoTool.Client.ApiClient
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial interface IFilteringClient
     {
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfFilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfFilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfGetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfGetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfCountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfCountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfFilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfFilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -3330,15 +3353,17 @@ namespace PoTool.Client.ApiClient
         partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
         partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<FilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfFilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request)
         {
             return FilterByValidationWithAncestorsAsync(request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<FilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfFilterByValidationResponse> FilterByValidationWithAncestorsAsync(FilterByValidationRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (request == null)
                 throw new System.ArgumentNullException("request");
@@ -3386,7 +3411,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<FilterByValidationResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfFilterByValidationResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -3413,15 +3438,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfGetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request)
         {
             return GetWorkItemIdsByValidationFilterAsync(request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<GetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfGetWorkItemIdsByValidationFilterResponse> GetWorkItemIdsByValidationFilterAsync(GetWorkItemIdsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (request == null)
                 throw new System.ArgumentNullException("request");
@@ -3469,7 +3496,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<GetWorkItemIdsByValidationFilterResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfGetWorkItemIdsByValidationFilterResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -3496,15 +3523,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfCountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request)
         {
             return CountWorkItemsByValidationFilterAsync(request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<CountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfCountWorkItemsByValidationFilterResponse> CountWorkItemsByValidationFilterAsync(CountWorkItemsByValidationFilterRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (request == null)
                 throw new System.ArgumentNullException("request");
@@ -3552,7 +3581,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<CountWorkItemsByValidationFilterResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfCountWorkItemsByValidationFilterResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -3579,15 +3608,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request)
         {
             return IsDescendantOfGoalsAsync(request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<IsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIsDescendantOfGoalsResponse> IsDescendantOfGoalsAsync(IsDescendantOfGoalsRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (request == null)
                 throw new System.ArgumentNullException("request");
@@ -3635,7 +3666,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<IsDescendantOfGoalsResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIsDescendantOfGoalsResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -3662,15 +3693,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfFilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request)
         {
             return FilterByGoalsAsync(request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<FilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfFilterByGoalsResponse> FilterByGoalsAsync(FilterByGoalsRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (request == null)
                 throw new System.ArgumentNullException("request");
@@ -3718,7 +3751,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<FilterByGoalsResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfFilterByGoalsResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -4149,166 +4182,212 @@ namespace PoTool.Client.ApiClient
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial interface IMetricsClient
     {
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfBacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfBacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfMultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfMultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, int? defaultCapacity);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfMultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfMultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioProgressDto> GetPortfolioProgressAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioProgressDto> GetPortfolioProgressAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioSnapshotDto> GetPortfolioSnapshotsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioSnapshotDto> GetPortfolioSnapshotsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioComparisonDto> GetPortfolioComparisonAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioComparisonDto> GetPortfolioComparisonAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioTrendDto> GetPortfolioTrendsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, int? defaultCapacity);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioTrendDto> GetPortfolioTrendsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioSignalsDto> GetPortfolioSignalsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PortfolioSignalsDto> GetPortfolioSignalsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioProgressDto> GetPortfolioProgressAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioProgressDto> GetPortfolioProgressAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioSnapshotDto> GetPortfolioSnapshotsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioSnapshotDto> GetPortfolioSnapshotsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioComparisonDto> GetPortfolioComparisonAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioComparisonDto> GetPortfolioComparisonAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfGetSprintTrendMetricsResponse> GetSprintTrendMetricsAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, bool? recompute, bool? includeDetails);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioTrendDto> GetPortfolioTrendsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfGetSprintTrendMetricsResponse> GetSprintTrendMetricsAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, bool? recompute, bool? includeDetails, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioTrendDto> GetPortfolioTrendsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfPortfolioProgressTrendDto> GetPortfolioProgressTrendAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfPortfolioProgressTrendDto> GetPortfolioProgressTrendAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfCapacityCalibrationDto> GetCapacityCalibrationAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioSignalsDto> GetPortfolioSignalsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfCapacityCalibrationDto> GetCapacityCalibrationAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioSignalsDto> GetPortfolioSignalsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfPortfolioDeliveryDto> GetPortfolioDeliveryAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfPortfolioDeliveryDto> GetPortfolioDeliveryAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfHomeProductBarMetricsDto> GetHomeProductBarMetricsAsync(int? productOwnerId, int? productId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfHomeProductBarMetricsDto> GetHomeProductBarMetricsAsync(int? productOwnerId, int? productId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintExecutionDto> GetSprintExecutionAsync(int? productOwnerId, int? sprintId, int? productId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintExecutionDto> GetSprintExecutionAsync(int? productOwnerId, int? sprintId, int? productId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfWorkItemActivityDetailsDto> GetWorkItemActivityDetailsAsync(int workItemId, int? productOwnerId, int? sprintId, System.DateTimeOffset? periodStartUtc, System.DateTimeOffset? periodEndUtc);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<SprintQueryResponseDtoOfWorkItemActivityDetailsDto> GetWorkItemActivityDetailsAsync(int workItemId, int? productOwnerId, int? sprintId, System.DateTimeOffset? periodStartUtc, System.DateTimeOffset? periodEndUtc, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfEffortEstimationSuggestionDto> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfEffortEstimationSuggestionDto> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse> GetSprintTrendMetricsAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, bool? recompute, bool? includeDetails);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse> GetSprintTrendMetricsAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, bool? recompute, bool? includeDetails, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioProgressTrendDto> GetPortfolioProgressTrendAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioProgressTrendDto> GetPortfolioProgressTrendAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfCapacityCalibrationDto> GetCapacityCalibrationAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfCapacityCalibrationDto> GetCapacityCalibrationAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioDeliveryDto> GetPortfolioDeliveryAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioDeliveryDto> GetPortfolioDeliveryAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfHomeProductBarMetricsDto> GetHomeProductBarMetricsAsync(int? productOwnerId, int? productId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfHomeProductBarMetricsDto> GetHomeProductBarMetricsAsync(int? productOwnerId, int? productId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto> GetSprintExecutionAsync(int? productOwnerId, int? sprintId, int? productId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto> GetSprintExecutionAsync(int? productOwnerId, int? sprintId, int? productId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfWorkItemActivityDetailsDto> GetWorkItemActivityDetailsAsync(int workItemId, int? productOwnerId, int? sprintId, System.DateTimeOffset? periodStartUtc, System.DateTimeOffset? periodEndUtc);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfWorkItemActivityDetailsDto> GetWorkItemActivityDetailsAsync(int workItemId, int? productOwnerId, int? sprintId, System.DateTimeOffset? periodStartUtc, System.DateTimeOffset? periodEndUtc, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -4360,15 +4439,17 @@ namespace PoTool.Client.ApiClient
         partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
         partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId)
         {
             return GetSprintMetricsAsync(iterationPath, productOwnerId, productIds, sprintId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintMetricsDto> GetSprintMetricsAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4427,7 +4508,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<SprintQueryResponseDtoOfSprintMetricsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintMetricsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -4454,15 +4535,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SprintQueryResponseDtoOfBacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId)
         {
             return GetBacklogHealthAsync(iterationPath, productOwnerId, productIds, sprintId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SprintQueryResponseDtoOfBacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto> GetBacklogHealthAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4521,7 +4604,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<SprintQueryResponseDtoOfBacklogHealthDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -4548,15 +4631,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SprintQueryResponseDtoOfMultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfMultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations)
         {
             return GetMultiIterationBacklogHealthAsync(productOwnerId, productIds, areaPath, maxIterations, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SprintQueryResponseDtoOfMultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfMultiIterationBacklogHealthDto> GetMultiIterationBacklogHealthAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4615,7 +4700,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<SprintQueryResponseDtoOfMultiIterationBacklogHealthDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfMultiIterationBacklogHealthDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -4642,15 +4727,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity)
         {
             return GetEffortDistributionAsync(areaPathFilter, maxIterations, defaultCapacity, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEffortDistributionDto> GetEffortDistributionAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4705,7 +4792,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EffortDistributionDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEffortDistributionDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -4732,15 +4819,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, int? defaultCapacity)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, int? defaultCapacity)
         {
             return GetSprintCapacityPlanAsync(iterationPath, productOwnerId, productIds, sprintId, defaultCapacity, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintCapacityPlanDto> GetSprintCapacityPlanAsync(string? iterationPath, int? productOwnerId, System.Collections.Generic.IEnumerable<int>? productIds, int? sprintId, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4803,7 +4892,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<SprintQueryResponseDtoOfSprintCapacityPlanDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintCapacityPlanDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -4830,15 +4919,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PortfolioProgressDto> GetPortfolioProgressAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioProgressDto> GetPortfolioProgressAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy)
         {
             return GetPortfolioProgressAsync(productOwnerId, productId, projectNumber, workPackage, lifecycleState, sortBy, sortDirection, groupBy, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PortfolioProgressDto> GetPortfolioProgressAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioProgressDto> GetPortfolioProgressAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -4913,7 +5004,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PortfolioProgressDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPortfolioProgressDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -4940,15 +5031,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PortfolioSnapshotDto> GetPortfolioSnapshotsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioSnapshotDto> GetPortfolioSnapshotsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy)
         {
             return GetPortfolioSnapshotsAsync(productOwnerId, productId, projectNumber, workPackage, lifecycleState, sortBy, sortDirection, groupBy, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PortfolioSnapshotDto> GetPortfolioSnapshotsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioSnapshotDto> GetPortfolioSnapshotsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5023,7 +5116,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PortfolioSnapshotDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPortfolioSnapshotDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5050,15 +5143,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PortfolioComparisonDto> GetPortfolioComparisonAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioComparisonDto> GetPortfolioComparisonAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId)
         {
             return GetPortfolioComparisonAsync(productOwnerId, productId, projectNumber, workPackage, lifecycleState, sortBy, sortDirection, groupBy, rangeStartUtc, rangeEndUtc, includeArchivedSnapshots, compareToSnapshotId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PortfolioComparisonDto> GetPortfolioComparisonAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioComparisonDto> GetPortfolioComparisonAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5149,7 +5244,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PortfolioComparisonDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPortfolioComparisonDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5176,15 +5271,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PortfolioTrendDto> GetPortfolioTrendsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioTrendDto> GetPortfolioTrendsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots)
         {
             return GetPortfolioTrendsAsync(productOwnerId, productId, projectNumber, workPackage, lifecycleState, sortBy, sortDirection, groupBy, snapshotCount, rangeStartUtc, rangeEndUtc, includeArchivedSnapshots, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PortfolioTrendDto> GetPortfolioTrendsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioTrendDto> GetPortfolioTrendsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5275,7 +5372,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PortfolioTrendDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPortfolioTrendDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5302,15 +5399,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PortfolioSignalsDto> GetPortfolioSignalsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioSignalsDto> GetPortfolioSignalsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId)
         {
             return GetPortfolioSignalsAsync(productOwnerId, productId, projectNumber, workPackage, lifecycleState, sortBy, sortDirection, groupBy, snapshotCount, rangeStartUtc, rangeEndUtc, includeArchivedSnapshots, compareToSnapshotId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PortfolioSignalsDto> GetPortfolioSignalsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPortfolioSignalsDto> GetPortfolioSignalsAsync(int? productOwnerId, int? productId, string? projectNumber, string? workPackage, PortfolioLifecycleState? lifecycleState, PortfolioReadSortBy? sortBy, PortfolioReadSortDirection? sortDirection, PortfolioReadGroupBy? groupBy, int? snapshotCount, System.DateTimeOffset? rangeStartUtc, System.DateTimeOffset? rangeEndUtc, bool? includeArchivedSnapshots, long? compareToSnapshotId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5405,7 +5504,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PortfolioSignalsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPortfolioSignalsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5432,15 +5531,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity)
         {
             return GetEpicForecastAsync(epicId, maxSprintsForVelocity, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEpicCompletionForecastDto> GetEpicForecastAsync(int epicId, int? maxSprintsForVelocity, System.Threading.CancellationToken cancellationToken)
         {
             if (epicId == null)
                 throw new System.ArgumentNullException("epicId");
@@ -5491,7 +5592,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EpicCompletionForecastDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEpicCompletionForecastDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5518,15 +5619,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold)
         {
             return GetEffortImbalanceAsync(areaPathFilter, maxIterations, defaultCapacity, imbalanceThreshold, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEffortImbalanceDto> GetEffortImbalanceAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, double? imbalanceThreshold, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5585,7 +5688,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EffortImbalanceDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEffortImbalanceDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5612,15 +5715,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity)
         {
             return GetEffortDistributionTrendAsync(areaPathFilter, maxIterations, defaultCapacity, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEffortDistributionTrendDto> GetEffortDistributionTrendAsync(string? areaPathFilter, int? maxIterations, int? defaultCapacity, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5675,7 +5780,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EffortDistributionTrendDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEffortDistributionTrendDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5702,15 +5807,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold)
         {
             return GetEffortConcentrationRiskAsync(areaPathFilter, maxIterations, concentrationThreshold, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEffortConcentrationRiskDto> GetEffortConcentrationRiskAsync(string? areaPathFilter, int? maxIterations, double? concentrationThreshold, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5765,7 +5872,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EffortConcentrationRiskDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEffortConcentrationRiskDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5792,15 +5899,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfEffortEstimationSuggestionDto> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems)
         {
             return GetEffortEstimationSuggestionsAsync(iterationPath, areaPath, onlyInProgressItems, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfEffortEstimationSuggestionDto> GetEffortEstimationSuggestionsAsync(string? iterationPath, string? areaPath, bool? onlyInProgressItems, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5855,7 +5964,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIReadOnlyListOfEffortEstimationSuggestionDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5882,15 +5991,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations)
         {
             return GetEffortEstimationQualityAsync(areaPath, maxIterations, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEffortEstimationQualityDto> GetEffortEstimationQualityAsync(string? areaPath, int? maxIterations, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -5941,7 +6052,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EffortEstimationQualityDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEffortEstimationQualityDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -5968,15 +6079,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SprintQueryResponseDtoOfGetSprintTrendMetricsResponse> GetSprintTrendMetricsAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, bool? recompute, bool? includeDetails)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse> GetSprintTrendMetricsAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, bool? recompute, bool? includeDetails)
         {
             return GetSprintTrendMetricsAsync(productOwnerId, sprintIds, productIds, recompute, includeDetails, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SprintQueryResponseDtoOfGetSprintTrendMetricsResponse> GetSprintTrendMetricsAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, bool? recompute, bool? includeDetails, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse> GetSprintTrendMetricsAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, bool? recompute, bool? includeDetails, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6039,7 +6152,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<SprintQueryResponseDtoOfGetSprintTrendMetricsResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6066,15 +6179,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfPortfolioProgressTrendDto> GetPortfolioProgressTrendAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioProgressTrendDto> GetPortfolioProgressTrendAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds)
         {
             return GetPortfolioProgressTrendAsync(productOwnerId, sprintIds, productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfPortfolioProgressTrendDto> GetPortfolioProgressTrendAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioProgressTrendDto> GetPortfolioProgressTrendAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6129,7 +6244,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<DeliveryQueryResponseDtoOfPortfolioProgressTrendDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioProgressTrendDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6156,15 +6271,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfCapacityCalibrationDto> GetCapacityCalibrationAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfCapacityCalibrationDto> GetCapacityCalibrationAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds)
         {
             return GetCapacityCalibrationAsync(productOwnerId, sprintIds, productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfCapacityCalibrationDto> GetCapacityCalibrationAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfCapacityCalibrationDto> GetCapacityCalibrationAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6219,7 +6336,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<DeliveryQueryResponseDtoOfCapacityCalibrationDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfDeliveryQueryResponseDtoOfCapacityCalibrationDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6246,15 +6363,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfPortfolioDeliveryDto> GetPortfolioDeliveryAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioDeliveryDto> GetPortfolioDeliveryAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds)
         {
             return GetPortfolioDeliveryAsync(productOwnerId, sprintIds, productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfPortfolioDeliveryDto> GetPortfolioDeliveryAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioDeliveryDto> GetPortfolioDeliveryAsync(int? productOwnerId, System.Collections.Generic.IEnumerable<int>? sprintIds, System.Collections.Generic.IEnumerable<int>? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6309,7 +6428,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<DeliveryQueryResponseDtoOfPortfolioDeliveryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioDeliveryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6336,15 +6455,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfHomeProductBarMetricsDto> GetHomeProductBarMetricsAsync(int? productOwnerId, int? productId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfHomeProductBarMetricsDto> GetHomeProductBarMetricsAsync(int? productOwnerId, int? productId)
         {
             return GetHomeProductBarMetricsAsync(productOwnerId, productId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DeliveryQueryResponseDtoOfHomeProductBarMetricsDto> GetHomeProductBarMetricsAsync(int? productOwnerId, int? productId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfDeliveryQueryResponseDtoOfHomeProductBarMetricsDto> GetHomeProductBarMetricsAsync(int? productOwnerId, int? productId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6395,7 +6516,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<DeliveryQueryResponseDtoOfHomeProductBarMetricsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfDeliveryQueryResponseDtoOfHomeProductBarMetricsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6422,15 +6543,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintExecutionDto> GetSprintExecutionAsync(int? productOwnerId, int? sprintId, int? productId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto> GetSprintExecutionAsync(int? productOwnerId, int? sprintId, int? productId)
         {
             return GetSprintExecutionAsync(productOwnerId, sprintId, productId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SprintQueryResponseDtoOfSprintExecutionDto> GetSprintExecutionAsync(int? productOwnerId, int? sprintId, int? productId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto> GetSprintExecutionAsync(int? productOwnerId, int? sprintId, int? productId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6485,7 +6608,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<SprintQueryResponseDtoOfSprintExecutionDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6512,15 +6635,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<SprintQueryResponseDtoOfWorkItemActivityDetailsDto> GetWorkItemActivityDetailsAsync(int workItemId, int? productOwnerId, int? sprintId, System.DateTimeOffset? periodStartUtc, System.DateTimeOffset? periodEndUtc)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfWorkItemActivityDetailsDto> GetWorkItemActivityDetailsAsync(int workItemId, int? productOwnerId, int? sprintId, System.DateTimeOffset? periodStartUtc, System.DateTimeOffset? periodEndUtc)
         {
             return GetWorkItemActivityDetailsAsync(workItemId, productOwnerId, sprintId, periodStartUtc, periodEndUtc, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<SprintQueryResponseDtoOfWorkItemActivityDetailsDto> GetWorkItemActivityDetailsAsync(int workItemId, int? productOwnerId, int? sprintId, System.DateTimeOffset? periodStartUtc, System.DateTimeOffset? periodEndUtc, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfSprintQueryResponseDtoOfWorkItemActivityDetailsDto> GetWorkItemActivityDetailsAsync(int workItemId, int? productOwnerId, int? sprintId, System.DateTimeOffset? periodStartUtc, System.DateTimeOffset? periodEndUtc, System.Threading.CancellationToken cancellationToken)
         {
             if (workItemId == null)
                 throw new System.ArgumentNullException("workItemId");
@@ -6583,7 +6708,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<SprintQueryResponseDtoOfWorkItemActivityDetailsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfSprintQueryResponseDtoOfWorkItemActivityDetailsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6742,33 +6867,41 @@ namespace PoTool.Client.ApiClient
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial interface IPipelinesClient
     {
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> GetAllAsync();
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPipelineDto> GetAllAsync();
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPipelineDto> GetAllAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPipelineRunDto> GetRunsAsync(int id, int? top);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPipelineRunDto> GetRunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto> GetRunsForProductsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto> GetRunsForProductsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto> GetRunsForProductsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto> GetRunsForProductsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDefinitionDto>> GetDefinitionsAsync(int? productId, int? repositoryId);
@@ -6777,12 +6910,14 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDefinitionDto>> GetDefinitionsAsync(int? productId, int? repositoryId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -6834,15 +6969,17 @@ namespace PoTool.Client.ApiClient
         partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
         partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> GetAllAsync()
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPipelineDto> GetAllAsync()
         {
             return GetAllAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPipelineDto> GetAllAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -6883,7 +7020,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<PipelineDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfPipelineDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6910,15 +7047,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPipelineRunDto> GetRunsAsync(int id, int? top)
         {
             return GetRunsAsync(id, top, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PipelineRunDto>> GetRunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPipelineRunDto> GetRunsAsync(int id, int? top, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -6970,7 +7109,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<PipelineRunDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfPipelineRunDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -6997,15 +7136,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate)
         {
             return GetMetricsAsync(productIds, fromDate, toDate, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7060,7 +7201,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -7087,15 +7228,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto> GetRunsForProductsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto> GetRunsForProductsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate)
         {
             return GetRunsForProductsAsync(productIds, fromDate, toDate, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto> GetRunsForProductsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto> GetRunsForProductsAsync(string? productIds, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7150,7 +7293,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -7263,15 +7406,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled)
         {
             return GetInsightsAsync(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7330,7 +7475,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PipelineQueryResponseDtoOfPipelineInsightsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -10144,12 +10289,14 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProductDto>> GetProjectProductsAsync(string alias, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -10448,15 +10595,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias)
         {
             return GetPlanningSummaryAsync(alias, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias, System.Threading.CancellationToken cancellationToken)
         {
             if (alias == null)
                 throw new System.ArgumentNullException("alias");
@@ -10502,22 +10651,12 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ProjectPlanningSummaryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfProjectPlanningSummaryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
-                        }
-                        else
-                        if (status_ == 404)
-                        {
-                            var objectResponse_ = await ReadObjectResponseAsync<ProblemDetails>(response_, headers_, cancellationToken).ConfigureAwait(false);
-                            if (objectResponse_.Object == null)
-                            {
-                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
-                            }
-                            throw new ApiException<ProblemDetails>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -10671,89 +10810,113 @@ namespace PoTool.Client.ApiClient
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial interface IPullRequestsClient
     {
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetAllAsync();
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestDto> GetAllAsync();
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestDto> GetAllAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestDto> GetByIdAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestDto> GetByIdAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetByWorkItemIdAsync(int workItemId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestDto> GetByIdAsync(int id);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetByWorkItemIdAsync(int workItemId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestDto> GetByIdAsync(int id, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestDto> GetByWorkItemIdAsync(int workItemId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestDto> GetByWorkItemIdAsync(int workItemId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> GetIterationsAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> GetIterationsAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> GetCommentsAsync(int id);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> GetCommentsAsync(int id, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> GetFileChangesAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> GetFileChangesAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfGetPrSprintTrendsResponse> GetSprintTrendsAsync(System.Collections.Generic.IEnumerable<int>? sprintIds, string? productIds, int? teamId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfGetPrSprintTrendsResponse> GetSprintTrendsAsync(System.Collections.Generic.IEnumerable<int>? sprintIds, string? productIds, int? teamId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfPullRequestInsightsDto> GetInsightsAsync(int? teamId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? repositoryName);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestIterationDto> GetIterationsAsync(int id);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfPullRequestInsightsDto> GetInsightsAsync(int? teamId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? repositoryName, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestIterationDto> GetIterationsAsync(int id, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfPrDeliveryInsightsDto> GetDeliveryInsightsAsync(int? teamId, int? sprintId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestCommentDto> GetCommentsAsync(int id);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfPrDeliveryInsightsDto> GetDeliveryInsightsAsync(int? teamId, int? sprintId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestCommentDto> GetCommentsAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestFileChangeDto> GetFileChangesAsync(int id);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestFileChangeDto> GetFileChangesAsync(int id, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse> GetSprintTrendsAsync(System.Collections.Generic.IEnumerable<int>? sprintIds, string? productIds, int? teamId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse> GetSprintTrendsAsync(System.Collections.Generic.IEnumerable<int>? sprintIds, string? productIds, int? teamId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto> GetInsightsAsync(int? teamId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? repositoryName);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto> GetInsightsAsync(int? teamId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? repositoryName, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPrDeliveryInsightsDto> GetDeliveryInsightsAsync(int? teamId, int? sprintId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPrDeliveryInsightsDto> GetDeliveryInsightsAsync(int? teamId, int? sprintId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -10805,15 +10968,17 @@ namespace PoTool.Client.ApiClient
         partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
         partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetAllAsync()
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestDto> GetAllAsync()
         {
             return GetAllAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestDto> GetAllAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -10854,7 +11019,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<PullRequestDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfPullRequestDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -10881,15 +11046,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PullRequestDto> GetByIdAsync(int id)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestDto> GetByIdAsync(int id)
         {
             return GetByIdAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PullRequestDto> GetByIdAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestDto> GetByIdAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -10934,7 +11101,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PullRequestDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPullRequestDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -10961,15 +11128,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetByWorkItemIdAsync(int workItemId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestDto> GetByWorkItemIdAsync(int workItemId)
         {
             return GetByWorkItemIdAsync(workItemId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestDto>> GetByWorkItemIdAsync(int workItemId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestDto> GetByWorkItemIdAsync(int workItemId, System.Threading.CancellationToken cancellationToken)
         {
             if (workItemId == null)
                 throw new System.ArgumentNullException("workItemId");
@@ -11014,7 +11183,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<PullRequestDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfPullRequestDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11041,15 +11210,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate)
         {
             return GetMetricsAsync(productIds, fromDate, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto> GetMetricsAsync(string? productIds, System.DateTimeOffset? fromDate, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -11100,7 +11271,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11127,15 +11298,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status)
         {
             return GetFilteredAsync(productIds, iterationPath, createdBy, fromDate, toDate, status, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto> GetFilteredAsync(string? productIds, string? iterationPath, string? createdBy, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? status, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -11202,7 +11375,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11229,15 +11402,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> GetIterationsAsync(int id)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestIterationDto> GetIterationsAsync(int id)
         {
             return GetIterationsAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestIterationDto>> GetIterationsAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestIterationDto> GetIterationsAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -11283,7 +11458,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<PullRequestIterationDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfPullRequestIterationDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11310,15 +11485,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> GetCommentsAsync(int id)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestCommentDto> GetCommentsAsync(int id)
         {
             return GetCommentsAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestCommentDto>> GetCommentsAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestCommentDto> GetCommentsAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -11364,7 +11541,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<PullRequestCommentDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfPullRequestCommentDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11391,15 +11568,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> GetFileChangesAsync(int id)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestFileChangeDto> GetFileChangesAsync(int id)
         {
             return GetFileChangesAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<PullRequestFileChangeDto>> GetFileChangesAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfPullRequestFileChangeDto> GetFileChangesAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -11445,7 +11624,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<PullRequestFileChangeDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfPullRequestFileChangeDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11472,15 +11651,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfGetPrSprintTrendsResponse> GetSprintTrendsAsync(System.Collections.Generic.IEnumerable<int>? sprintIds, string? productIds, int? teamId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse> GetSprintTrendsAsync(System.Collections.Generic.IEnumerable<int>? sprintIds, string? productIds, int? teamId)
         {
             return GetSprintTrendsAsync(sprintIds, productIds, teamId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfGetPrSprintTrendsResponse> GetSprintTrendsAsync(System.Collections.Generic.IEnumerable<int>? sprintIds, string? productIds, int? teamId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse> GetSprintTrendsAsync(System.Collections.Generic.IEnumerable<int>? sprintIds, string? productIds, int? teamId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -11535,7 +11716,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PullRequestQueryResponseDtoOfGetPrSprintTrendsResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11562,15 +11743,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack)
         {
             return GetReviewBottleneckAsync(maxPRs, daysBack, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPRReviewBottleneckDto> GetReviewBottleneckAsync(int? maxPRs, int? daysBack, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -11621,7 +11804,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PRReviewBottleneckDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPRReviewBottleneckDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11648,15 +11831,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfPullRequestInsightsDto> GetInsightsAsync(int? teamId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? repositoryName)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto> GetInsightsAsync(int? teamId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? repositoryName)
         {
             return GetInsightsAsync(teamId, fromDate, toDate, repositoryName, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfPullRequestInsightsDto> GetInsightsAsync(int? teamId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? repositoryName, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto> GetInsightsAsync(int? teamId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, string? repositoryName, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -11715,7 +11900,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PullRequestQueryResponseDtoOfPullRequestInsightsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11742,15 +11927,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfPrDeliveryInsightsDto> GetDeliveryInsightsAsync(int? teamId, int? sprintId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPrDeliveryInsightsDto> GetDeliveryInsightsAsync(int? teamId, int? sprintId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate)
         {
             return GetDeliveryInsightsAsync(teamId, sprintId, fromDate, toDate, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PullRequestQueryResponseDtoOfPrDeliveryInsightsDto> GetDeliveryInsightsAsync(int? teamId, int? sprintId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPrDeliveryInsightsDto> GetDeliveryInsightsAsync(int? teamId, int? sprintId, System.DateTimeOffset? fromDate, System.DateTimeOffset? toDate, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -11809,7 +11996,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<PullRequestQueryResponseDtoOfPrDeliveryInsightsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfPullRequestQueryResponseDtoOfPrDeliveryInsightsDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -11968,145 +12155,185 @@ namespace PoTool.Client.ApiClient
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial interface IReleasePlanningClient
     {
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ReleasePlanningBoardDto> GetBoardAsync();
+        System.Threading.Tasks.Task<DataStateResponseDtoOfReleasePlanningBoardDto> GetBoardAsync();
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ReleasePlanningBoardDto> GetBoardAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfReleasePlanningBoardDto> GetBoardAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> GetUnplannedEpicsAsync();
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> GetUnplannedEpicsAsync(System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> GetObjectiveEpicsAsync(int objectiveId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfUnplannedEpicDto> GetUnplannedEpicsAsync();
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> GetObjectiveEpicsAsync(int objectiveId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfUnplannedEpicDto> GetUnplannedEpicsAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LaneOperationResultDto> DeleteLaneAsync(int laneId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfObjectiveEpicDto> GetObjectiveEpicsAsync(int objectiveId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LaneOperationResultDto> DeleteLaneAsync(int laneId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfObjectiveEpicDto> GetObjectiveEpicsAsync(int objectiveId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> DeletePlacementAsync(int placementId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> DeletePlacementAsync(int placementId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLaneOperationResultDto> DeleteLaneAsync(int laneId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLaneOperationResultDto> DeleteLaneAsync(int laneId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> DeleteMilestoneLineAsync(int lineId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> DeleteMilestoneLineAsync(int lineId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> DeletePlacementAsync(int placementId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> DeletePlacementAsync(int placementId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> DeleteIterationLineAsync(int lineId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<LineOperationResultDto> DeleteIterationLineAsync(int lineId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshValidationAsync();
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshValidationAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EpicFeatureDto>> GetEpicFeaturesAsync(int epicId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EpicFeatureDto>> GetEpicFeaturesAsync(int epicId, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicSplitResultDto> SplitEpicAsync(int epicId, SplitEpicRequest request);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<EpicSplitResultDto> SplitEpicAsync(int epicId, SplitEpicRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ExportResultDto> ExportBoardAsync(ExportOptionsDto options);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ExportResultDto> ExportBoardAsync(ExportOptionsDto options, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> DeleteMilestoneLineAsync(int lineId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> DeleteMilestoneLineAsync(int lineId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> DeleteIterationLineAsync(int lineId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> DeleteIterationLineAsync(int lineId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationCacheResultDto> RefreshValidationAsync();
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationCacheResultDto> RefreshValidationAsync(System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfEpicFeatureDto> GetEpicFeaturesAsync(int epicId);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfEpicFeatureDto> GetEpicFeaturesAsync(int epicId, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicSplitResultDto> SplitEpicAsync(int epicId, SplitEpicRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfEpicSplitResultDto> SplitEpicAsync(int epicId, SplitEpicRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfExportResultDto> ExportBoardAsync(ExportOptionsDto options);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfExportResultDto> ExportBoardAsync(ExportOptionsDto options, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -12158,15 +12385,17 @@ namespace PoTool.Client.ApiClient
         partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
         partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ReleasePlanningBoardDto> GetBoardAsync()
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfReleasePlanningBoardDto> GetBoardAsync()
         {
             return GetBoardAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ReleasePlanningBoardDto> GetBoardAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfReleasePlanningBoardDto> GetBoardAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -12207,7 +12436,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ReleasePlanningBoardDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfReleasePlanningBoardDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12234,15 +12463,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> GetUnplannedEpicsAsync()
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfUnplannedEpicDto> GetUnplannedEpicsAsync()
         {
             return GetUnplannedEpicsAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<UnplannedEpicDto>> GetUnplannedEpicsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfUnplannedEpicDto> GetUnplannedEpicsAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -12283,7 +12514,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<UnplannedEpicDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIReadOnlyListOfUnplannedEpicDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12310,15 +12541,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> GetObjectiveEpicsAsync(int objectiveId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfObjectiveEpicDto> GetObjectiveEpicsAsync(int objectiveId)
         {
             return GetObjectiveEpicsAsync(objectiveId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ObjectiveEpicDto>> GetObjectiveEpicsAsync(int objectiveId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfObjectiveEpicDto> GetObjectiveEpicsAsync(int objectiveId, System.Threading.CancellationToken cancellationToken)
         {
             if (objectiveId == null)
                 throw new System.ArgumentNullException("objectiveId");
@@ -12364,7 +12597,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<ObjectiveEpicDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIReadOnlyListOfObjectiveEpicDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12391,15 +12624,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfLaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command)
         {
             return CreateLaneAsync(command, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfLaneOperationResultDto> CreateLaneAsync(CreateLaneCommand command, System.Threading.CancellationToken cancellationToken)
         {
             if (command == null)
                 throw new System.ArgumentNullException("command");
@@ -12447,7 +12682,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<LaneOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfLaneOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12474,15 +12709,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LaneOperationResultDto> DeleteLaneAsync(int laneId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfLaneOperationResultDto> DeleteLaneAsync(int laneId)
         {
             return DeleteLaneAsync(laneId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LaneOperationResultDto> DeleteLaneAsync(int laneId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfLaneOperationResultDto> DeleteLaneAsync(int laneId, System.Threading.CancellationToken cancellationToken)
         {
             if (laneId == null)
                 throw new System.ArgumentNullException("laneId");
@@ -12527,7 +12764,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<LaneOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfLaneOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12554,15 +12791,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command)
         {
             return CreatePlacementAsync(command, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> CreatePlacementAsync(CreateEpicPlacementCommand command, System.Threading.CancellationToken cancellationToken)
         {
             if (command == null)
                 throw new System.ArgumentNullException("command");
@@ -12610,7 +12849,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12637,15 +12876,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request)
         {
             return UpdatePlacementAsync(placementId, request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> UpdatePlacementAsync(int placementId, UpdatePlacementRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (placementId == null)
                 throw new System.ArgumentNullException("placementId");
@@ -12697,7 +12938,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12724,15 +12965,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> DeletePlacementAsync(int placementId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> DeletePlacementAsync(int placementId)
         {
             return DeletePlacementAsync(placementId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> DeletePlacementAsync(int placementId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> DeletePlacementAsync(int placementId, System.Threading.CancellationToken cancellationToken)
         {
             if (placementId == null)
                 throw new System.ArgumentNullException("placementId");
@@ -12777,7 +13020,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12804,15 +13047,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request)
         {
             return MoveEpicAsync(placementId, request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> MoveEpicAsync(int placementId, MoveEpicRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (placementId == null)
                 throw new System.ArgumentNullException("placementId");
@@ -12865,7 +13110,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12892,15 +13137,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command)
         {
             return ReorderEpicsInRowAsync(command, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEpicPlacementResultDto> ReorderEpicsInRowAsync(ReorderEpicsInRowCommand command, System.Threading.CancellationToken cancellationToken)
         {
             if (command == null)
                 throw new System.ArgumentNullException("command");
@@ -12948,7 +13195,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEpicPlacementResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -12975,15 +13222,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command)
         {
             return CreateMilestoneLineAsync(command, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> CreateMilestoneLineAsync(CreateMilestoneLineCommand command, System.Threading.CancellationToken cancellationToken)
         {
             if (command == null)
                 throw new System.ArgumentNullException("command");
@@ -13031,7 +13280,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<LineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfLineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -13058,15 +13307,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request)
         {
             return UpdateMilestoneLineAsync(lineId, request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> UpdateMilestoneLineAsync(int lineId, UpdateMilestoneLineRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (lineId == null)
                 throw new System.ArgumentNullException("lineId");
@@ -13118,7 +13369,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<LineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfLineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -13145,15 +13396,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> DeleteMilestoneLineAsync(int lineId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> DeleteMilestoneLineAsync(int lineId)
         {
             return DeleteMilestoneLineAsync(lineId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> DeleteMilestoneLineAsync(int lineId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> DeleteMilestoneLineAsync(int lineId, System.Threading.CancellationToken cancellationToken)
         {
             if (lineId == null)
                 throw new System.ArgumentNullException("lineId");
@@ -13198,7 +13451,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<LineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfLineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -13225,15 +13478,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command)
         {
             return CreateIterationLineAsync(command, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> CreateIterationLineAsync(CreateIterationLineCommand command, System.Threading.CancellationToken cancellationToken)
         {
             if (command == null)
                 throw new System.ArgumentNullException("command");
@@ -13281,7 +13536,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<LineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfLineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -13308,15 +13563,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request)
         {
             return UpdateIterationLineAsync(lineId, request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> UpdateIterationLineAsync(int lineId, UpdateIterationLineRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (lineId == null)
                 throw new System.ArgumentNullException("lineId");
@@ -13368,7 +13625,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<LineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfLineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -13395,15 +13652,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<LineOperationResultDto> DeleteIterationLineAsync(int lineId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> DeleteIterationLineAsync(int lineId)
         {
             return DeleteIterationLineAsync(lineId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<LineOperationResultDto> DeleteIterationLineAsync(int lineId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfLineOperationResultDto> DeleteIterationLineAsync(int lineId, System.Threading.CancellationToken cancellationToken)
         {
             if (lineId == null)
                 throw new System.ArgumentNullException("lineId");
@@ -13448,7 +13707,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<LineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfLineOperationResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -13475,15 +13734,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshValidationAsync()
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfValidationCacheResultDto> RefreshValidationAsync()
         {
             return RefreshValidationAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ValidationCacheResultDto> RefreshValidationAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfValidationCacheResultDto> RefreshValidationAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -13525,7 +13786,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ValidationCacheResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfValidationCacheResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -13552,15 +13813,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EpicFeatureDto>> GetEpicFeaturesAsync(int epicId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfEpicFeatureDto> GetEpicFeaturesAsync(int epicId)
         {
             return GetEpicFeaturesAsync(epicId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<EpicFeatureDto>> GetEpicFeaturesAsync(int epicId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIReadOnlyListOfEpicFeatureDto> GetEpicFeaturesAsync(int epicId, System.Threading.CancellationToken cancellationToken)
         {
             if (epicId == null)
                 throw new System.ArgumentNullException("epicId");
@@ -13606,7 +13869,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<EpicFeatureDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIReadOnlyListOfEpicFeatureDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -13633,15 +13896,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<EpicSplitResultDto> SplitEpicAsync(int epicId, SplitEpicRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfEpicSplitResultDto> SplitEpicAsync(int epicId, SplitEpicRequest request)
         {
             return SplitEpicAsync(epicId, request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<EpicSplitResultDto> SplitEpicAsync(int epicId, SplitEpicRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfEpicSplitResultDto> SplitEpicAsync(int epicId, SplitEpicRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (epicId == null)
                 throw new System.ArgumentNullException("epicId");
@@ -13694,7 +13959,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<EpicSplitResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfEpicSplitResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -13721,15 +13986,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ExportResultDto> ExportBoardAsync(ExportOptionsDto options)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfExportResultDto> ExportBoardAsync(ExportOptionsDto options)
         {
             return ExportBoardAsync(options, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ExportResultDto> ExportBoardAsync(ExportOptionsDto options, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfExportResultDto> ExportBoardAsync(ExportOptionsDto options, System.Threading.CancellationToken cancellationToken)
         {
             if (options == null)
                 throw new System.ArgumentNullException("options");
@@ -13777,7 +14044,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ExportResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfExportResultDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -18006,12 +18273,14 @@ namespace PoTool.Client.ApiClient
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial interface IWorkItemsClient
     {
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllAsync();
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAllAsync();
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAllAsync(System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> GetDistinctAreaPathsAsync();
@@ -18020,47 +18289,57 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> GetDistinctAreaPathsAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> GetAllWithValidationAsync(string? productIds);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemWithValidationDto> GetAllWithValidationAsync(string? productIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemWithValidationDto> GetAllWithValidationAsync(string? productIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemWithValidationDto> GetByIdWithValidationAsync(int tfsId, string? productIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemWithValidationDto> GetByIdWithValidationAsync(int tfsId, string? productIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationTriageSummaryDto> GetValidationTriageAsync(string? productIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationTriageSummaryDto> GetValidationTriageAsync(string? productIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationQueueDto> GetValidationQueueAsync(string? category, string? productIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationQueueDto> GetValidationQueueAsync(string? category, string? productIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationFixSessionDto> GetValidationFixSessionAsync(string? ruleId, string? category, string? productIds);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationFixSessionDto> GetValidationFixSessionAsync(string? ruleId, string? category, string? productIds, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task RefreshFromTfsAsync(int tfsId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> GetAllWithValidationAsync(string? productIds, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemWithValidationDto> GetByIdWithValidationAsync(int tfsId, string? productIds);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemWithValidationDto> GetByIdWithValidationAsync(int tfsId, string? productIds, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationTriageSummaryDto> GetValidationTriageAsync(string? productIds);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationTriageSummaryDto> GetValidationTriageAsync(string? productIds, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationQueueDto> GetValidationQueueAsync(string? category, string? productIds);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationQueueDto> GetValidationQueueAsync(string? category, string? productIds, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationFixSessionDto> GetValidationFixSessionAsync(string? ruleId, string? category, string? productIds);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationFixSessionDto> GetValidationFixSessionAsync(string? ruleId, string? category, string? productIds, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FileResponse> RefreshFromTfsAsync(int tfsId);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FileResponse> RefreshFromTfsAsync(int tfsId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task RefreshFromTfsAsync(int tfsId, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<int> RefreshByRootIdsFromTfsAsync(string? rootIds);
@@ -18069,40 +18348,46 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<int> RefreshByRootIdsFromTfsAsync(string? rootIds, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemDto> UpdateTagsAsync(int tfsId, UpdateTagsRequest request);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemDto> UpdateTagsAsync(int tfsId, UpdateTagsRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemDto> UpdateTagsAsync(int tfsId, UpdateTagsRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemDto> UpdateTitleDescriptionAsync(int tfsId, UpdateTitleDescriptionRequest request);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemDto> UpdateTitleDescriptionAsync(int tfsId, UpdateTitleDescriptionRequest request, System.Threading.CancellationToken cancellationToken);
+
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task UpdateBacklogPriorityAsync(int tfsId, UpdateBacklogPriorityRequest request);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemDto> UpdateTagsAsync(int tfsId, UpdateTagsRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task UpdateBacklogPriorityAsync(int tfsId, UpdateBacklogPriorityRequest request, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemDto> UpdateTitleDescriptionAsync(int tfsId, UpdateTitleDescriptionRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemDto> UpdateTitleDescriptionAsync(int tfsId, UpdateTitleDescriptionRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FileResponse> UpdateBacklogPriorityAsync(int tfsId, UpdateBacklogPriorityRequest request);
+        System.Threading.Tasks.Task UpdateIterationPathAsync(int tfsId, UpdateIterationPathRequest request);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FileResponse> UpdateBacklogPriorityAsync(int tfsId, UpdateBacklogPriorityRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task UpdateIterationPathAsync(int tfsId, UpdateIterationPathRequest request, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FileResponse> UpdateIterationPathAsync(int tfsId, UpdateIterationPathRequest request);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<FileResponse> UpdateIterationPathAsync(int tfsId, UpdateIterationPathRequest request, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetFilteredAsync(string filter);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetFilteredAsync(string filter);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetFilteredAsync(string filter, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetFilteredAsync(string filter, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request);
@@ -18111,12 +18396,14 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<ValidateWorkItemResponse> ValidateWorkItemAsync(ValidateWorkItemRequest request, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllGoalsAsync();
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAllGoalsAsync();
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllGoalsAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAllGoalsAsync(System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> GetAreaPathsFromTfsAsync();
@@ -18132,54 +18419,68 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalsFromTfsAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalHierarchyAsync(string? goalIds);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetGoalHierarchyAsync(string? goalIds);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalHierarchyAsync(string? goalIds, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetGoalHierarchyAsync(string? goalIds, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(int workItemId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemStateTimelineDto> GetStateTimelineAsync(int id);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(int workItemId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemStateTimelineDto> GetStateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemRevisionDto> GetWorkItemRevisionsAsync(int workItemId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemRevisionDto> GetWorkItemRevisionsAsync(int workItemId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType);
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType, System.Threading.CancellationToken cancellationToken);
-
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfDependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfValidationViolationHistoryDto> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfValidationViolationHistoryDto> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType, System.Threading.CancellationToken cancellationToken);
+
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter);
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<DataStateResponseDtoOfValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<FixValidationViolationResultDto> FixValidationViolationsAsync(FixValidationViolationBatchCommand command);
@@ -18195,12 +18496,14 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<BulkEffortAssignmentResultDto> BulkAssignEffortAsync(BulkAssignEffortCommand command, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetByRootIdsAsync(string? rootIds);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetByRootIdsAsync(string? rootIds);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetByRootIdsAsync(string? rootIds, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetByRootIdsAsync(string? rootIds, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> GetBugSeverityOptionsAsync();
@@ -18209,19 +18512,23 @@ namespace PoTool.Client.ApiClient
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<string>> GetBugSeverityOptionsAsync(System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProductBacklogStateDto> GetBacklogStateAsync(int productId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfProductBacklogStateDto> GetBacklogStateAsync(int productId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<ProductBacklogStateDto> GetBacklogStateAsync(int productId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfProductBacklogStateDto> GetBacklogStateAsync(int productId, System.Threading.CancellationToken cancellationToken);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<HealthWorkspaceProductSummaryDto> GetHealthSummaryAsync(int productId);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfHealthWorkspaceProductSummaryDto> GetHealthSummaryAsync(int productId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<HealthWorkspaceProductSummaryDto> GetHealthSummaryAsync(int productId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfHealthWorkspaceProductSummaryDto> GetHealthSummaryAsync(int productId, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -18273,15 +18580,17 @@ namespace PoTool.Client.ApiClient
         partial void PrepareRequest(System.Net.Http.HttpClient client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
         partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllAsync()
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAllAsync()
         {
             return GetAllAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAllAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -18322,7 +18631,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<WorkItemDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfWorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -18425,15 +18734,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> GetAllWithValidationAsync(string? productIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemWithValidationDto> GetAllWithValidationAsync(string? productIds)
         {
             return GetAllWithValidationAsync(productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemWithValidationDto>> GetAllWithValidationAsync(string? productIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemWithValidationDto> GetAllWithValidationAsync(string? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -18480,7 +18791,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<WorkItemWithValidationDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfWorkItemWithValidationDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -18507,15 +18818,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<WorkItemWithValidationDto> GetByIdWithValidationAsync(int tfsId, string? productIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemWithValidationDto> GetByIdWithValidationAsync(int tfsId, string? productIds)
         {
             return GetByIdWithValidationAsync(tfsId, productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<WorkItemWithValidationDto> GetByIdWithValidationAsync(int tfsId, string? productIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemWithValidationDto> GetByIdWithValidationAsync(int tfsId, string? productIds, System.Threading.CancellationToken cancellationToken)
         {
             if (tfsId == null)
                 throw new System.ArgumentNullException("tfsId");
@@ -18566,7 +18879,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<WorkItemWithValidationDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfWorkItemWithValidationDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -18593,15 +18906,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ValidationTriageSummaryDto> GetValidationTriageAsync(string? productIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfValidationTriageSummaryDto> GetValidationTriageAsync(string? productIds)
         {
             return GetValidationTriageAsync(productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ValidationTriageSummaryDto> GetValidationTriageAsync(string? productIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfValidationTriageSummaryDto> GetValidationTriageAsync(string? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -18648,7 +18963,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ValidationTriageSummaryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfValidationTriageSummaryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -18675,15 +18990,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ValidationQueueDto> GetValidationQueueAsync(string? category, string? productIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfValidationQueueDto> GetValidationQueueAsync(string? category, string? productIds)
         {
             return GetValidationQueueAsync(category, productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ValidationQueueDto> GetValidationQueueAsync(string? category, string? productIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfValidationQueueDto> GetValidationQueueAsync(string? category, string? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -18734,7 +19051,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ValidationQueueDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfValidationQueueDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -18761,15 +19078,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ValidationFixSessionDto> GetValidationFixSessionAsync(string? ruleId, string? category, string? productIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfValidationFixSessionDto> GetValidationFixSessionAsync(string? ruleId, string? category, string? productIds)
         {
             return GetValidationFixSessionAsync(ruleId, category, productIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ValidationFixSessionDto> GetValidationFixSessionAsync(string? ruleId, string? category, string? productIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfValidationFixSessionDto> GetValidationFixSessionAsync(string? ruleId, string? category, string? productIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -18824,7 +19143,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ValidationFixSessionDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfValidationFixSessionDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -18852,14 +19171,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<FileResponse> RefreshFromTfsAsync(int tfsId)
+        public virtual System.Threading.Tasks.Task RefreshFromTfsAsync(int tfsId)
         {
             return RefreshFromTfsAsync(tfsId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<FileResponse> RefreshFromTfsAsync(int tfsId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task RefreshFromTfsAsync(int tfsId, System.Threading.CancellationToken cancellationToken)
         {
             if (tfsId == null)
                 throw new System.ArgumentNullException("tfsId");
@@ -18872,7 +19191,6 @@ namespace PoTool.Client.ApiClient
                 {
                     request_.Content = new System.Net.Http.StringContent(string.Empty, System.Text.Encoding.UTF8, "application/json");
                     request_.Method = new System.Net.Http.HttpMethod("POST");
-                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/octet-stream"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
@@ -18904,12 +19222,29 @@ namespace PoTool.Client.ApiClient
                         ProcessResponse(client_, response_);
 
                         var status_ = (int)response_.StatusCode;
-                        if (status_ == 200 || status_ == 206)
+                        if (status_ == 200)
                         {
-                            var responseStream_ = response_.Content == null ? System.IO.Stream.Null : await ReadAsStreamAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            var fileResponse_ = new FileResponse(status_, headers_, responseStream_, null, response_);
-                            disposeClient_ = false; disposeResponse_ = false; // response and client are disposed by FileResponse
-                            return fileResponse_;
+                            return;
+                        }
+                        else
+                        if (status_ == 404)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<string>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 500)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<string>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -19014,15 +19349,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<WorkItemDto> UpdateTagsAsync(int tfsId, UpdateTagsRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemDto> UpdateTagsAsync(int tfsId, UpdateTagsRequest request)
         {
             return UpdateTagsAsync(tfsId, request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<WorkItemDto> UpdateTagsAsync(int tfsId, UpdateTagsRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemDto> UpdateTagsAsync(int tfsId, UpdateTagsRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (tfsId == null)
                 throw new System.ArgumentNullException("tfsId");
@@ -19075,7 +19412,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<WorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfWorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -19102,15 +19439,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<WorkItemDto> UpdateTitleDescriptionAsync(int tfsId, UpdateTitleDescriptionRequest request)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemDto> UpdateTitleDescriptionAsync(int tfsId, UpdateTitleDescriptionRequest request)
         {
             return UpdateTitleDescriptionAsync(tfsId, request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<WorkItemDto> UpdateTitleDescriptionAsync(int tfsId, UpdateTitleDescriptionRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemDto> UpdateTitleDescriptionAsync(int tfsId, UpdateTitleDescriptionRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (tfsId == null)
                 throw new System.ArgumentNullException("tfsId");
@@ -19163,7 +19502,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<WorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfWorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -19191,14 +19530,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<FileResponse> UpdateBacklogPriorityAsync(int tfsId, UpdateBacklogPriorityRequest request)
+        public virtual System.Threading.Tasks.Task UpdateBacklogPriorityAsync(int tfsId, UpdateBacklogPriorityRequest request)
         {
             return UpdateBacklogPriorityAsync(tfsId, request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<FileResponse> UpdateBacklogPriorityAsync(int tfsId, UpdateBacklogPriorityRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task UpdateBacklogPriorityAsync(int tfsId, UpdateBacklogPriorityRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (tfsId == null)
                 throw new System.ArgumentNullException("tfsId");
@@ -19217,7 +19556,6 @@ namespace PoTool.Client.ApiClient
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
                     request_.Method = new System.Net.Http.HttpMethod("POST");
-                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/octet-stream"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
@@ -19249,12 +19587,29 @@ namespace PoTool.Client.ApiClient
                         ProcessResponse(client_, response_);
 
                         var status_ = (int)response_.StatusCode;
-                        if (status_ == 200 || status_ == 206)
+                        if (status_ == 200)
                         {
-                            var responseStream_ = response_.Content == null ? System.IO.Stream.Null : await ReadAsStreamAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            var fileResponse_ = new FileResponse(status_, headers_, responseStream_, null, response_);
-                            disposeClient_ = false; disposeResponse_ = false; // response and client are disposed by FileResponse
-                            return fileResponse_;
+                            return;
+                        }
+                        else
+                        if (status_ == 400)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<string>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 500)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<string>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -19277,14 +19632,14 @@ namespace PoTool.Client.ApiClient
         }
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<FileResponse> UpdateIterationPathAsync(int tfsId, UpdateIterationPathRequest request)
+        public virtual System.Threading.Tasks.Task UpdateIterationPathAsync(int tfsId, UpdateIterationPathRequest request)
         {
             return UpdateIterationPathAsync(tfsId, request, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<FileResponse> UpdateIterationPathAsync(int tfsId, UpdateIterationPathRequest request, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task UpdateIterationPathAsync(int tfsId, UpdateIterationPathRequest request, System.Threading.CancellationToken cancellationToken)
         {
             if (tfsId == null)
                 throw new System.ArgumentNullException("tfsId");
@@ -19303,7 +19658,6 @@ namespace PoTool.Client.ApiClient
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
                     request_.Method = new System.Net.Http.HttpMethod("POST");
-                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/octet-stream"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
@@ -19335,12 +19689,29 @@ namespace PoTool.Client.ApiClient
                         ProcessResponse(client_, response_);
 
                         var status_ = (int)response_.StatusCode;
-                        if (status_ == 200 || status_ == 206)
+                        if (status_ == 200)
                         {
-                            var responseStream_ = response_.Content == null ? System.IO.Stream.Null : await ReadAsStreamAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            var fileResponse_ = new FileResponse(status_, headers_, responseStream_, null, response_);
-                            disposeClient_ = false; disposeResponse_ = false; // response and client are disposed by FileResponse
-                            return fileResponse_;
+                            return;
+                        }
+                        else
+                        if (status_ == 400)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<string>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 500)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<string>("A server side error occurred.", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -19362,15 +19733,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetFilteredAsync(string filter)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetFilteredAsync(string filter)
         {
             return GetFilteredAsync(filter, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetFilteredAsync(string filter, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetFilteredAsync(string filter, System.Threading.CancellationToken cancellationToken)
         {
             if (filter == null)
                 throw new System.ArgumentNullException("filter");
@@ -19415,7 +19788,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<WorkItemDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfWorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -19525,15 +19898,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllGoalsAsync()
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAllGoalsAsync()
         {
             return GetAllGoalsAsync(System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAllGoalsAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAllGoalsAsync(System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -19574,7 +19949,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<WorkItemDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfWorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -19753,15 +20128,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalHierarchyAsync(string? goalIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetGoalHierarchyAsync(string? goalIds)
         {
             return GetGoalHierarchyAsync(goalIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetGoalHierarchyAsync(string? goalIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetGoalHierarchyAsync(string? goalIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -19808,7 +20185,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<WorkItemDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfWorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -19835,15 +20212,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemStateTimelineDto> GetStateTimelineAsync(int id)
         {
             return GetStateTimelineAsync(id, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<WorkItemStateTimelineDto> GetStateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfWorkItemStateTimelineDto> GetStateTimelineAsync(int id, System.Threading.CancellationToken cancellationToken)
         {
             if (id == null)
                 throw new System.ArgumentNullException("id");
@@ -19889,7 +20268,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<WorkItemStateTimelineDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfWorkItemStateTimelineDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -19916,15 +20295,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(int workItemId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemRevisionDto> GetWorkItemRevisionsAsync(int workItemId)
         {
             return GetWorkItemRevisionsAsync(workItemId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemRevisionDto>> GetWorkItemRevisionsAsync(int workItemId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemRevisionDto> GetWorkItemRevisionsAsync(int workItemId, System.Threading.CancellationToken cancellationToken)
         {
             if (workItemId == null)
                 throw new System.ArgumentNullException("workItemId");
@@ -19970,7 +20351,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<WorkItemRevisionDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfWorkItemRevisionDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -19997,15 +20378,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch)
         {
             return GetAdvancedFilteredAsync(typeFilter, stateFilter, iterationPathFilter, areaPathFilter, minEffort, maxEffort, hasValidationIssues, isBlocked, titleSearch, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetAdvancedFilteredAsync(string? typeFilter, string? stateFilter, string? iterationPathFilter, string? areaPathFilter, int? minEffort, int? maxEffort, bool? hasValidationIssues, bool? isBlocked, string? titleSearch, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -20084,7 +20467,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<WorkItemDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfWorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -20111,15 +20494,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfDependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes)
         {
             return GetDependencyGraphAsync(areaPathFilter, workItemIds, workItemTypes, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfDependencyGraphDto> GetDependencyGraphAsync(string? areaPathFilter, string? workItemIds, string? workItemTypes, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -20174,7 +20559,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<DependencyGraphDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfDependencyGraphDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -20201,15 +20586,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfValidationViolationHistoryDto> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType)
         {
             return GetValidationHistoryAsync(areaPathFilter, startDate, endDate, violationType, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfValidationViolationHistoryDto> GetValidationHistoryAsync(string? areaPathFilter, System.DateTimeOffset? startDate, System.DateTimeOffset? endDate, string? violationType, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -20268,7 +20655,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<ValidationViolationHistoryDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfValidationViolationHistoryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -20295,15 +20682,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter)
         {
             return GetValidationImpactAnalysisAsync(areaPathFilter, iterationPathFilter, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfValidationImpactAnalysisDto> GetValidationImpactAnalysisAsync(string? areaPathFilter, string? iterationPathFilter, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -20354,7 +20743,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ValidationImpactAnalysisDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfValidationImpactAnalysisDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -20547,15 +20936,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetByRootIdsAsync(string? rootIds)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetByRootIdsAsync(string? rootIds)
         {
             return GetByRootIdsAsync(rootIds, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<WorkItemDto>> GetByRootIdsAsync(string? rootIds, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfIEnumerableOfWorkItemDto> GetByRootIdsAsync(string? rootIds, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -20602,7 +20993,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<WorkItemDto>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfIEnumerableOfWorkItemDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -20705,15 +21096,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ProductBacklogStateDto> GetBacklogStateAsync(int productId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfProductBacklogStateDto> GetBacklogStateAsync(int productId)
         {
             return GetBacklogStateAsync(productId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ProductBacklogStateDto> GetBacklogStateAsync(int productId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfProductBacklogStateDto> GetBacklogStateAsync(int productId, System.Threading.CancellationToken cancellationToken)
         {
             if (productId == null)
                 throw new System.ArgumentNullException("productId");
@@ -20758,7 +21151,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ProductBacklogStateDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfProductBacklogStateDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -20785,15 +21178,17 @@ namespace PoTool.Client.ApiClient
             }
         }
 
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<HealthWorkspaceProductSummaryDto> GetHealthSummaryAsync(int productId)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfHealthWorkspaceProductSummaryDto> GetHealthSummaryAsync(int productId)
         {
             return GetHealthSummaryAsync(productId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<HealthWorkspaceProductSummaryDto> GetHealthSummaryAsync(int productId, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfHealthWorkspaceProductSummaryDto> GetHealthSummaryAsync(int productId, System.Threading.CancellationToken cancellationToken)
         {
             if (productId == null)
                 throw new System.ArgumentNullException("productId");
@@ -20838,7 +21233,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<HealthWorkspaceProductSummaryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DataStateResponseDtoOfHealthWorkspaceProductSummaryDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -21121,6 +21516,24 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfDeliveryQueryResponseDtoOfBuildQualityPageDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public DeliveryQueryResponseDtoOfBuildQualityPageDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class DeliveryQueryResponseDtoOfDeliveryBuildQualityDto
     {
 
@@ -21138,6 +21551,42 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("validationMessages")]
         public System.Collections.Generic.ICollection<FilterValidationIssueDto> ValidationMessages { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfDeliveryQueryResponseDtoOfDeliveryBuildQualityDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public DeliveryQueryResponseDtoOfDeliveryBuildQualityDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPipelineBuildQualityDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PipelineBuildQualityDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21184,6 +21633,96 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfFilterByValidationResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public FilterByValidationResponse? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfGetWorkItemIdsByValidationFilterResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public GetWorkItemIdsByValidationFilterResponse? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfCountWorkItemsByValidationFilterResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public CountWorkItemsByValidationFilterResponse? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIsDescendantOfGoalsResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public IsDescendantOfGoalsResponse? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfFilterByGoalsResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public FilterByGoalsResponse? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SprintQueryResponseDtoOfSprintMetricsDto
     {
 
@@ -21217,6 +21756,24 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfSprintQueryResponseDtoOfSprintMetricsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public SprintQueryResponseDtoOfSprintMetricsDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SprintQueryResponseDtoOfBacklogHealthDto
     {
 
@@ -21234,6 +21791,24 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("validationMessages")]
         public System.Collections.Generic.ICollection<FilterValidationIssueDto> ValidationMessages { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public SprintQueryResponseDtoOfBacklogHealthDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21259,6 +21834,42 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfSprintQueryResponseDtoOfMultiIterationBacklogHealthDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public SprintQueryResponseDtoOfMultiIterationBacklogHealthDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfEffortDistributionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public EffortDistributionDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SprintQueryResponseDtoOfSprintCapacityPlanDto
     {
 
@@ -21280,6 +21891,24 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfSprintQueryResponseDtoOfSprintCapacityPlanDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public SprintQueryResponseDtoOfSprintCapacityPlanDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class FilterSelectionDtoOfPortfolioLifecycleState
     {
 
@@ -21288,6 +21917,204 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("values")]
         public System.Collections.Generic.ICollection<PortfolioLifecycleState> Values { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPortfolioProgressDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PortfolioProgressDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPortfolioSnapshotDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PortfolioSnapshotDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPortfolioComparisonDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PortfolioComparisonDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPortfolioTrendDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PortfolioTrendDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPortfolioSignalsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PortfolioSignalsDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfEpicCompletionForecastDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public EpicCompletionForecastDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfEffortImbalanceDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public EffortImbalanceDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfEffortDistributionTrendDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public EffortDistributionTrendDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfEffortConcentrationRiskDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public EffortConcentrationRiskDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIReadOnlyListOfEffortEstimationSuggestionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<EffortEstimationSuggestionDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfEffortEstimationQualityDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public EffortEstimationQualityDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21313,6 +22140,24 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public SprintQueryResponseDtoOfGetSprintTrendMetricsResponse? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class DeliveryQueryResponseDtoOfPortfolioProgressTrendDto
     {
 
@@ -21330,6 +22175,24 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("validationMessages")]
         public System.Collections.Generic.ICollection<FilterValidationIssueDto> ValidationMessages { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioProgressTrendDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public DeliveryQueryResponseDtoOfPortfolioProgressTrendDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21355,6 +22218,24 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfDeliveryQueryResponseDtoOfCapacityCalibrationDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public DeliveryQueryResponseDtoOfCapacityCalibrationDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class DeliveryQueryResponseDtoOfPortfolioDeliveryDto
     {
 
@@ -21372,6 +22253,24 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("validationMessages")]
         public System.Collections.Generic.ICollection<FilterValidationIssueDto> ValidationMessages { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioDeliveryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public DeliveryQueryResponseDtoOfPortfolioDeliveryDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21397,6 +22296,24 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfDeliveryQueryResponseDtoOfHomeProductBarMetricsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public DeliveryQueryResponseDtoOfHomeProductBarMetricsDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SprintQueryResponseDtoOfSprintExecutionDto
     {
 
@@ -21414,6 +22331,24 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("validationMessages")]
         public System.Collections.Generic.ICollection<FilterValidationIssueDto> ValidationMessages { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public SprintQueryResponseDtoOfSprintExecutionDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21439,6 +22374,60 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfSprintQueryResponseDtoOfWorkItemActivityDetailsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public SprintQueryResponseDtoOfWorkItemActivityDetailsDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfPipelineDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<PipelineDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfPipelineRunDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<PipelineRunDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto
     {
 
@@ -21456,6 +22445,24 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("validationMessages")]
         public System.Collections.Generic.ICollection<FilterValidationIssueDto> ValidationMessages { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21481,6 +22488,24 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PipelineQueryResponseDtoOfPipelineInsightsDto
     {
 
@@ -21498,6 +22523,24 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("validationMessages")]
         public System.Collections.Generic.ICollection<FilterValidationIssueDto> ValidationMessages { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PipelineQueryResponseDtoOfPipelineInsightsDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21638,6 +22681,60 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfProjectPlanningSummaryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public ProjectPlanningSummaryDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfPullRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<PullRequestDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPullRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PullRequestDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto
     {
 
@@ -21655,6 +22752,24 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("validationMessages")]
         public System.Collections.Generic.ICollection<FilterValidationIssueDto> ValidationMessages { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21680,6 +22795,78 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfPullRequestIterationDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<PullRequestIterationDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfPullRequestCommentDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<PullRequestCommentDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfPullRequestFileChangeDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<PullRequestFileChangeDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PullRequestQueryResponseDtoOfGetPrSprintTrendsResponse
     {
 
@@ -21697,6 +22884,42 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("validationMessages")]
         public System.Collections.Generic.ICollection<FilterValidationIssueDto> ValidationMessages { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PullRequestQueryResponseDtoOfGetPrSprintTrendsResponse? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPRReviewBottleneckDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PRReviewBottleneckDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21722,6 +22945,24 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PullRequestQueryResponseDtoOfPullRequestInsightsDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class PullRequestQueryResponseDtoOfPrDeliveryInsightsDto
     {
 
@@ -21743,6 +22984,78 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfPullRequestQueryResponseDtoOfPrDeliveryInsightsDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public PullRequestQueryResponseDtoOfPrDeliveryInsightsDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfReleasePlanningBoardDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public ReleasePlanningBoardDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIReadOnlyListOfUnplannedEpicDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<UnplannedEpicDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIReadOnlyListOfObjectiveEpicDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<ObjectiveEpicDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CreateLaneCommand
     {
 
@@ -21751,6 +23064,24 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("displayOrder")]
         public int DisplayOrder { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfLaneOperationResultDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public LaneOperationResultDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21769,6 +23100,24 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("orderInRow")]
         public int OrderInRow { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfEpicPlacementResultDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public EpicPlacementResultDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21827,6 +23176,24 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfLineOperationResultDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public LineOperationResultDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class UpdateMilestoneLineRequest
     {
 
@@ -21866,6 +23233,42 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfValidationCacheResultDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public ValidationCacheResultDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIReadOnlyListOfEpicFeatureDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<EpicFeatureDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class SplitEpicRequest
     {
 
@@ -21874,6 +23277,42 @@ namespace PoTool.Client.ApiClient
 
         [System.Text.Json.Serialization.JsonPropertyName("featureIdsForExtractedEpic")]
         public System.Collections.Generic.ICollection<int> FeatureIdsForExtractedEpic { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfEpicSplitResultDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public EpicSplitResultDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfExportResultDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public ExportResultDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21938,11 +23377,137 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfWorkItemDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<WorkItemDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfWorkItemWithValidationDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<WorkItemWithValidationDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfWorkItemWithValidationDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public WorkItemWithValidationDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfValidationTriageSummaryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public ValidationTriageSummaryDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfValidationQueueDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public ValidationQueueDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfValidationFixSessionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public ValidationFixSessionDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class UpdateTagsRequest
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("tags")]
         public System.Collections.Generic.ICollection<string> Tags { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfWorkItemDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public WorkItemDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
     }
 
@@ -21977,6 +23542,96 @@ namespace PoTool.Client.ApiClient
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfWorkItemStateTimelineDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public WorkItemStateTimelineDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfWorkItemRevisionDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<WorkItemRevisionDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfDependencyGraphDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public DependencyGraphDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfIEnumerableOfValidationViolationHistoryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public System.Collections.Generic.ICollection<ValidationViolationHistoryDto>? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfValidationImpactAnalysisDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public ValidationImpactAnalysisDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class FixValidationViolationBatchCommand
     {
 
@@ -21994,41 +23649,42 @@ namespace PoTool.Client.ApiClient
 
     }
 
-    [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FileResponse : System.IDisposable
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfProductBacklogStateDto
     {
-        private System.IDisposable? _client;
-        private System.IDisposable? _response;
 
-        public int StatusCode { get; private set; }
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
 
-        public System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> Headers { get; private set; }
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public ProductBacklogStateDto? Data { get; set; } = default!;
 
-        public System.IO.Stream Stream { get; private set; }
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
 
-        public bool IsPartial
-        {
-            get { return StatusCode == 206; }
-        }
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
 
-        public FileResponse(int statusCode, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.IO.Stream stream, System.IDisposable? client, System.IDisposable? response)
-        {
-            StatusCode = statusCode;
-            Headers = headers;
-            Stream = stream;
-            _client = client;
-            _response = response;
-        }
-
-        public void Dispose()
-        {
-            Stream.Dispose();
-            if (_response != null)
-                _response.Dispose();
-            if (_client != null)
-                _client.Dispose();
-        }
     }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DataStateResponseDtoOfHealthWorkspaceProductSummaryDto
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public DataStateDto State { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("data")]
+        public HealthWorkspaceProductSummaryDto? Data { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("reason")]
+        public string? Reason { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("retryAfterSeconds")]
+        public int? RetryAfterSeconds { get; set; } = default!;
+
+    }
+
 
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]

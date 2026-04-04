@@ -33,6 +33,9 @@ public sealed class NswagGovernanceTests
 
         var generator = root.GetProperty("codeGenerators").GetProperty("openApiToCSharpClient");
         Assert.AreEqual("ApiClient/Generated/ApiClient.g.cs", generator.GetProperty("output").GetString());
+        CollectionAssert.Contains(
+            generator.GetProperty("additionalNamespaceUsages").EnumerateArray().Select(value => value.GetString()).ToList(),
+            "PoTool.Shared.DataState");
 
         var excludedTypeNames = generator.GetProperty("excludedTypeNames")
             .EnumerateArray()

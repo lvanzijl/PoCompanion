@@ -1,4 +1,5 @@
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @inject IWorkItemsClient WorkItemsClient
 @inject ISnackbar Snackbar
 
@@ -261,10 +262,11 @@
             _isProcessingFixes = true;
             StateHasChanged();
 
-            _impactAnalysis = await WorkItemsClient.GetValidationImpactAnalysisAsync(null, null);
+            var response = await WorkItemsClient.GetValidationImpactAnalysisAsync(null, null);
+            _impactAnalysis = GeneratedCacheEnvelopeHelper.GetDataOrDefault<ValidationImpactAnalysisDto>(response);
             IsExpanded = true;
 
-            if (_impactAnalysis.Violations.Count == 0)
+            if (_impactAnalysis is null || _impactAnalysis.Violations.Count == 0)
             {
                 Snackbar.Add("No validation violations found that can be auto-fixed", Severity.Info);
             }

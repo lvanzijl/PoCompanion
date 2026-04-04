@@ -1,4 +1,5 @@
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Components.Common
 @inject IWorkItemsClient WorkItemsClient
@@ -249,11 +250,12 @@
                 ? string.Join(",", _selectedAreaPaths) 
                 : null;
 
-            _historyRecords = await WorkItemsClient.GetValidationHistoryAsync(
+            var response = await WorkItemsClient.GetValidationHistoryAsync(
                 areaPathFilter, 
                 startDateOffset, 
                 endDateOffset, 
                 null);
+            _historyRecords = GeneratedCacheEnvelopeHelper.GetDataOrDefault(response, Array.Empty<ValidationViolationHistoryDto>());
 
             if (_historyRecords?.Count == 0)
             {
