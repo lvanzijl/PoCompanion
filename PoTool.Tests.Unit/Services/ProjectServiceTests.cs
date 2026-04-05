@@ -1,4 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Net.Http;
+using System.Reflection;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
@@ -19,6 +21,20 @@ public class ProjectServiceTests
 
         Assert.AreEqual(CacheBackedClientState.Failed, result.State);
         Assert.IsNull(result.Data);
+    }
+
+    [TestMethod]
+    public void ProjectsClient_Uses_CaseInsensitive_Json_Settings()
+    {
+        var client = new ProjectsClient(new HttpClient());
+        var settingsProperty = typeof(ProjectsClient).GetProperty(
+            "JsonSerializerSettings",
+            BindingFlags.Instance | BindingFlags.NonPublic);
+
+        var settings = settingsProperty?.GetValue(client) as System.Text.Json.JsonSerializerOptions;
+
+        Assert.IsNotNull(settings);
+        Assert.IsTrue(settings.PropertyNameCaseInsensitive);
     }
 
     private sealed class StubProjectsClient : IProjectsClient

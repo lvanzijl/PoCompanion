@@ -447,34 +447,33 @@ public class BattleshipWorkItemGenerator
     {
         return _random.NextDouble() < 0.45
             ? "\\Battleship Systems\\Backlog"
-            : GetSprintPath(GetSprintNumber());
+            : GetSprintPath(GetPlanningSprintNumber());
     }
 
     private string GetDeliveryPath()
     {
         var roll = _random.NextDouble();
-        if (roll < 0.35)
+        if (roll < 0.25)
         {
             return "\\Battleship Systems\\Backlog";
         }
 
         if (roll < 0.75)
         {
-            return GetSprintPath(_random.Next(1, 7));
+            return GetSprintPath(GetDeliverySprintNumber());
         }
 
         if (roll < 0.92)
         {
-            return GetSprintPath(_random.Next(7, 11));
+            return GetSprintPath(_random.Next(13, 15));
         }
 
-        return GetSprintPath(_random.Next(3, 11));
+        return GetSprintPath(_random.Next(10, 15));
     }
 
     private string GetSprintPath(int sprintNumber)
     {
-        var quarter = sprintNumber <= 5 ? "Q1" : "Q2";
-        return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {sprintNumber}";
+        return $"\\Battleship Systems\\Sprint {sprintNumber}";
     }
 
     private string GetQuarterForGoal(int goalIndex, int objectiveIndex)
@@ -485,6 +484,16 @@ public class BattleshipWorkItemGenerator
     private int GetSprintNumber()
     {
         return WeightedRandom([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [0.06, 0.08, 0.11, 0.13, 0.14, 0.15, 0.12, 0.10, 0.07, 0.04]);
+    }
+
+    private int GetPlanningSprintNumber()
+    {
+        return WeightedRandom([10, 11, 12, 13, 14], [0.12, 0.30, 0.28, 0.18, 0.12]);
+    }
+
+    private int GetDeliverySprintNumber()
+    {
+        return WeightedRandom([10, 11, 12, 13, 14], [0.14, 0.34, 0.24, 0.16, 0.12]);
     }
 
     private int? GetParentEffort(string state, double estimatedProbability)

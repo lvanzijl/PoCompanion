@@ -669,9 +669,43 @@
             var workItems = _boardState.Data.ToList();
             _allWorkItems = workItems;
 
-            var sprints = new List<SprintDto>();
             var allTeamSprints = new List<SprintDto>();
-            _sprintResolutionMessage = "Plan Board no longer derives sprint columns from product teams. Sprint columns stay unavailable until explicit sprint inputs exist.";
+            if (product.TeamIds.Count > 0)
+            {
+                var sprintBatches = await Task.WhenAll(
+                    product.TeamIds
+                        .Distinct()
+                        .Select(teamId => SprintService.GetSprintsForTeamAsync(teamId)));
+
+                allTeamSprints = sprintBatches
+                    .SelectMany(static sprints => sprints)
+                    .Where(sprint => sprint.StartUtc.HasValue && sprint.EndUtc.HasValue)
+                    .GroupBy(sprint => NormalizeIterationPath(sprint.Path))
+                    .Select(static group => group
+                        .OrderByDescending(sprint => sprint.StartUtc)
+                        .ThenBy(sprint => sprint.Id)
+                        .First())
+                    .OrderBy(sprint => sprint.StartUtc)
+                    .ThenBy(sprint => sprint.Id)
+                    .ToList();
+            }
+
+            var sprints = allTeamSprints
+                .Where(sprint => string.Equals(sprint.TimeFrame, "current", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(sprint.TimeFrame, "future", StringComparison.OrdinalIgnoreCase))
+                .Take(4)
+                .ToList();
+
+            if (sprints.Count == 0)
+            {
+                sprints = allTeamSprints
+                    .TakeLast(4)
+                    .ToList();
+            }
+
+            _sprintResolutionMessage = sprints.Count == 0
+                ? "No sprint columns are available for the selected product teams."
+                : null;
 
             // Build sprint columns
             _sprintColumns = sprints.Select(s => new SprintColumn

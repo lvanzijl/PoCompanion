@@ -200,6 +200,22 @@ public class BattleshipWorkItemGeneratorTests
     }
 
     [TestMethod]
+    public void GenerateHierarchy_Should_Align_Delivery_Work_With_Current_Battleship_Sprint_Window()
+    {
+        var deliverySprintPaths = _workItems
+            .Where(w => w.Type is WorkItemType.Pbi or WorkItemType.Bug)
+            .Where(w => w.IterationPath.Contains("Sprint ", StringComparison.OrdinalIgnoreCase))
+            .Select(w => w.IterationPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Assert.IsTrue(deliverySprintPaths.All(path => !path.Contains("\\2025\\", StringComparison.OrdinalIgnoreCase)),
+            "Delivery work should use the current seeded Battleship sprint paths instead of legacy 2025 quarter paths.");
+        CollectionAssert.Contains(deliverySprintPaths, "\\Battleship Systems\\Sprint 11",
+            "The current sprint window should contain Sprint 11 work so execution surfaces can render data.");
+    }
+
+    [TestMethod]
     public void GenerateHierarchy_Should_Use_TfsStyle_Semicolon_Tag_Formatting()
     {
         var taggedItems = _workItems
