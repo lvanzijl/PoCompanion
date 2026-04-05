@@ -129,6 +129,11 @@ public sealed class GlobalFilterDefaultsService
         var candidateTeamIds = BuildCandidateTeamIds(state, ownedProducts);
         if (candidateTeamIds.Count == 0)
         {
+            if (state.PrimaryProductId.HasValue)
+            {
+                return null;
+            }
+
             candidateTeamIds = (await _teamService.GetAllTeamsAsync(includeArchived: false, cancellationToken))
                 .OrderBy(team => team.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(team => team.Id)
@@ -165,12 +170,17 @@ public sealed class GlobalFilterDefaultsService
             return [state.TeamId.Value];
         }
 
-        var relevantProducts = ownedProducts.Where(product =>
-            state.PrimaryProductId.HasValue && product.Id == state.PrimaryProductId.Value);
+        if (state.PrimaryProductId.HasValue)
+        {
+            return ownedProducts
+                .Where(product => product.Id == state.PrimaryProductId.Value)
+                .SelectMany(product => product.TeamIds)
+                .Distinct()
+                .ToList();
+        }
 
-        var candidateTeamIds = relevantProducts
+        var candidateTeamIds = ownedProducts
             .SelectMany(product => product.TeamIds)
-            .Concat(ownedProducts.SelectMany(product => product.TeamIds))
             .Distinct()
             .ToList();
 

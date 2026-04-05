@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Api.Services;
+using PoTool.Core.Filters;
 using PoTool.Shared.DataState;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
@@ -92,6 +93,10 @@ public class MetricsController : ControllerBase
                     SprintId: sprintId),
                 nameof(GetSprintMetrics),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+            }
 
             var metrics = await _mediator.Send(
                 new GetSprintMetricsQuery(resolution.EffectiveFilter),
@@ -141,6 +146,10 @@ public class MetricsController : ControllerBase
                     SprintId: sprintId),
                 nameof(GetBacklogHealth),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+            }
 
             var health = await _mediator.Send(
                 new GetBacklogHealthQuery(resolution.EffectiveFilter),
@@ -191,6 +200,10 @@ public class MetricsController : ControllerBase
                     AreaPath: areaPath),
                 nameof(GetMultiIterationBacklogHealth),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+            }
 
             var health = await _mediator.Send(
                 new GetMultiIterationBacklogHealthQuery(resolution.EffectiveFilter, maxIterations),
@@ -283,6 +296,10 @@ public class MetricsController : ControllerBase
                     SprintId: sprintId),
                 nameof(GetSprintCapacityPlan),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+            }
 
             var plan = await _mediator.Send(
                 new GetSprintCapacityPlanQuery(resolution.EffectiveFilter, defaultCapacity),
@@ -769,6 +786,10 @@ public class MetricsController : ControllerBase
                     SprintIds: sprintIds),
                 nameof(GetSprintTrendMetrics),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+            }
 
             var response = await _mediator.Send(
                 new GetSprintTrendMetricsQuery(productOwnerId, resolution.EffectiveFilter, recompute, includeDetails),
@@ -978,9 +999,14 @@ public class MetricsController : ControllerBase
                 new SprintFilterBoundaryRequest(
                     ProductOwnerId: productOwnerId,
                     ProductIds: productId.HasValue ? [productId.Value] : null,
+                    RequireExplicitProductScope: true,
                     SprintId: sprintId),
                 nameof(GetSprintExecution),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+            }
 
             var result = await _mediator.Send(
                 new GetSprintExecutionQuery(productOwnerId, resolution.EffectiveFilter),
@@ -1017,6 +1043,10 @@ public class MetricsController : ControllerBase
                     RangeEndUtc: periodEndUtc),
                 nameof(GetWorkItemActivityDetails),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+            }
 
             var details = await _mediator.Send(
                 new GetWorkItemActivityDetailsQuery(productOwnerId, workItemId, resolution.EffectiveFilter),
@@ -1096,4 +1126,9 @@ public class MetricsController : ControllerBase
 
         return sprintId.HasValue ? $"Sprint {sprintId.Value}" : "Unknown sprint";
     }
+
+    private static string BuildSprintFilterValidationMessage(FilterValidationResult validation)
+        => validation.Messages.Count == 0
+            ? "Invalid sprint filter state."
+            : string.Join(" ", validation.Messages.Select(static issue => issue.Message));
 }

@@ -25,6 +25,7 @@ public sealed class MetricsControllerSprintCanonicalFilterTests
         PersistenceTestGraph.EnsureProject(context);
         PersistenceTestGraph.EnsureTeam(context, 3);
         context.Products.Add(PersistenceTestGraph.CreateProduct(100, "Product 100", 7));
+        context.ProductTeamLinks.Add(new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 });
         context.Sprints.Add(new SprintEntity
         {
             Id = 42,
@@ -195,6 +196,34 @@ public sealed class MetricsControllerSprintCanonicalFilterTests
         Assert.AreEqual(0, envelope.Data.TotalWorkItemCount);
         Assert.AreEqual(0, envelope.Data.CompletedStoryPoints);
         mediator.VerifyAll();
+    }
+
+    [TestMethod]
+    public async Task GetSprintExecution_RejectsMissingExplicitProductScope()
+    {
+        await using var context = CreateContext();
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
+        context.Products.Add(PersistenceTestGraph.CreateProduct(100, "Product 100", 7));
+        context.ProductTeamLinks.Add(new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 });
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            Path = "\\Project\\Sprint 42",
+            TeamId = 3,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var mediator = new Mock<IMediator>(MockBehavior.Strict);
+        var controller = CreateController(context, mediator.Object);
+
+        var result = await controller.GetSprintExecution(7, 42, null, CancellationToken.None);
+
+        Assert.IsInstanceOfType<BadRequestObjectResult>(result.Result);
+        mediator.VerifyNoOtherCalls();
     }
 
     private static MetricsController CreateController(PoToolDbContext context, IMediator mediator)

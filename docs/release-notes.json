@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-05",
+    "type": "Changed",
+    "title": "Planning and sprint pages now reject inconsistent Battleship context earlier",
+    "impact": "Sprint metrics and Sprint Execution now fail fast when sprint scope, team scope, and product scope do not align, shared defaults no longer jump to another product's team when an explicitly selected product has no sprint history, and Battleship mock validation now checks sprint definitions and known team assignments to catch drift before pages fall back to misleading empty states.",
+    "area": "Planning / Delivery",
+    "link": "/home/delivery/execution"
+  },
+  {
+    "date": "2026-04-05",
     "type": "Fixed",
     "title": "Battleship planning and execution pages now render current sprint and project data consistently",
     "impact": "Sprint Execution now shows Battleship Sprint 11 scope instead of an empty state, project planning overview now deserializes and renders the Battleship project summary correctly, Multi-Product Planning now uses real team sprint cadence with visible product lanes, and Plan Board restores sprint columns for the selected product teams.",

@@ -95,6 +95,19 @@ public sealed class GlobalFilterDefaultsServiceTests
         Assert.AreEqual("/home/delivery/execution?teamId=7&sprintId=799&timeMode=Sprint", uri);
     }
 
+    [TestMethod]
+    public async Task BuildDefaultedUriAsync_DoesNotFallbackToOtherProductTeams_WhenExplicitProductHasNoSprints()
+    {
+        var store = CreateStore();
+        await store.TrackNavigationAsync("http://localhost/home/delivery/execution?productId=12", 42);
+
+        var defaultsService = CreateDefaultsService(store);
+
+        var uri = await defaultsService.BuildDefaultedUriAsync("http://localhost/home/delivery/execution?productId=12", 42);
+
+        Assert.IsNull(uri);
+    }
+
     private static GlobalFilterStore CreateStore()
     {
         var projectService = new ProjectService(new StubProjectsClient());

@@ -14,6 +14,7 @@ public sealed record SprintFilterResolution(
 public sealed record SprintFilterBoundaryRequest(
     int? ProductOwnerId = null,
     IReadOnlyList<int>? ProductIds = null,
+    bool RequireExplicitProductScope = false,
     int? TeamId = null,
     string? AreaPath = null,
     IReadOnlyList<string>? AreaPaths = null,
@@ -45,6 +46,10 @@ public sealed class SprintFilterResolutionService
         var requestedFilter = MapRequestedFilter(request);
         var issues = new List<FilterValidationIssue>();
         ValidateRequestedFilter(requestedFilter, issues);
+        if (request.RequireExplicitProductScope && requestedFilter.ProductIds.IsAll)
+        {
+            issues.Add(new FilterValidationIssue(nameof(SprintFilterContext.ProductIds), "An explicit product selection is required for this query."));
+        }
 
         var ownerProductIds = await LoadOwnerProductIdsAsync(request.ProductOwnerId, cancellationToken);
         var effectiveProductIds = ResolveProductIds(
@@ -61,6 +66,12 @@ public sealed class SprintFilterResolutionService
             requestedIterationPaths.Values,
             cancellationToken,
             issues);
+        await ValidateResolvedScopeConsistencyAsync(
+            effectiveProductIds,
+            effectiveTeamIds,
+            resolvedTime,
+            issues,
+            cancellationToken);
 
         var effectiveFilter = new SprintEffectiveFilter(
             new SprintFilterContext(
@@ -479,6 +490,14 @@ public sealed class SprintFilterResolutionService
                 sprint.EndDateUtc))
             .ToListAsync(cancellationToken);
 
+        if (matchingSprints.Count != normalizedPaths.Length
+            && normalizedPaths.Any(static path => path.Contains("\\Sprint ", StringComparison.OrdinalIgnoreCase)))
+        {
+            issues.Add(new FilterValidationIssue(
+                nameof(SprintFilterContext.IterationPaths),
+                "One or more sprint iteration paths do not match known sprint definitions."));
+        }
+
         if (matchingSprints.Count == 1)
         {
             var sprint = matchingSprints[0];
@@ -502,6 +521,96 @@ public sealed class SprintFilterResolutionService
             normalizedPaths,
             null,
             null);
+    }
+
+    private async Task ValidateResolvedScopeConsistencyAsync(
+        FilterSelection<int> effectiveProductIds,
+        FilterSelection<int> effectiveTeamIds,
+        ResolvedSprintTime resolvedTime,
+        ICollection<FilterValidationIssue> issues,
+        CancellationToken cancellationToken)
+    {
+        var resolvedSprintTeamIds = await LoadResolvedSprintTeamIdsAsync(resolvedTime, cancellationToken);
+        if (!effectiveProductIds.IsAll)
+        {
+            var selectedProductIds = effectiveProductIds.Values
+                .Distinct()
+                .ToArray();
+            var productTeamIds = await _context.ProductTeamLinks
+                .AsNoTracking()
+                .Where(link => selectedProductIds.Contains(link.ProductId))
+                .Select(link => link.TeamId)
+                .Distinct()
+                .ToArrayAsync(cancellationToken);
+
+            if (productTeamIds.Length == 0)
+            {
+                issues.Add(new FilterValidationIssue(nameof(SprintFilterContext.ProductIds), "Selected products do not have any linked teams."));
+            }
+            else
+            {
+                if (!effectiveTeamIds.IsAll)
+                {
+                    var invalidTeamIds = effectiveTeamIds.Values
+                        .Except(productTeamIds)
+                        .ToArray();
+                    if (invalidTeamIds.Length > 0)
+                    {
+                        issues.Add(new FilterValidationIssue(nameof(SprintFilterContext.TeamIds), "Selected team scope is outside the selected product scope."));
+                    }
+                }
+
+                if (resolvedSprintTeamIds.Length > 0
+                    && resolvedSprintTeamIds.Any(teamId => !productTeamIds.Contains(teamId)))
+                {
+                    issues.Add(new FilterValidationIssue(nameof(SprintFilterContext.Time), "Selected sprint scope does not belong to the selected product scope."));
+                }
+            }
+        }
+
+        if (!effectiveTeamIds.IsAll
+            && resolvedSprintTeamIds.Length > 0
+            && resolvedSprintTeamIds.Any(teamId => !effectiveTeamIds.Values.Contains(teamId)))
+        {
+            issues.Add(new FilterValidationIssue(nameof(SprintFilterContext.Time), "Selected sprint scope does not match the selected team scope."));
+        }
+    }
+
+    private async Task<int[]> LoadResolvedSprintTeamIdsAsync(
+        ResolvedSprintTime resolvedTime,
+        CancellationToken cancellationToken)
+    {
+        if (resolvedTime.SprintId.HasValue)
+        {
+            return await _context.Sprints
+                .AsNoTracking()
+                .Where(sprint => sprint.Id == resolvedTime.SprintId.Value)
+                .Select(sprint => sprint.TeamId)
+                .Distinct()
+                .ToArrayAsync(cancellationToken);
+        }
+
+        if (resolvedTime.SprintIds.Count > 0)
+        {
+            return await _context.Sprints
+                .AsNoTracking()
+                .Where(sprint => resolvedTime.SprintIds.Contains(sprint.Id))
+                .Select(sprint => sprint.TeamId)
+                .Distinct()
+                .ToArrayAsync(cancellationToken);
+        }
+
+        if (resolvedTime.IterationPaths.Count > 0)
+        {
+            return await _context.Sprints
+                .AsNoTracking()
+                .Where(sprint => resolvedTime.IterationPaths.Contains(sprint.Path))
+                .Select(sprint => sprint.TeamId)
+                .Distinct()
+                .ToArrayAsync(cancellationToken);
+        }
+
+        return Array.Empty<int>();
     }
 
     private static SprintFilterContextDto ToDto(SprintFilterContext filter)

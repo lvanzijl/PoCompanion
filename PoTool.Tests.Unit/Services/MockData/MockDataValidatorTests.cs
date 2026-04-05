@@ -73,6 +73,42 @@ public class MockDataValidatorTests
     }
 
     [TestMethod]
+    public void ValidateWorkItems_Should_Detect_Unknown_Sprint_Definitions()
+    {
+        var invalidWorkItems = _workItems
+            .Select(item => item.Type == WorkItemType.Pbi
+                ? item with { IterationPath = "\\Battleship Systems\\Sprint 99" }
+                : item)
+            .ToList();
+
+        var report = _validator.ValidateWorkItems(
+            invalidWorkItems,
+            BattleshipSprintSeedCatalog.GetIterationPaths("Battleship Systems"),
+            BattleshipWorkItemGenerator.GetTeamStructure().SelectMany(static group => group.Teams).ToArray());
+
+        Assert.IsFalse(report.SprintDefinitionAlignmentValid);
+        Assert.IsGreaterThan(0, report.UnknownSprintDefinitionCount);
+    }
+
+    [TestMethod]
+    public void ValidateWorkItems_Should_Detect_Unknown_Team_Assignments()
+    {
+        var invalidWorkItems = _workItems
+            .Select(item => item.Type == WorkItemType.Feature
+                ? item with { AreaPath = "\\Battleship Systems\\Incident Response\\Unknown Team" }
+                : item)
+            .ToList();
+
+        var report = _validator.ValidateWorkItems(
+            invalidWorkItems,
+            BattleshipSprintSeedCatalog.GetIterationPaths("Battleship Systems"),
+            BattleshipWorkItemGenerator.GetTeamStructure().SelectMany(static group => group.Teams).ToArray());
+
+        Assert.IsFalse(report.TeamAssignmentsValid);
+        Assert.IsGreaterThan(0, report.UnknownTeamAssignmentCount);
+    }
+
+    [TestMethod]
     public void ValidatePullRequests_Should_Check_Volume()
     {
         // Arrange
