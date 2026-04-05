@@ -155,7 +155,7 @@ Reproduced on `/planning/plan-board?productId=1` before the fix.
 Once a concrete product is selected, Plan Board should use that product’s team context to resolve usable sprint columns instead of staying permanently column-less.
 
 ### Mock data present
-**Ja**
+**Yes**
 
 Evidence:
 - Product 1 already had team IDs `[4, 5, 6]`.
