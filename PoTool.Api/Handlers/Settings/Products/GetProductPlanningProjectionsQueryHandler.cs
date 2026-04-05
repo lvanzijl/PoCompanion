@@ -63,7 +63,7 @@ public sealed class GetProductPlanningProjectionsQueryHandler
                 candidate.Title,
                 index + 1,
                 candidate.Projection?.SprintsRemaining,
-                candidate.Projection?.EstimatedCompletionDate,
+                ResolveEstimatedCompletionDate(candidate.Projection),
                 ParseConfidence(candidate.Projection?.Confidence),
                 candidate.Projection is not null,
                 candidate.Projection?.LastUpdated))
@@ -86,6 +86,23 @@ public sealed class GetProductPlanningProjectionsQueryHandler
     {
         return Enum.TryParse<ForecastConfidence>(confidence, ignoreCase: true, out var parsed)
             ? parsed
+            : null;
+    }
+
+    private static DateTimeOffset? ResolveEstimatedCompletionDate(Persistence.Entities.ForecastProjectionEntity? projection)
+    {
+        if (projection is null)
+        {
+            return null;
+        }
+
+        if (projection.EstimatedCompletionDate.HasValue)
+        {
+            return projection.EstimatedCompletionDate;
+        }
+
+        return projection.SprintsRemaining is <= 0
+            ? projection.LastUpdated
             : null;
     }
 }
