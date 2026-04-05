@@ -309,12 +309,7 @@ public sealed class PipelineFilterResolutionService
         CancellationToken cancellationToken)
     {
         var query = _context.PipelineDefinitions
-            .AsNoTracking()
-            .Select(definition => new PipelineDefinitionScope(
-                definition.PipelineDefinitionId,
-                definition.ProductId,
-                definition.RepositoryId,
-                definition.DefaultBranch));
+            .AsNoTracking();
 
         if (!productIds.IsAll)
         {
@@ -327,10 +322,18 @@ public sealed class PipelineFilterResolutionService
             query = query.Where(definition => repositoryScope.Contains(definition.RepositoryId));
         }
 
-        return await query
+        var definitions = await query
+            .Select(definition => new PipelineDefinitionScope(
+                definition.PipelineDefinitionId,
+                definition.ProductId,
+                definition.RepositoryId,
+                definition.DefaultBranch))
+            .ToListAsync(cancellationToken);
+
+        return definitions
             .Distinct()
             .OrderBy(definition => definition.PipelineDefinitionId)
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 
     private async Task<(FilterTimeSelection Time, DateTimeOffset? RangeStartUtc, DateTimeOffset? RangeEndUtc, int? SprintId)> ResolveTimeAsync(
