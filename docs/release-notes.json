@@ -2,6 +2,14 @@
   {
     "date": "2026-04-05",
     "type": "Changed",
+    "title": "Global product selection now stays authoritative across planning, roadmap, backlog, bug, and work-item pages",
+    "impact": "Project-scoped planning routes now constrain only which products are valid, the roadmap editor can bootstrap the shared product selection once from its route without continuing to override it, and invalid product/route combinations now show explicit invalid-context states instead of silently switching scope or falling back to empty results.",
+    "area": "Planning / Health / Bugs / Work Items",
+    "link": "/planning/product-roadmaps"
+  },
+  {
+    "date": "2026-04-05",
+    "type": "Changed",
     "title": "Portfolio Delivery and Pipeline Insights now honor the shared product filter",
     "impact": "Portfolio Delivery and Pipeline Insights now send the selected product scope through their canonical API filters instead of silently reading all products, so single-product analysis matches the shared filter state while all-products mode stays explicit when no product is selected.",
     "area": "Delivery / Pipelines",
