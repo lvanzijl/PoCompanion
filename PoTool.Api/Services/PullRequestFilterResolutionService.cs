@@ -27,13 +27,16 @@ public sealed record PullRequestFilterBoundaryRequest(
 public sealed class PullRequestFilterResolutionService
 {
     private readonly PoToolDbContext _context;
+    private readonly ContextResolver _contextResolver;
     private readonly ILogger<PullRequestFilterResolutionService> _logger;
 
     public PullRequestFilterResolutionService(
         PoToolDbContext context,
+        ContextResolver contextResolver,
         ILogger<PullRequestFilterResolutionService> logger)
     {
         _context = context;
+        _contextResolver = contextResolver;
         _logger = logger;
     }
 
@@ -49,34 +52,27 @@ public sealed class PullRequestFilterResolutionService
         var effectiveProductIds = ResolveProductIds(requestedFilter.ProductIds);
         var effectiveTeamIds = ResolveTeamIds(requestedFilter.TeamIds, issues);
 
-        if (effectiveProductIds.IsAll && !effectiveTeamIds.IsAll)
-        {
-            var linkedProductIds = await _context.ProductTeamLinks
-                .AsNoTracking()
-                .Where(link => effectiveTeamIds.Values.Contains(link.TeamId))
-                .Select(link => link.ProductId)
-                .Distinct()
-                .OrderBy(productId => productId)
-                .ToArrayAsync(cancellationToken);
+        var (effectiveTime, rangeStartUtc, rangeEndUtc, sprintId, sprintIds) = await ResolveTimeAsync(
+            requestedFilter.Time,
+            cancellationToken,
+            issues);
+        var contextResolution = await _contextResolver.ResolveAsync(
+            new ContextResolutionRequest(
+                effectiveProductIds,
+                effectiveTeamIds,
+                sprintIds.Count > 0 ? sprintIds : sprintId.HasValue ? [sprintId.Value] : Array.Empty<int>(),
+                DeriveProductsFromTeams: true),
+            cancellationToken);
+        issues.AddRange(contextResolution.Validation.Messages);
 
-            effectiveProductIds = linkedProductIds.Length == 0
-                ? FilterSelection<int>.Selected(Array.Empty<int>())
-                : FilterSelection<int>.Selected(linkedProductIds);
-        }
-
-        var repositoryUniverse = await LoadRepositoryUniverseAsync(effectiveProductIds, cancellationToken);
+        var repositoryUniverse = await LoadRepositoryUniverseAsync(contextResolution.ProductIds, cancellationToken);
         var repositoryScope = ResolveRepositoryScope(
             requestedFilter.RepositoryNames,
             repositoryUniverse,
             issues);
 
-        var (effectiveTime, rangeStartUtc, rangeEndUtc, sprintId, sprintIds) = await ResolveTimeAsync(
-            requestedFilter.Time,
-            cancellationToken,
-            issues);
-
         var effectiveFilterContext = new PullRequestFilterContext(
-            effectiveProductIds,
+            contextResolution.ProductIds,
             effectiveTeamIds,
             requestedFilter.RepositoryNames.IsAll
                 ? FilterSelection<string>.All()

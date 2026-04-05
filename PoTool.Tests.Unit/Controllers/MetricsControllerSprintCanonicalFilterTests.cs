@@ -230,9 +230,11 @@ public sealed class MetricsControllerSprintCanonicalFilterTests
     {
         var deliveryFilterService = new DeliveryFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<DeliveryFilterResolutionService>.Instance);
         var sprintFilterService = new SprintFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<SprintFilterResolutionService>.Instance);
         var cacheStateRepository = new Mock<ICacheStateRepository>();
         cacheStateRepository

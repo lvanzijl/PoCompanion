@@ -23,13 +23,16 @@ public sealed record PipelineFilterBoundaryRequest(
 public sealed class PipelineFilterResolutionService
 {
     private readonly PoToolDbContext _context;
+    private readonly ContextResolver _contextResolver;
     private readonly ILogger<PipelineFilterResolutionService> _logger;
 
     public PipelineFilterResolutionService(
         PoToolDbContext context,
+        ContextResolver contextResolver,
         ILogger<PipelineFilterResolutionService> logger)
     {
         _context = context;
+        _contextResolver = contextResolver;
         _logger = logger;
     }
 
@@ -63,10 +66,17 @@ public sealed class PipelineFilterResolutionService
             requestedFilter.Time,
             cancellationToken,
             issues);
+        var contextResolution = await _contextResolver.ResolveAsync(
+            new ContextResolutionRequest(
+                effectiveProductIds,
+                FilterSelection<int>.All(),
+                sprintId.HasValue ? [sprintId.Value] : Array.Empty<int>()),
+            cancellationToken);
+        issues.AddRange(contextResolution.Validation.Messages);
 
         var effectiveFilter = new PipelineEffectiveFilter(
             new PipelineFilterContext(
-                effectiveProductIds,
+                contextResolution.ProductIds,
                 requestedFilter.TeamIds,
                 requestedFilter.RepositoryIds.IsAll
                     ? FilterSelection<int>.Selected(repositoryScope)

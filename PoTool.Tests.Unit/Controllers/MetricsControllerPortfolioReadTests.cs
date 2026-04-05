@@ -25,9 +25,11 @@ public sealed class MetricsControllerPortfolioReadTests
         var context = new PoToolDbContext(options);
         var deliveryFilterResolutionService = new DeliveryFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<DeliveryFilterResolutionService>.Instance);
         var sprintFilterResolutionService = new SprintFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<SprintFilterResolutionService>.Instance);
         var cacheStateRepository = new Mock<ICacheStateRepository>();
         cacheStateRepository

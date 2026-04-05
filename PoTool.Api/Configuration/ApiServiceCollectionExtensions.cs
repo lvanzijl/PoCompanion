@@ -173,6 +173,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ProjectPlanningSummaryService>();
         services.AddScoped<IBuildQualityReadStore, EfBuildQualityReadStore>();
         services.AddScoped<IBuildQualityProvider, BuildQualityProvider>();
+        services.AddScoped<ContextResolver>();
         services.AddScoped<DeliveryFilterResolutionService>();
         services.AddScoped<PipelineFilterResolutionService>();
         services.AddScoped<IPipelineInsightsReadStore, EfPipelineInsightsReadStore>();

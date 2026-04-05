@@ -71,6 +71,7 @@ public sealed class PipelinesControllerCanonicalFilterTests
 
         var filterService = new PipelineFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PipelineFilterResolutionService>.Instance);
         var controller = new PipelinesController(
             mediator.Object,

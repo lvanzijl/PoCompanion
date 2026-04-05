@@ -10,6 +10,7 @@
 @inject ProjectService ProjectService
 @inject TeamService TeamService
 @inject SprintService SprintService
+@inject GlobalFilterContextResolver GlobalFilterContextResolver
 @inject NavigationManager NavigationManager
 @implements IDisposable
 
@@ -202,6 +203,7 @@
 @code {
     private List<ProductDto> _products = new();
     private List<ProjectDto> _projects = new();
+    private List<TeamDto> _allTeams = new();
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
     private int? _loadedTeamId;
@@ -247,7 +249,8 @@
         }
 
         _projects = (await ProjectService.GetAllProjectsAsync()).OrderBy(project => project.Name).ToList();
-        _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).OrderBy(team => team.Name).ToList();
+        _allTeams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).OrderBy(team => team.Name).ToList();
+        RefreshAvailableTeams();
     }
 
     private async Task EnsureSprintsLoadedAsync()
@@ -349,8 +352,10 @@
 
     private async Task ApplyStateAsync(FilterLocalBridgeState localState)
     {
+        localState = GlobalFilterContextResolver.NormalizeState(State, localState, _products);
         var activeProfileId = ProfileService.GetActiveProfileId();
         await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, activeProfileId, localState, FilterUpdateSource.Ui);
+        RefreshAvailableTeams();
         await EnsureSprintsLoadedAsync();
 
         var targetUri = await GlobalFilterRouteService.BuildCurrentPageUriAsync(NavigationManager.Uri, GlobalFilterStore.GetState());
@@ -389,6 +394,7 @@
     private void HandleStoreChanged()
         => _ = InvokeAsync(async () =>
         {
+            RefreshAvailableTeams();
             await EnsureSprintsLoadedAsync();
             StateHasChanged();
         });
@@ -423,4 +429,11 @@
         => usage is not null && GlobalFilterPageCatalog.TryResolvePage($"/{usage.Route}", out _, out var definition, out _)
             ? definition?.EffectiveDefaultTimeMode ?? usage.State.Time.Mode
             : FilterTimeMode.Snapshot;
+
+    private void RefreshAvailableTeams()
+    {
+        _teams = GlobalFilterContextResolver
+            .GetAvailableTeams(SelectedProductId, _products, _allTeams)
+            .ToList();
+    }
 }

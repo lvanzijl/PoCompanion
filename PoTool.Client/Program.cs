@@ -211,6 +211,7 @@ builder.Services.AddScoped<TfsConfigService>();
 builder.Services.AddScoped<ConfigurationTransferService>();
 builder.Services.AddScoped<ModeIsolatedStateService>();
 builder.Services.AddScoped<FilterStateResolver>();
+builder.Services.AddScoped<GlobalFilterContextResolver>();
 builder.Services.AddScoped<GlobalFilterStore>();
 builder.Services.AddScoped<GlobalFilterUiState>();
 builder.Services.AddScoped<PageFilterExecutionGate>();

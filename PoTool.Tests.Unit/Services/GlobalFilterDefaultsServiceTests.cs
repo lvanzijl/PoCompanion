@@ -131,6 +131,7 @@ public sealed class GlobalFilterDefaultsServiceTests
             new ProductService(productsClient ?? new StubProductsClient()),
             new TeamService(teamsClient ?? new StubTeamsClient()),
             new SprintService(sprintsClient ?? new StubSprintsClient()),
+            new GlobalFilterContextResolver(),
             new InMemorySecureStorageService());
     }
 

@@ -93,6 +93,10 @@ public class PipelinesController : ControllerBase
                     RangeEndUtc: toDate),
                 nameof(GetMetrics),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var metrics = (await _mediator.Send(
                     new GetPipelineMetricsQuery(resolution.EffectiveFilter),
@@ -133,6 +137,10 @@ public class PipelinesController : ControllerBase
                     RangeEndUtc: toDate),
                 nameof(GetRunsForProducts),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var runs = (await _mediator.Send(
                     new GetPipelineRunsForProductsQuery(resolution.EffectiveFilter),
@@ -192,6 +200,10 @@ public class PipelinesController : ControllerBase
                     SprintId: sprintId),
                 nameof(GetInsights),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetPipelineInsightsQuery(

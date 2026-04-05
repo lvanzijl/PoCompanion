@@ -49,6 +49,7 @@ public sealed class SprintFilterResolutionServiceTests
 
         var service = new SprintFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<SprintFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -87,6 +88,7 @@ public sealed class SprintFilterResolutionServiceTests
 
         var service = new SprintFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<SprintFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -125,6 +127,7 @@ public sealed class SprintFilterResolutionServiceTests
 
         var service = new SprintFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<SprintFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -136,7 +139,7 @@ public sealed class SprintFilterResolutionServiceTests
             CancellationToken.None);
 
         Assert.IsFalse(resolution.Validation.IsValid);
-        CollectionAssert.Contains(resolution.Validation.InvalidFields.ToArray(), nameof(SprintFilterContext.Time));
+        CollectionAssert.Contains(resolution.Validation.InvalidFields.ToArray(), nameof(ContextResolutionRequest.SprintIds));
     }
 
     [TestMethod]
@@ -160,6 +163,7 @@ public sealed class SprintFilterResolutionServiceTests
 
         var service = new SprintFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<SprintFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(

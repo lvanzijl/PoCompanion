@@ -25,6 +25,7 @@ public sealed class MetricsControllerDeliveryCanonicalFilterTests
         PersistenceTestGraph.EnsureProject(context);
         PersistenceTestGraph.EnsureTeam(context, 3);
         context.Products.Add(PersistenceTestGraph.CreateProduct(100, "Product 100", 7));
+        context.ProductTeamLinks.Add(new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 });
         context.Sprints.Add(new SprintEntity
         {
             Id = 42,
@@ -55,9 +56,11 @@ public sealed class MetricsControllerDeliveryCanonicalFilterTests
 
         var filterService = new DeliveryFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<DeliveryFilterResolutionService>.Instance);
         var sprintFilterService = new SprintFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<SprintFilterResolutionService>.Instance);
         var cacheStateRepository = new Mock<ICacheStateRepository>();
         cacheStateRepository

@@ -16,6 +16,7 @@ public sealed class GlobalFilterDefaultsService
     private readonly ProductService _productService;
     private readonly TeamService _teamService;
     private readonly SprintService _sprintService;
+    private readonly GlobalFilterContextResolver _contextResolver;
     private readonly ISecureStorageService _secureStorageService;
     private readonly HashSet<string> _appliedRoutes = new(StringComparer.Ordinal);
 
@@ -27,6 +28,7 @@ public sealed class GlobalFilterDefaultsService
         ProductService productService,
         TeamService teamService,
         SprintService sprintService,
+        GlobalFilterContextResolver contextResolver,
         ISecureStorageService secureStorageService)
     {
         _globalFilterStore = globalFilterStore;
@@ -34,6 +36,7 @@ public sealed class GlobalFilterDefaultsService
         _productService = productService;
         _teamService = teamService;
         _sprintService = sprintService;
+        _contextResolver = contextResolver;
         _secureStorageService = secureStorageService;
     }
 
@@ -126,7 +129,7 @@ public sealed class GlobalFilterDefaultsService
             return null;
         }
 
-        var candidateTeamIds = BuildCandidateTeamIds(state, ownedProducts);
+        var candidateTeamIds = BuildCandidateTeamIds(state, ownedProducts, _contextResolver);
         if (candidateTeamIds.Count == 0)
         {
             if (state.PrimaryProductId.HasValue)
@@ -163,28 +166,15 @@ public sealed class GlobalFilterDefaultsService
 
     private static List<int> BuildCandidateTeamIds(
         FilterState state,
-        IReadOnlyList<ProductDto> ownedProducts)
+        IReadOnlyList<ProductDto> ownedProducts,
+        GlobalFilterContextResolver contextResolver)
     {
         if (state.TeamId.HasValue)
         {
             return [state.TeamId.Value];
         }
 
-        if (state.PrimaryProductId.HasValue)
-        {
-            return ownedProducts
-                .Where(product => product.Id == state.PrimaryProductId.Value)
-                .SelectMany(product => product.TeamIds)
-                .Distinct()
-                .ToList();
-        }
-
-        var candidateTeamIds = ownedProducts
-            .SelectMany(product => product.TeamIds)
-            .Distinct()
-            .ToList();
-
-        return candidateTeamIds;
+        return contextResolver.GetAllowedTeamIds(state.PrimaryProductId, ownedProducts).ToList();
     }
 
     private static FilterTimeSelection ResolveDefaultTime(

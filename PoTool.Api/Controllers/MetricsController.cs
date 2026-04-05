@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Api.Services;
-using PoTool.Core.Filters;
 using PoTool.Shared.DataState;
 using PoTool.Shared.Metrics;
 using PoTool.Core.Metrics.Queries;
@@ -95,7 +94,7 @@ public class MetricsController : ControllerBase
                 cancellationToken);
             if (!resolution.Validation.IsValid)
             {
-                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
             }
 
             var metrics = await _mediator.Send(
@@ -148,7 +147,7 @@ public class MetricsController : ControllerBase
                 cancellationToken);
             if (!resolution.Validation.IsValid)
             {
-                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
             }
 
             var health = await _mediator.Send(
@@ -202,7 +201,7 @@ public class MetricsController : ControllerBase
                 cancellationToken);
             if (!resolution.Validation.IsValid)
             {
-                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
             }
 
             var health = await _mediator.Send(
@@ -298,7 +297,7 @@ public class MetricsController : ControllerBase
                 cancellationToken);
             if (!resolution.Validation.IsValid)
             {
-                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
             }
 
             var plan = await _mediator.Send(
@@ -788,7 +787,7 @@ public class MetricsController : ControllerBase
                 cancellationToken);
             if (!resolution.Validation.IsValid)
             {
-                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
             }
 
             var response = await _mediator.Send(
@@ -841,6 +840,10 @@ public class MetricsController : ControllerBase
                     SprintIds: sprintIds),
                 nameof(GetPortfolioProgressTrend),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetPortfolioProgressTrendQuery(resolution.EffectiveFilter),
@@ -886,6 +889,10 @@ public class MetricsController : ControllerBase
                     SprintIds: sprintIds),
                 nameof(GetCapacityCalibration),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetCapacityCalibrationQuery(resolution.EffectiveFilter),
@@ -930,6 +937,10 @@ public class MetricsController : ControllerBase
                     SprintIds: sprintIds),
                 nameof(GetPortfolioDelivery),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetPortfolioDeliveryQuery(resolution.EffectiveFilter),
@@ -961,6 +972,10 @@ public class MetricsController : ControllerBase
                     ProductIds: productId.HasValue ? [productId.Value] : null),
                 nameof(GetHomeProductBarMetrics),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetHomeProductBarMetricsQuery(productOwnerId, resolution.EffectiveFilter),
@@ -1005,7 +1020,7 @@ public class MetricsController : ControllerBase
                 cancellationToken);
             if (!resolution.Validation.IsValid)
             {
-                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
             }
 
             var result = await _mediator.Send(
@@ -1045,7 +1060,7 @@ public class MetricsController : ControllerBase
                 cancellationToken);
             if (!resolution.Validation.IsValid)
             {
-                return BadRequest(BuildSprintFilterValidationMessage(resolution.Validation));
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
             }
 
             var details = await _mediator.Send(
@@ -1127,8 +1142,4 @@ public class MetricsController : ControllerBase
         return sprintId.HasValue ? $"Sprint {sprintId.Value}" : "Unknown sprint";
     }
 
-    private static string BuildSprintFilterValidationMessage(FilterValidationResult validation)
-        => validation.Messages.Count == 0
-            ? "Invalid sprint filter state."
-            : string.Join(" ", validation.Messages.Select(static issue => issue.Message));
 }
