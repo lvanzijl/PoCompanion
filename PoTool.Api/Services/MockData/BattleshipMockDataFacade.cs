@@ -291,7 +291,13 @@ public class BattleshipMockDataFacade : ITfsClient
 
             // Validate work items
             var workItems = GetMockHierarchy();
-            report = _validator.ValidateWorkItems(workItems);
+            report = _validator.ValidateWorkItems(
+                workItems,
+                BattleshipSprintSeedCatalog.GetIterationPaths("Battleship Systems"),
+                BattleshipWorkItemGenerator.GetTeamStructure()
+                    .SelectMany(static program => program.Teams)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray());
 
             // Validate dependencies
             var dependencies = GetMockDependencies();

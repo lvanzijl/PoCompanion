@@ -117,6 +117,10 @@ public class PullRequestsController : ControllerBase
                     RangeStartUtc: fromDate),
                 nameof(GetMetrics),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var metrics = (await _mediator.Send(
                     new GetPullRequestMetricsQuery(resolution.EffectiveFilter),
@@ -170,6 +174,10 @@ public class PullRequestsController : ControllerBase
                     RangeEndUtc: toDate),
                 nameof(GetFiltered),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var pullRequests = (await _mediator.Send(
                     new GetFilteredPullRequestsQuery(resolution.EffectiveFilter),
@@ -280,6 +288,10 @@ public class PullRequestsController : ControllerBase
                     SprintIds: sprintIds),
                 nameof(GetSprintTrends),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetPrSprintTrendsQuery(resolution.EffectiveFilter),
@@ -359,6 +371,10 @@ public class PullRequestsController : ControllerBase
                     RangeEndUtc: toDate),
                 nameof(GetInsights),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetPullRequestInsightsQuery(resolution.EffectiveFilter),
@@ -401,6 +417,10 @@ public class PullRequestsController : ControllerBase
                     RangeEndUtc: toDate),
                 nameof(GetDeliveryInsights),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetPrDeliveryInsightsQuery(resolution.EffectiveFilter),

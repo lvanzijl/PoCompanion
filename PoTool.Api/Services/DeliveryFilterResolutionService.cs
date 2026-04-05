@@ -22,13 +22,16 @@ public sealed record DeliveryFilterBoundaryRequest(
 public sealed class DeliveryFilterResolutionService
 {
     private readonly PoToolDbContext _context;
+    private readonly ContextResolver _contextResolver;
     private readonly ILogger<DeliveryFilterResolutionService> _logger;
 
     public DeliveryFilterResolutionService(
         PoToolDbContext context,
+        ContextResolver contextResolver,
         ILogger<DeliveryFilterResolutionService> logger)
     {
         _context = context;
+        _contextResolver = contextResolver;
         _logger = logger;
     }
 
@@ -52,10 +55,17 @@ public sealed class DeliveryFilterResolutionService
             requestedFilter.Time,
             cancellationToken,
             issues);
+        var contextResolution = await _contextResolver.ResolveAsync(
+            new ContextResolutionRequest(
+                effectiveProductIds,
+                FilterSelection<int>.All(),
+                sprintIds.Count > 0 ? sprintIds : sprintId.HasValue ? [sprintId.Value] : Array.Empty<int>()),
+            cancellationToken);
+        issues.AddRange(contextResolution.Validation.Messages);
 
         var effectiveFilter = new DeliveryEffectiveFilter(
             new DeliveryFilterContext(
-                effectiveProductIds,
+                contextResolution.ProductIds,
                 effectiveTime),
             rangeStartUtc,
             rangeEndUtc,

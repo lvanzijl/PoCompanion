@@ -10,6 +10,7 @@
 @inject ProjectService ProjectService
 @inject TeamService TeamService
 @inject SprintService SprintService
+@inject GlobalFilterContextResolver GlobalFilterContextResolver
 @inject NavigationManager NavigationManager
 @implements IDisposable
 
@@ -60,7 +61,7 @@
                                    Disabled="@(!CanEditProducts)"
                                    Clearable="true"
                                    Variant="Variant.Outlined"
-                                   HelperText="@GetHelperText(CanEditProducts, "Product filter is not applied on this page.")">
+                                   HelperText="@GetProductHelperText()">
                             <MudSelectItem T="int?" Value="@((int?)null)">All products</MudSelectItem>
                             @foreach (var product in _products)
                             {
@@ -76,7 +77,7 @@
                                    Disabled="@(!CanEditProjects)"
                                    Clearable="true"
                                    Variant="Variant.Outlined"
-                                   HelperText="@GetHelperText(CanEditProjects, "Project filter is not applied on this page.")">
+                                   HelperText="@GetProjectHelperText()">
                             <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
                             @foreach (var project in _projects)
                             {
@@ -187,8 +188,8 @@
                 </MudGrid>
 
                 <MudStack Row="true" Spacing="1">
-                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProductsAsync" Disabled="@(SelectedProductId is null)">Reset product</MudButton>
-                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProjectsAsync" Disabled="@string.IsNullOrWhiteSpace(SelectedProjectId)">Reset project</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProductsAsync" Disabled="@(!CanEditProducts || SelectedProductId is null)">Reset product</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetProjectsAsync" Disabled="@(!CanEditProjects || string.IsNullOrWhiteSpace(SelectedProjectId))">Reset project</MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetTeamAsync" Disabled="@(SelectedTeamId is null)">Reset team</MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="ResetTimeAsync" Disabled="@IsTimeResetDisabled">Reset time</MudButton>
                     <MudSpacer />
@@ -202,6 +203,7 @@
 @code {
     private List<ProductDto> _products = new();
     private List<ProjectDto> _projects = new();
+    private List<TeamDto> _allTeams = new();
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
     private int? _loadedTeamId;
@@ -209,8 +211,8 @@
     private FilterState State => GlobalFilterStore.GetState();
     private FilterStateResolution? Usage => GlobalFilterStore.CurrentUsage;
     private IReadOnlyList<FilterTimeMode> AllowedTimeModes => ResolveAllowedTimeModes(Usage);
-    private bool CanEditProducts => Usage?.UsesProduct == true;
-    private bool CanEditProjects => Usage?.UsesProject == true;
+    private bool CanEditProducts => Usage?.UsesProduct == true && Usage.HasRouteProductAuthority is false;
+    private bool CanEditProjects => Usage?.UsesProject == true && Usage.HasRouteProjectAuthority is false;
     private bool CanEditTeam => Usage?.UsesTeam == true;
     private bool CanEditTime => Usage?.UsesTime == true;
     private int? SelectedProductId => State.PrimaryProductId;
@@ -247,7 +249,8 @@
         }
 
         _projects = (await ProjectService.GetAllProjectsAsync()).OrderBy(project => project.Name).ToList();
-        _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).OrderBy(team => team.Name).ToList();
+        _allTeams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).OrderBy(team => team.Name).ToList();
+        RefreshAvailableTeams();
     }
 
     private async Task EnsureSprintsLoadedAsync()
@@ -349,8 +352,10 @@
 
     private async Task ApplyStateAsync(FilterLocalBridgeState localState)
     {
+        localState = GlobalFilterContextResolver.NormalizeState(State, localState, _products);
         var activeProfileId = ProfileService.GetActiveProfileId();
         await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, activeProfileId, localState, FilterUpdateSource.Ui);
+        RefreshAvailableTeams();
         await EnsureSprintsLoadedAsync();
 
         var targetUri = await GlobalFilterRouteService.BuildCurrentPageUriAsync(NavigationManager.Uri, GlobalFilterStore.GetState());
@@ -389,6 +394,7 @@
     private void HandleStoreChanged()
         => _ = InvokeAsync(async () =>
         {
+            RefreshAvailableTeams();
             await EnsureSprintsLoadedAsync();
             StateHasChanged();
         });
@@ -404,6 +410,16 @@
     private static string? GetHelperText(bool canEdit, string message)
         => canEdit ? null : message;
 
+    private string? GetProductHelperText()
+        => Usage?.HasRouteProductAuthority == true
+            ? "Product context is fixed by this route."
+            : GetHelperText(CanEditProducts, "Product filter is not applied on this page.");
+
+    private string? GetProjectHelperText()
+        => Usage?.HasRouteProjectAuthority == true
+            ? "Project context is fixed by this route."
+            : GetHelperText(CanEditProjects, "Project filter is not applied on this page.");
+
     private static IReadOnlyList<FilterTimeMode> ResolveAllowedTimeModes(FilterStateResolution? usage)
         => usage is not null && GlobalFilterPageCatalog.TryResolvePage($"/{usage.Route}", out _, out var definition, out _)
             ? definition?.AllowedTimeModes ?? [usage.State.Time.Mode]
@@ -413,4 +429,11 @@
         => usage is not null && GlobalFilterPageCatalog.TryResolvePage($"/{usage.Route}", out _, out var definition, out _)
             ? definition?.EffectiveDefaultTimeMode ?? usage.State.Time.Mode
             : FilterTimeMode.Snapshot;
+
+    private void RefreshAvailableTeams()
+    {
+        _teams = GlobalFilterContextResolver
+            .GetAvailableTeams(SelectedProductId, _products, _allTeams)
+            .ToList();
+    }
 }

@@ -48,6 +48,32 @@ public sealed class GetProductPlanningProjectionsQueryHandlerTests
         Assert.AreEqual(new DateTimeOffset(2026, 4, 1, 10, 0, 0, TimeSpan.Zero), result[1].LastUpdated);
     }
 
+    [TestMethod]
+    public async Task Handle_WhenForecastHasNoCompletionDate_UsesLastUpdatedForCompletedForecasts()
+    {
+        await using var context = CreateContext();
+        SeedData(context);
+        context.ForecastProjections.Add(new ForecastProjectionEntity
+        {
+            WorkItemId = 11,
+            WorkItemType = "Epic",
+            SprintsRemaining = 0,
+            EstimatedCompletionDate = null,
+            Confidence = nameof(ForecastConfidence.Low),
+            LastUpdated = new DateTimeOffset(2026, 4, 2, 12, 0, 0, TimeSpan.Zero),
+            ProjectionVariantsJson = "[]"
+        });
+        await context.SaveChangesAsync();
+
+        var handler = new GetProductPlanningProjectionsQueryHandler(context);
+
+        var result = await handler.Handle(new GetProductPlanningProjectionsQuery(1), CancellationToken.None);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(new DateTimeOffset(2026, 4, 2, 12, 0, 0, TimeSpan.Zero), result[0].EstimatedCompletionDate);
+        Assert.IsTrue(result[0].HasForecast);
+    }
+
     private static PoToolDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<PoToolDbContext>()

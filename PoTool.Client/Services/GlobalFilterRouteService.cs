@@ -28,6 +28,7 @@ public sealed class GlobalFilterRouteService
 
         var path = await ResolvePathAsync(route, definition!.PageName, state, cancellationToken);
         var queryContext = await BuildContextAsync(state, cancellationToken);
+        queryContext = ApplyRouteAuthority(queryContext, route, definition.PageName, path);
         var additionalParams = WorkspaceQueryContextHelper.ExtractAdditionalParameters(currentUri);
         return $"{path}{WorkspaceQueryContextHelper.BuildQueryString(queryContext, additionalParams)}";
     }
@@ -58,7 +59,11 @@ public sealed class GlobalFilterRouteService
         };
 
         var path = await ResolvePathAsync(route, pageName, state, cancellationToken);
-        var queryContext = await BuildContextAsync(state, cancellationToken);
+        var queryContext = ApplyRouteAuthority(
+            await BuildContextAsync(state, cancellationToken),
+            path.Trim('/').ToLowerInvariant(),
+            pageName,
+            path);
         return $"{path}{WorkspaceQueryContextHelper.BuildQueryString(queryContext, additionalParams)}";
     }
 
@@ -102,6 +107,24 @@ public sealed class GlobalFilterRouteService
             RollingWindow: state.Time.RollingWindow,
             RollingUnit: state.Time.RollingUnit);
 
+    private static WorkspaceQueryContext ApplyRouteAuthority(
+        WorkspaceQueryContext context,
+        string normalizedRoute,
+        string pageName,
+        string path)
+    {
+        var hasRouteProjectAuthority = !string.IsNullOrWhiteSpace(GlobalFilterPageCatalog.ResolveRouteProjectAlias(normalizedRoute))
+            || (pageName is "ProductRoadmaps" or "PlanBoard" or "ProjectPlanningOverview"
+                && path.StartsWith("/planning/", StringComparison.OrdinalIgnoreCase)
+                && path.Count(static c => c == '/') >= 3);
+        return context with
+        {
+            ProjectAlias = hasRouteProjectAuthority ? null : context.ProjectAlias,
+            ProjectId = hasRouteProjectAuthority ? null : context.ProjectId,
+            ProductId = context.ProductId
+        };
+    }
+
     private async Task<string> ResolvePathAsync(
         string normalizedRoute,
         string pageName,
@@ -110,19 +133,26 @@ public sealed class GlobalFilterRouteService
     {
         var defaultPath = $"/{normalizedRoute}";
         var projectAlias = await ResolveProjectAliasAsync(state.PrimaryProjectId, cancellationToken);
+        var routeProjectAlias = GlobalFilterPageCatalog.ResolveRouteProjectAlias(normalizedRoute);
+        var routeProductId = GlobalFilterPageCatalog.ResolveRouteProductId(normalizedRoute);
 
         return pageName switch
         {
+            "ProjectPlanningOverview" when !string.IsNullOrWhiteSpace(routeProjectAlias)
+                => defaultPath,
             "ProductRoadmaps" => string.IsNullOrWhiteSpace(projectAlias)
-                ? WorkspaceRoutes.ProductRoadmaps
+                ? (!string.IsNullOrWhiteSpace(routeProjectAlias) ? defaultPath : WorkspaceRoutes.ProductRoadmaps)
                 : WorkspaceRoutes.GetProjectProductRoadmaps(projectAlias),
             "ProjectPlanningOverview" => string.IsNullOrWhiteSpace(projectAlias)
                 ? WorkspaceRoutes.PlanningWorkspace
                 : WorkspaceRoutes.GetProjectPlanningOverview(projectAlias),
             "PlanBoard" => string.IsNullOrWhiteSpace(projectAlias)
-                ? WorkspaceRoutes.PlanBoard
+                ? (!string.IsNullOrWhiteSpace(routeProjectAlias) ? defaultPath : WorkspaceRoutes.PlanBoard)
                 : WorkspaceRoutes.GetProjectPlanBoard(projectAlias),
-            "ProductRoadmapEditor" when state.PrimaryProductId.HasValue => WorkspaceRoutes.GetProductRoadmapEditor(state.PrimaryProductId.Value),
+            "ProductRoadmapEditor" when routeProductId.HasValue
+                => defaultPath,
+            "ProductRoadmapEditor" when state.PrimaryProductId.HasValue
+                => WorkspaceRoutes.GetProductRoadmapEditor(state.PrimaryProductId.Value),
             _ => defaultPath
         };
     }

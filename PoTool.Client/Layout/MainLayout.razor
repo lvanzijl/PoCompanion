@@ -11,6 +11,7 @@
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inject GlobalFilterCorrectionService GlobalFilterCorrectionService
+@inject GlobalFilterDefaultsService GlobalFilterDefaultsService
 @inject GlobalFilterRouteService GlobalFilterRouteService
 @inherits LayoutComponentBase
 @implements IDisposable
@@ -59,10 +60,10 @@
 
         <article class="content px-4">
             <FilterSummaryBar />
-            <GlobalFilterControls />
             <StartupGuard>
                 @Body
             </StartupGuard>
+            <GlobalFilterControls />
         </article>
     </main>
 </div>
@@ -174,7 +175,22 @@
 
     private async Task ObserveCurrentRouteAsync(string uri)
     {
-        await GlobalFilterStore.TrackNavigationAsync(uri, ProfileService.GetActiveProfileId());
+        var activeProfileId = ProfileService.GetActiveProfileId();
+        if (!activeProfileId.HasValue)
+        {
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            activeProfileId = activeProfile?.Id;
+            ProfileService.SetCachedActiveProfileId(activeProfileId);
+        }
+
+        await GlobalFilterStore.TrackNavigationAsync(uri, activeProfileId);
+        var defaultedUri = await GlobalFilterDefaultsService.BuildDefaultedUriAsync(uri, activeProfileId);
+        if (!string.IsNullOrWhiteSpace(defaultedUri) && GlobalFilterStore.TryPrepareNavigation(uri, defaultedUri))
+        {
+            NavigationManager.NavigateTo(defaultedUri, forceLoad: false);
+            return;
+        }
+
         var correctedUri = await GlobalFilterCorrectionService.BuildCorrectedUriAsync(uri);
         if (!string.IsNullOrWhiteSpace(correctedUri) && GlobalFilterStore.TryPrepareNavigation(uri, correctedUri))
         {

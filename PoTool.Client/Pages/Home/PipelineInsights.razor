@@ -631,6 +631,7 @@
             var response = await PipelineStateService.GetInsightsStateAsync(
                 _activeProfileId.Value,
                 _selectedSprintId.Value,
+                GlobalFilterStore.GetState().ProductIds.Count > 0 ? GlobalFilterStore.GetState().ProductIds : null,
                 _includePartiallySucceeded,
                 _includeCanceled,
                 CancellationToken.None);

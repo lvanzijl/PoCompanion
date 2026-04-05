@@ -19,7 +19,31 @@ public sealed class GlobalFilterRouteServiceTests
             "http://localhost/planning/payments-platform/overview?teamId=7",
             new FilterState([11], ["project-payments"], 7, new FilterTimeSelection(FilterTimeMode.Snapshot)));
 
-        Assert.AreEqual("/planning/payments-platform/overview?projectAlias=payments-platform&projectId=project-payments&productId=11&teamId=7&timeMode=Snapshot", uri);
+        Assert.AreEqual("/planning/payments-platform/overview?productId=11&teamId=7&timeMode=Snapshot", uri);
+    }
+
+    [TestMethod]
+    public async Task BuildCurrentPageUriAsync_ProjectScopedPlanBoard_PreservesRouteAliasWhenStateHasNoProject()
+    {
+        var routeService = CreateRouteService();
+
+        var uri = await routeService.BuildCurrentPageUriAsync(
+            "http://localhost/planning/payments-platform/plan-board",
+            new FilterState([11], Array.Empty<string>(), null, FilterTimeSelection.Snapshot));
+
+        Assert.AreEqual("/planning/payments-platform/plan-board?productId=11&timeMode=Snapshot", uri);
+    }
+
+    [TestMethod]
+    public async Task BuildCurrentPageUriAsync_ProductScopedEditor_PreservesCurrentRoutePath()
+    {
+        var routeService = CreateRouteService();
+
+        var uri = await routeService.BuildCurrentPageUriAsync(
+            "http://localhost/planning/product-roadmaps/11?teamId=7",
+            new FilterState([12], Array.Empty<string>(), 7, FilterTimeSelection.Snapshot));
+
+        Assert.AreEqual("/planning/product-roadmaps/11?productId=12&teamId=7&timeMode=Snapshot", uri);
     }
 
     [TestMethod]

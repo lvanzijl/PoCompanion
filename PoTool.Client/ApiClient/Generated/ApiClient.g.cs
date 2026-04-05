@@ -6912,12 +6912,12 @@ namespace PoTool.Client.ApiClient
 
         /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, System.Collections.Generic.IEnumerable<int>? productIds, bool? includePartiallySucceeded, bool? includeCanceled);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, System.Collections.Generic.IEnumerable<int>? productIds, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken);
 
     }
 
@@ -7408,15 +7408,15 @@ namespace PoTool.Client.ApiClient
 
         /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled)
+        public virtual System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, System.Collections.Generic.IEnumerable<int>? productIds, bool? includePartiallySucceeded, bool? includeCanceled)
         {
-            return GetInsightsAsync(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled, System.Threading.CancellationToken.None);
+            return GetInsightsAsync(productOwnerId, sprintId, productIds, includePartiallySucceeded, includeCanceled, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Cache-backed response envelope. Inspect state for available, empty, not-ready, or failed outcomes.</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto> GetInsightsAsync(int? productOwnerId, int? sprintId, System.Collections.Generic.IEnumerable<int>? productIds, bool? includePartiallySucceeded, bool? includeCanceled, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -7439,6 +7439,10 @@ namespace PoTool.Client.ApiClient
                     if (sprintId != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("sprintId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(sprintId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (productIds != null)
+                    {
+                            foreach (var item_ in productIds) { urlBuilder_.Append(System.Uri.EscapeDataString("productIds")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(item_, System.Globalization.CultureInfo.InvariantCulture))).Append('&'); }
                     }
                     if (includePartiallySucceeded != null)
                     {

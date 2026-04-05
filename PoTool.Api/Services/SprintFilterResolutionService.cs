@@ -14,6 +14,7 @@ public sealed record SprintFilterResolution(
 public sealed record SprintFilterBoundaryRequest(
     int? ProductOwnerId = null,
     IReadOnlyList<int>? ProductIds = null,
+    bool RequireExplicitProductScope = false,
     int? TeamId = null,
     string? AreaPath = null,
     IReadOnlyList<string>? AreaPaths = null,
@@ -27,13 +28,16 @@ public sealed record SprintFilterBoundaryRequest(
 public sealed class SprintFilterResolutionService
 {
     private readonly PoToolDbContext _context;
+    private readonly ContextResolver _contextResolver;
     private readonly ILogger<SprintFilterResolutionService> _logger;
 
     public SprintFilterResolutionService(
         PoToolDbContext context,
+        ContextResolver contextResolver,
         ILogger<SprintFilterResolutionService> logger)
     {
         _context = context;
+        _contextResolver = contextResolver;
         _logger = logger;
     }
 
@@ -61,10 +65,19 @@ public sealed class SprintFilterResolutionService
             requestedIterationPaths.Values,
             cancellationToken,
             issues);
+        var contextResolution = await _contextResolver.ResolveAsync(
+            new ContextResolutionRequest(
+                effectiveProductIds,
+                effectiveTeamIds,
+                GetResolvedSprintIds(resolvedTime),
+                request.RequireExplicitProductScope,
+                HasExplicitProductSelection: !requestedFilter.ProductIds.IsAll),
+            cancellationToken);
+        issues.AddRange(contextResolution.Validation.Messages);
 
         var effectiveFilter = new SprintEffectiveFilter(
             new SprintFilterContext(
-                effectiveProductIds,
+                contextResolution.ProductIds,
                 effectiveTeamIds,
                 effectiveAreaPaths,
                 resolvedTime.IterationPaths.Count == 0
@@ -479,6 +492,14 @@ public sealed class SprintFilterResolutionService
                 sprint.EndDateUtc))
             .ToListAsync(cancellationToken);
 
+        if (matchingSprints.Count != normalizedPaths.Length
+            && normalizedPaths.Any(static path => path.Contains("\\Sprint ", StringComparison.OrdinalIgnoreCase)))
+        {
+            issues.Add(new FilterValidationIssue(
+                nameof(SprintFilterContext.IterationPaths),
+                "One or more sprint iteration paths do not match known sprint definitions."));
+        }
+
         if (matchingSprints.Count == 1)
         {
             var sprint = matchingSprints[0];
@@ -502,6 +523,18 @@ public sealed class SprintFilterResolutionService
             normalizedPaths,
             null,
             null);
+    }
+
+    private static IReadOnlyList<int> GetResolvedSprintIds(ResolvedSprintTime resolvedTime)
+    {
+        if (resolvedTime.SprintIds.Count > 0)
+        {
+            return resolvedTime.SprintIds;
+        }
+
+        return resolvedTime.SprintId.HasValue
+            ? [resolvedTime.SprintId.Value]
+            : Array.Empty<int>();
     }
 
     private static SprintFilterContextDto ToDto(SprintFilterContext filter)

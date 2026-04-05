@@ -43,6 +43,10 @@
         {
             <LoadingIndicator IsLoading="true" />
         }
+        else if (!string.IsNullOrWhiteSpace(_contextError))
+        {
+            <MudAlert Severity="Severity.Error">@_contextError</MudAlert>
+        }
         else if (!string.IsNullOrWhiteSpace(_errorMessage))
         {
             <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
@@ -158,6 +162,7 @@
     private CacheBackedClientResult<ProjectPlanningSummaryDto>? _summaryState;
     private int? _activeProfileId;
     private ProjectPlanningSummaryDto? _summary;
+    private string? _contextError;
     private List<BreadcrumbItem> _breadcrumbs = new();
 
     protected override async Task OnInitializedAsync()
@@ -170,6 +175,8 @@
         }
 
         _activeProfileId = ProfileService.GetActiveProfileId();
+        await GlobalFilterStore.TrackNavigationAsync(NavigationManager.Uri, _activeProfileId);
+        RefreshContextError();
 
         ProjectAlias = ProjectAliasRoute;
         _breadcrumbs =
@@ -181,6 +188,12 @@
 
         try
         {
+            if (!string.IsNullOrWhiteSpace(_contextError))
+            {
+                _summary = null;
+                return;
+            }
+
             _summaryState = await ProjectService.GetPlanningSummaryAsync(ProjectAliasRoute);
             if (_summaryState.State == CacheBackedClientState.Success)
             {
@@ -222,6 +235,14 @@
         _errorMessage = null;
         try
         {
+            await GlobalFilterStore.TrackNavigationAsync(NavigationManager.Uri, _activeProfileId);
+            RefreshContextError();
+            if (!string.IsNullOrWhiteSpace(_contextError))
+            {
+                _summary = null;
+                return;
+            }
+
             _summaryState = await ProjectService.GetPlanningSummaryAsync(ProjectAliasRoute);
             _summary = _summaryState.State == CacheBackedClientState.Success ? _summaryState.Data : null;
         }
@@ -229,6 +250,14 @@
         {
             _isLoading = false;
         }
+    }
+
+    private void RefreshContextError()
+    {
+        var usage = GlobalFilterStore.CurrentUsage;
+        _contextError = usage?.Status == FilterResolutionStatus.Invalid && usage.StateIssues.Count > 0
+            ? string.Join(" ", usage.StateIssues)
+            : null;
     }
 
     private bool HasProductImbalance()

@@ -19,6 +19,7 @@ public partial interface IPipelinesClient
     Task<PoTool.Shared.Pipelines.PipelineQueryResponseDto<PipelineInsightsDto>> GetInsightsEnvelopeAsync(
         int? productOwnerId,
         int? sprintId,
+        ICollection<int>? productIds,
         bool? includePartiallySucceeded,
         bool? includeCanceled,
         CancellationToken cancellationToken);
@@ -49,11 +50,12 @@ public partial class PipelinesClient
     public async Task<PoTool.Shared.Pipelines.PipelineQueryResponseDto<PipelineInsightsDto>> GetInsightsEnvelopeAsync(
         int? productOwnerId,
         int? sprintId,
+        ICollection<int>? productIds,
         bool? includePartiallySucceeded,
         bool? includeCanceled,
         CancellationToken cancellationToken)
     {
-        var response = await GetInsightsAsync(productOwnerId, sprintId, includePartiallySucceeded, includeCanceled, cancellationToken);
+        var response = await GetInsightsAsync(productOwnerId, sprintId, productIds, includePartiallySucceeded, includeCanceled, cancellationToken);
         return response.ToCacheBackedResult().RequireData(nameof(GetInsightsEnvelopeAsync));
     }
 }

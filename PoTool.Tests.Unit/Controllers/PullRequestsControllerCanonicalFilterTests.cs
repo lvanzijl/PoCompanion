@@ -58,6 +58,7 @@ public sealed class PullRequestsControllerCanonicalFilterTests
 
         var filterService = new PullRequestFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PullRequestFilterResolutionService>.Instance);
         var controller = new PullRequestsController(
             mediator.Object,

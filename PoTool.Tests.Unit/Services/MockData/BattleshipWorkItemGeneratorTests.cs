@@ -200,6 +200,54 @@ public class BattleshipWorkItemGeneratorTests
     }
 
     [TestMethod]
+    public void GenerateHierarchy_Should_Align_Delivery_Work_With_Current_Battleship_Sprint_Window()
+    {
+        var deliverySprintPaths = _workItems
+            .Where(w => w.Type is WorkItemType.Pbi or WorkItemType.Bug)
+            .Where(w => w.IterationPath.Contains("Sprint ", StringComparison.OrdinalIgnoreCase))
+            .Select(w => w.IterationPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        Assert.IsTrue(deliverySprintPaths.All(path => !path.Contains("\\2025\\", StringComparison.OrdinalIgnoreCase)),
+            "Delivery work should use the current seeded Battleship sprint paths instead of legacy 2025 quarter paths.");
+        CollectionAssert.Contains(deliverySprintPaths, "\\Battleship Systems\\Sprint 11",
+            "The current sprint window should contain Sprint 11 work so execution surfaces can render data.");
+    }
+
+    [TestMethod]
+    public void GenerateHierarchy_Should_Use_TfsStyle_Semicolon_Tag_Formatting()
+    {
+        var taggedItems = _workItems
+            .Where(w => !string.IsNullOrWhiteSpace(w.Tags))
+            .Take(100)
+            .ToList();
+
+        Assert.IsNotEmpty(taggedItems, "Expected tagged mock work items.");
+        Assert.IsTrue(taggedItems.All(item => !item.Tags!.Contains(',')),
+            "Mock tags should use TFS-style semicolon separators rather than commas.");
+        Assert.IsTrue(taggedItems.All(item => item.Tags!.Split(';', StringSplitOptions.RemoveEmptyEntries).Length >= 2),
+            "Tagged mock work items should remain parseable as multi-tag TFS values.");
+    }
+
+    [TestMethod]
+    public void GenerateHierarchy_Should_Include_Roadmap_Epics_And_Triageable_Bug_Tags()
+    {
+        var roadmapEpicCount = _workItems
+            .Where(w => w.Type == WorkItemType.Epic)
+            .Count(w => (w.Tags ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Any(tag => string.Equals(tag, "roadmap", StringComparison.OrdinalIgnoreCase)));
+
+        var bugWithTriageTagCount = _workItems
+            .Where(w => w.Type == WorkItemType.Bug)
+            .Count(w => (w.Tags ?? string.Empty).Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Any(tag => tag is "Needs Investigation" or "Regression" or "Customer Reported" or "Operational Risk" or "Hotfix Candidate" or "Needs Repro"));
+
+        Assert.IsGreaterThan(0, roadmapEpicCount, "The mock dataset should surface roadmap-tagged epics for roadmap pages.");
+        Assert.IsGreaterThan(0, bugWithTriageTagCount, "The mock dataset should include triage tags on bugs for the bug-triage UI.");
+    }
+
+    [TestMethod]
     public void GenerateHierarchy_Should_Complete_In_Reasonable_Time()
     {
         // Act

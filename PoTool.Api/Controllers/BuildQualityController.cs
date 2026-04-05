@@ -39,6 +39,10 @@ public sealed class BuildQualityController : ControllerBase
                 RangeEndUtc: windowEndUtc.ToUniversalTime()),
             nameof(GetRolling),
             cancellationToken);
+        if (!resolution.Validation.IsValid)
+        {
+            return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+        }
 
         var result = await _mediator.Send(
             new GetBuildQualityRollingWindowQuery(productOwnerId, resolution.EffectiveFilter),
@@ -59,6 +63,10 @@ public sealed class BuildQualityController : ControllerBase
                 SprintId: sprintId),
             nameof(GetSprint),
             cancellationToken);
+        if (!resolution.Validation.IsValid)
+        {
+            return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+        }
 
         var result = await _mediator.Send(
             new GetBuildQualitySprintQuery(productOwnerId, resolution.EffectiveFilter),

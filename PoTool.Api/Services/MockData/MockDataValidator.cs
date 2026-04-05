@@ -20,7 +20,10 @@ public class MockDataValidator
     /// <summary>
     /// Validates work item hierarchy and generates a validation report.
     /// </summary>
-    public ValidationReport ValidateWorkItems(List<WorkItemDto> workItems)
+    public ValidationReport ValidateWorkItems(
+        List<WorkItemDto> workItems,
+        IReadOnlyCollection<string>? seededSprintPaths = null,
+        IReadOnlyCollection<string>? validTeamNames = null)
     {
         var report = new ValidationReport
         {
@@ -38,6 +41,8 @@ public class MockDataValidator
         ValidateHierarchyIntegrity(workItems, report);
         ValidateAreaPathConsistency(workItems, report);
         ValidateIterationPaths(workItems, report);
+        ValidateSprintDefinitionAlignment(workItems, seededSprintPaths, report);
+        ValidateKnownTeamAssignments(workItems, validTeamNames, report);
         ValidateStates(workItems, report);
         ValidateEstimation(workItems, report);
         ValidateBacklogQualityDistribution(workItems, report);
@@ -181,6 +186,49 @@ public class MockDataValidator
 
         report.InvalidIterationPathCount = invalidIterations;
         report.IterationPathValid = invalidIterations == 0;
+    }
+
+    private static void ValidateSprintDefinitionAlignment(
+        List<WorkItemDto> workItems,
+        IReadOnlyCollection<string>? seededSprintPaths,
+        ValidationReport report)
+    {
+        if (seededSprintPaths is null || seededSprintPaths.Count == 0)
+        {
+            report.UnknownSprintDefinitionCount = 0;
+            report.SprintDefinitionAlignmentValid = true;
+            return;
+        }
+
+        var seededSprintPathSet = seededSprintPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        report.UnknownSprintDefinitionCount = workItems.Count(workItem =>
+            !string.IsNullOrWhiteSpace(workItem.IterationPath)
+            && workItem.IterationPath.Contains("\\Sprint ", StringComparison.OrdinalIgnoreCase)
+            && !seededSprintPathSet.Contains(workItem.IterationPath));
+        report.SprintDefinitionAlignmentValid = report.UnknownSprintDefinitionCount == 0;
+    }
+
+    private static void ValidateKnownTeamAssignments(
+        List<WorkItemDto> workItems,
+        IReadOnlyCollection<string>? validTeamNames,
+        ValidationReport report)
+    {
+        if (validTeamNames is null || validTeamNames.Count == 0)
+        {
+            report.UnknownTeamAssignmentCount = 0;
+            report.TeamAssignmentsValid = true;
+            return;
+        }
+
+        var validTeamSet = validTeamNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        report.UnknownTeamAssignmentCount = workItems.Count(workItem =>
+        {
+            var segments = workItem.AreaPath
+                .Split('\\', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            return segments.Length >= 3 && !validTeamSet.Contains(segments[^1]);
+        });
+        report.TeamAssignmentsValid = report.UnknownTeamAssignmentCount == 0;
     }
 
     private static void ValidateStates(List<WorkItemDto> workItems, ValidationReport report)
@@ -400,6 +448,12 @@ public class ValidationReport
     public int InvalidIterationPathCount { get; set; }
     public bool IterationPathValid { get; set; }
 
+    public int UnknownSprintDefinitionCount { get; set; }
+    public bool SprintDefinitionAlignmentValid { get; set; }
+
+    public int UnknownTeamAssignmentCount { get; set; }
+    public bool TeamAssignmentsValid { get; set; }
+
     public int InvalidStateCount { get; set; }
     public bool StateValidityValid { get; set; }
 
@@ -451,6 +505,8 @@ public class ValidationReport
             && HierarchyIntegrityValid
             && AreaPathConsistencyValid
             && IterationPathValid
+            && SprintDefinitionAlignmentValid
+            && TeamAssignmentsValid
             && StateValidityValid
             && StoryPointEstimationValid
             && EffortStoryPointSeparationValid
@@ -478,6 +534,8 @@ Data Quality:
   Hierarchy Integrity: {HierarchyIntegrityValid} (Orphaned: {OrphanedWorkItemCount})
   Area Path Consistency: {AreaPathConsistencyValid} (Violations: {AreaPathViolationCount})
   Iteration Path Valid: {IterationPathValid} (Invalid: {InvalidIterationPathCount})
+  Sprint Definition Alignment: {SprintDefinitionAlignmentValid} (Unknown sprint paths: {UnknownSprintDefinitionCount})
+  Team Assignments Valid: {TeamAssignmentsValid} (Unknown team assignments: {UnknownTeamAssignmentCount})
   State Validity: {StateValidityValid} (Invalid: {InvalidStateCount})
   Effort Coverage: {100 - UnestimatedPercentage:F1}% estimated / {UnestimatedPercentage:F1}% missing
   Story Point Validity: {StoryPointEstimationValid} (Non-standard: {NonStandardStoryPointCount})

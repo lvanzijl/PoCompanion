@@ -77,7 +77,7 @@ else
                             Show capacity collisions
                         </MudSwitch>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                            @_productLanes.Count selected product(s)
+                            @_selectedProductIds.Count selected product(s)
                         </MudText>
                     </MudStack>
                 </MudPaper>
@@ -441,13 +441,26 @@ else
                 return;
             }
 
+            var teamSprintTasks = products
+                .SelectMany(product => product.TeamIds)
+                .Distinct()
+                .ToDictionary(
+                    teamId => teamId,
+                    teamId => SprintService.GetSprintsForTeamAsync(teamId));
+
+            await Task.WhenAll(teamSprintTasks.Values);
+
+            var sprintsByTeamId = teamSprintTasks.ToDictionary(
+                static entry => entry.Key,
+                static entry => (IReadOnlyList<SprintDto>)entry.Value.Result);
+
             // Load projections in parallel for all products (read-only, no EF concurrency risk)
             var productTasks = products
                 .Select(async product => new
                 {
                     Product = product,
                     Projections = (await ProductService.GetPlanningProjectionsAsync(product.Id)).ToList(),
-                    SprintCadence = ResolveSprintCadence()
+                    SprintCadence = ResolveSprintCadence(product.TeamIds, sprintsByTeamId)
                 })
                 .ToList();
             _availableProducts = (await Task.WhenAll(productTasks))
@@ -678,9 +691,21 @@ else
         return InvokeAsync(StateHasChanged);
     }
 
-    private static SprintCadenceInfo ResolveSprintCadence()
+    private static SprintCadenceInfo ResolveSprintCadence(
+        IReadOnlyList<int> teamIds,
+        IReadOnlyDictionary<int, IReadOnlyList<SprintDto>> sprintsByTeamId)
     {
-        return SprintCadenceResolver.Resolve([]);
+        var sprints = teamIds
+            .Distinct()
+            .SelectMany(teamId => sprintsByTeamId.GetValueOrDefault(teamId) ?? Array.Empty<SprintDto>())
+            .GroupBy(sprint => sprint.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(static group => group
+                .OrderByDescending(sprint => sprint.EndUtc)
+                .ThenBy(sprint => sprint.Id)
+                .First())
+            .ToList();
+
+        return SprintCadenceResolver.Resolve(sprints);
     }
 
     private static string GetTimelineBarClass(RoadmapTimelineRow row, SprintCadenceInfo sprintCadence)

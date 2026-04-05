@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Api.Persistence;
@@ -20,6 +21,9 @@ public sealed class PipelineFilterResolutionServiceTests
         context.Products.AddRange(
             PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
             PersistenceTestGraph.CreateProduct(200, "Product 200", 7));
+        context.ProductTeamLinks.AddRange(
+            new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 200, TeamId = 3 });
         context.Repositories.AddRange(
             PersistenceTestGraph.CreateRepository(1, 100, "Repo-A"),
             PersistenceTestGraph.CreateRepository(2, 200, "Repo-B"));
@@ -60,6 +64,7 @@ public sealed class PipelineFilterResolutionServiceTests
 
         var service = new PipelineFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PipelineFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -84,6 +89,7 @@ public sealed class PipelineFilterResolutionServiceTests
 
         var service = new PipelineFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PipelineFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -101,7 +107,9 @@ public sealed class PipelineFilterResolutionServiceTests
     {
         await using var context = CreateContext();
         PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
         context.Products.Add(PersistenceTestGraph.CreateProduct(100, "Product 100", 7));
+        context.ProductTeamLinks.Add(new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 });
         context.Repositories.Add(PersistenceTestGraph.CreateRepository(1, 100, "Renamed Repo"));
         context.PipelineDefinitions.Add(new PipelineDefinitionEntity
         {
@@ -119,6 +127,7 @@ public sealed class PipelineFilterResolutionServiceTests
 
         var service = new PipelineFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PipelineFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -141,6 +150,7 @@ public sealed class PipelineFilterResolutionServiceTests
 
         var service = new PipelineFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PipelineFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -162,6 +172,7 @@ public sealed class PipelineFilterResolutionServiceTests
 
         var service = new PipelineFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PipelineFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -184,6 +195,7 @@ public sealed class PipelineFilterResolutionServiceTests
 
         var service = new PipelineFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PipelineFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -204,6 +216,7 @@ public sealed class PipelineFilterResolutionServiceTests
 
         var service = new PipelineFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PipelineFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -216,13 +229,136 @@ public sealed class PipelineFilterResolutionServiceTests
         Assert.IsTrue(resolution.Validation.Messages.Any(message => message.Message.Contains("cannot be empty", StringComparison.Ordinal)));
     }
 
+    [TestMethod]
+    public async Task ResolveAsync_SprintOutsideSelectedProductScope_IsInvalid()
+    {
+        await using var context = CreateContext();
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
+        PersistenceTestGraph.EnsureTeam(context, 9);
+        context.Products.AddRange(
+            PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
+            PersistenceTestGraph.CreateProduct(200, "Product 200", 7));
+        context.ProductTeamLinks.AddRange(
+            new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 200, TeamId = 9 });
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            TeamId = 3,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new PipelineFilterResolutionService(
+            context,
+            new ContextResolver(context),
+            NullLogger<PipelineFilterResolutionService>.Instance);
+
+        var resolution = await service.ResolveAsync(
+            new PipelineFilterBoundaryRequest(ProductIds: [200], SprintId: 42),
+            "TestBoundary",
+            CancellationToken.None);
+
+        Assert.IsFalse(resolution.Validation.IsValid);
+        CollectionAssert.Contains(resolution.Validation.InvalidFields.ToArray(), nameof(ContextResolutionRequest.SprintIds));
+    }
+
+    [TestMethod]
+    public async Task ResolveAsync_ProductAndRepositoryScopedDefinitions_QueryTranslatesOnSqlite()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        var options = new DbContextOptionsBuilder<PoToolDbContext>()
+            .UseSqlite(connection)
+            .Options;
+
+        await using var context = new PoToolDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureProfile(context, 7);
+        PersistenceTestGraph.EnsureTeam(context, 3);
+        await context.SaveChangesAsync();
+
+        context.Products.AddRange(
+            PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
+            PersistenceTestGraph.CreateProduct(200, "Product 200", 7));
+        await context.SaveChangesAsync();
+
+        context.ProductTeamLinks.AddRange(
+            new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 200, TeamId = 3 });
+        context.Repositories.AddRange(
+            PersistenceTestGraph.CreateRepository(1, 100, "Repo-A"),
+            PersistenceTestGraph.CreateRepository(2, 200, "Repo-B"));
+        await context.SaveChangesAsync();
+
+        context.PipelineDefinitions.AddRange(
+            new PipelineDefinitionEntity
+            {
+                Id = 1,
+                PipelineDefinitionId = 11,
+                ProductId = 100,
+                RepositoryId = 1,
+                RepoId = "repo-1",
+                RepoName = "Repo-A",
+                Name = "Pipeline A",
+                DefaultBranch = "refs/heads/main",
+                LastSyncedUtc = DateTimeOffset.UtcNow
+            },
+            new PipelineDefinitionEntity
+            {
+                Id = 2,
+                PipelineDefinitionId = 22,
+                ProductId = 200,
+                RepositoryId = 2,
+                RepoId = "repo-2",
+                RepoName = "Repo-B",
+                Name = "Pipeline B",
+                DefaultBranch = "refs/heads/release",
+                LastSyncedUtc = DateTimeOffset.UtcNow
+            });
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            TeamId = 3,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new PipelineFilterResolutionService(
+            context,
+            new ContextResolver(context),
+            NullLogger<PipelineFilterResolutionService>.Instance);
+
+        var resolution = await service.ResolveAsync(
+            new PipelineFilterBoundaryRequest(ProductOwnerId: 7, ProductIds: [100], RepositoryIds: [1], SprintId: 42),
+            "SqliteBoundary",
+            CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { 100 }, resolution.EffectiveFilter.Context.ProductIds.Values.ToArray());
+        CollectionAssert.AreEqual(new[] { 1 }, resolution.EffectiveFilter.RepositoryScope.ToArray());
+        CollectionAssert.AreEqual(new[] { 11 }, resolution.EffectiveFilter.PipelineIds.ToArray());
+        CollectionAssert.AreEqual(Array.Empty<string>(), resolution.Validation.InvalidFields.ToArray());
+    }
+
     private static void SeedScopedProductsAndPipelines(PoToolDbContext context)
     {
         PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureProfile(context, 7);
         PersistenceTestGraph.EnsureTeam(context, 3);
         context.Products.AddRange(
             PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
             PersistenceTestGraph.CreateProduct(200, "Product 200", 7));
+        context.ProductTeamLinks.AddRange(
+            new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 200, TeamId = 3 });
         context.Repositories.AddRange(
             PersistenceTestGraph.CreateRepository(1, 100, "Repo-A"),
             PersistenceTestGraph.CreateRepository(2, 200, "Repo-B"));

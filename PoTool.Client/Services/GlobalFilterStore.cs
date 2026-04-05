@@ -122,6 +122,8 @@ public sealed class GlobalFilterStore
         => left.PageName == right.PageName
            && left.Route == right.Route
            && left.RouteSignature == right.RouteSignature
+           && left.HasRouteProductAuthority == right.HasRouteProductAuthority
+           && left.HasRouteProjectAuthority == right.HasRouteProjectAuthority
            && left.UsesProduct == right.UsesProduct
            && left.UsesProject == right.UsesProject
            && left.UsesTeam == right.UsesTeam

@@ -37,7 +37,7 @@ public class BuildQualityServiceTests
         {
             BaseUrl = "http://localhost"
         };
-        var service = new BuildQualityService(client);
+        var service = new BuildQualityService(client, httpClient);
 
         var result = await service.GetRollingWindowAsync(
             7,

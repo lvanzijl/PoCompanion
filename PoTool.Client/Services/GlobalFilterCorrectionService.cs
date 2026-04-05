@@ -28,6 +28,11 @@ public sealed class GlobalFilterCorrectionService
             return null;
         }
 
+        if (usage.HasRouteProjectAuthority || usage.HasRouteProductAuthority)
+        {
+            return null;
+        }
+
         var correctedState = usage.State;
         string? correctionMessage = null;
 

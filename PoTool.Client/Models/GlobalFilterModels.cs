@@ -19,6 +19,7 @@ public enum FilterUpdateSource
     Default,
     Route,
     Query,
+    DefaultPreset,
     LocalBridge,
     Ui
 }
@@ -128,6 +129,8 @@ public sealed record FilterStateResolution(
     string PageName,
     string Route,
     string RouteSignature,
+    bool HasRouteProductAuthority,
+    bool HasRouteProjectAuthority,
     bool UsesProduct,
     bool UsesProject,
     bool UsesTeam,

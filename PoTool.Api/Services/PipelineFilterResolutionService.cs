@@ -23,13 +23,16 @@ public sealed record PipelineFilterBoundaryRequest(
 public sealed class PipelineFilterResolutionService
 {
     private readonly PoToolDbContext _context;
+    private readonly ContextResolver _contextResolver;
     private readonly ILogger<PipelineFilterResolutionService> _logger;
 
     public PipelineFilterResolutionService(
         PoToolDbContext context,
+        ContextResolver contextResolver,
         ILogger<PipelineFilterResolutionService> logger)
     {
         _context = context;
+        _contextResolver = contextResolver;
         _logger = logger;
     }
 
@@ -63,10 +66,17 @@ public sealed class PipelineFilterResolutionService
             requestedFilter.Time,
             cancellationToken,
             issues);
+        var contextResolution = await _contextResolver.ResolveAsync(
+            new ContextResolutionRequest(
+                effectiveProductIds,
+                FilterSelection<int>.All(),
+                sprintId.HasValue ? [sprintId.Value] : Array.Empty<int>()),
+            cancellationToken);
+        issues.AddRange(contextResolution.Validation.Messages);
 
         var effectiveFilter = new PipelineEffectiveFilter(
             new PipelineFilterContext(
-                effectiveProductIds,
+                contextResolution.ProductIds,
                 requestedFilter.TeamIds,
                 requestedFilter.RepositoryIds.IsAll
                     ? FilterSelection<int>.Selected(repositoryScope)
@@ -299,12 +309,7 @@ public sealed class PipelineFilterResolutionService
         CancellationToken cancellationToken)
     {
         var query = _context.PipelineDefinitions
-            .AsNoTracking()
-            .Select(definition => new PipelineDefinitionScope(
-                definition.PipelineDefinitionId,
-                definition.ProductId,
-                definition.RepositoryId,
-                definition.DefaultBranch));
+            .AsNoTracking();
 
         if (!productIds.IsAll)
         {
@@ -317,10 +322,18 @@ public sealed class PipelineFilterResolutionService
             query = query.Where(definition => repositoryScope.Contains(definition.RepositoryId));
         }
 
-        return await query
+        var definitions = await query
+            .Select(definition => new PipelineDefinitionScope(
+                definition.PipelineDefinitionId,
+                definition.ProductId,
+                definition.RepositoryId,
+                definition.DefaultBranch))
+            .ToListAsync(cancellationToken);
+
+        return definitions
             .Distinct()
             .OrderBy(definition => definition.PipelineDefinitionId)
-            .ToListAsync(cancellationToken);
+            .ToList();
     }
 
     private async Task<(FilterTimeSelection Time, DateTimeOffset? RangeStartUtc, DateTimeOffset? RangeEndUtc, int? SprintId)> ResolveTimeAsync(

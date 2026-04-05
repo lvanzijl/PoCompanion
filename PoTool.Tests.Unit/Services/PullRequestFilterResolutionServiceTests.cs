@@ -60,6 +60,7 @@ public sealed class PullRequestFilterResolutionServiceTests
 
         var service = new PullRequestFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PullRequestFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -90,6 +91,7 @@ public sealed class PullRequestFilterResolutionServiceTests
 
         var service = new PullRequestFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<PullRequestFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -101,6 +103,36 @@ public sealed class PullRequestFilterResolutionServiceTests
         Assert.AreEqual(42, resolution.EffectiveFilter.SprintId);
         Assert.AreEqual(new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero), resolution.EffectiveFilter.RangeStartUtc);
         Assert.AreEqual(new DateTimeOffset(2026, 2, 14, 0, 0, 0, TimeSpan.Zero), resolution.EffectiveFilter.RangeEndUtc);
+    }
+
+    [TestMethod]
+    public async Task ResolveAsync_SprintOutsideSelectedTeamScope_IsInvalid()
+    {
+        await using var context = CreateContext();
+        PersistenceTestGraph.EnsureTeam(context, 5);
+        PersistenceTestGraph.EnsureTeam(context, 6);
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            TeamId = 5,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new PullRequestFilterResolutionService(
+            context,
+            new ContextResolver(context),
+            NullLogger<PullRequestFilterResolutionService>.Instance);
+
+        var resolution = await service.ResolveAsync(
+            new PullRequestFilterBoundaryRequest(TeamId: 6, SprintId: 42),
+            "TestBoundary",
+            CancellationToken.None);
+
+        Assert.IsFalse(resolution.Validation.IsValid);
+        CollectionAssert.Contains(resolution.Validation.InvalidFields.ToArray(), nameof(ContextResolutionRequest.SprintIds));
     }
 
     private static PoToolDbContext CreateContext()

@@ -86,6 +86,12 @@ public partial class ProductsClient
         => ApiClientJsonSettings.Configure(settings);
 }
 
+public partial class ProjectsClient
+{
+    static partial void UpdateJsonSerializerSettings(JsonSerializerOptions settings)
+        => ApiClientJsonSettings.Configure(settings);
+}
+
 public partial class ProfilesClient
 {
     static partial void UpdateJsonSerializerSettings(JsonSerializerOptions settings)

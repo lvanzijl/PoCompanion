@@ -1,5 +1,6 @@
 @page "/workitems"
 @using PoTool.Client.ApiClient
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @using PoTool.Client.Configuration
@@ -14,6 +15,7 @@
 @inject WorkItemVisibilityService VisibilityService
 @inject IProfileService ProfileService
 @inject ProductService ProductService
+@inject GlobalFilterStore GlobalFilterStore
 @inject TfsConfigService TfsConfigService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
@@ -144,9 +146,11 @@
     
     // Selection service state
     private WorkItemSelectionService.SelectionState _selectionState = new();
+    private IDisposable? _filterSubscription;
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         await LoadExpandedStateAsync();
         await LoadWorkItems();
     }
@@ -155,18 +159,47 @@
     {
         // Get active profile to determine which products to load
         var activeProfile = await ProfileService.GetActiveProfileAsync();
+        await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, activeProfile?.Id ?? ProfileService.GetActiveProfileId());
 
         if (activeProfile != null)
         {
             // Load products for the active profile (Product Owner)
-            var profileProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            var availableProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            var invalidProductIds = GlobalProductSelectionHelper.ResolveUnavailableSelectedProductIds(GlobalFilterStore.GetState(), availableProducts);
+            if (invalidProductIds.Count > 0)
+            {
+                _errorResponse = new ErrorResponse
+                {
+                    UserMessage = "Invalid product selection for Work Item Explorer.",
+                    Suggestion = $"Choose All products or a product available in your current scope. Invalid selection: {string.Join(", ", invalidProductIds)}."
+                };
+                return new List<ProductDto>();
+            }
+
+            _errorResponse = null;
+            var profileProducts = GlobalProductSelectionHelper.ResolveScopedProducts(GlobalFilterStore.GetState(), availableProducts).ToList();
             Console.WriteLine($"[WorkItemExplorer] Loaded {profileProducts.Count} products for active profile '{activeProfile.Name}' (ID: {activeProfile.Id})");
             return profileProducts;
         }
         else
         {
             // No active profile - load all products as fallback
-            var allProducts = (await ProductService.GetAllProductsAsync()).ToList();
+            var availableProducts = (await ProductService.GetAllProductsAsync()).ToList();
+            var invalidProductIds = GlobalProductSelectionHelper.ResolveUnavailableSelectedProductIds(GlobalFilterStore.GetState(), availableProducts);
+            if (invalidProductIds.Count > 0)
+            {
+                _errorResponse = new ErrorResponse
+                {
+                    UserMessage = "Invalid product selection for Work Item Explorer.",
+                    Suggestion = $"Choose All products or a product available in the current scope. Invalid selection: {string.Join(", ", invalidProductIds)}."
+                };
+                return new List<ProductDto>();
+            }
+
+            _errorResponse = null;
+            var allProducts = GlobalProductSelectionHelper.ResolveScopedProducts(
+                GlobalFilterStore.GetState(),
+                availableProducts).ToList();
             Console.WriteLine($"[WorkItemExplorer] No active profile, loaded all {allProducts.Count} products");
             return allProducts;
         }
@@ -182,6 +215,14 @@
             // Extract product IDs to pass to the backend for efficient filtering
             var productIds = profileProducts.Select(p => p.Id).ToArray();
             Console.WriteLine($"[WorkItemExplorer] Loading work items for {productIds.Length} products: {string.Join(", ", productIds)}");
+
+            if (productIds.Length == 0)
+            {
+                _workItemsWithValidation = new List<WorkItemWithValidationDto>();
+                _treeRoots = new List<TreeNode>();
+                _flatNodeList = new List<TreeNode>();
+                return;
+            }
 
             // Load work items with validation, filtered by product IDs
             // Backend will only load hierarchies for the specified products
@@ -352,9 +393,13 @@
 
     public async ValueTask DisposeAsync()
     {
+        _filterSubscription?.Dispose();
         // No cleanup needed in Live-only mode
         await Task.CompletedTask;
     }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(LoadWorkItems);
 
 
 

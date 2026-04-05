@@ -84,6 +84,48 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
+    public async Task TrackNavigation_ProductScopedEditorRoute_TreatsRouteProductAsHintOnly()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/planning/product-roadmaps/11");
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual("ProductRoadmapEditor", store.CurrentUsage.PageName);
+        Assert.IsFalse(store.CurrentUsage.HasRouteProductAuthority);
+        Assert.IsTrue(store.CurrentState.AllProducts);
+        CollectionAssert.Contains(store.CurrentUsage.NormalizationDecisions.ToArray(), "route productId 11 is treated as a lookup hint only");
+    }
+
+    [TestMethod]
+    public async Task TrackNavigation_ProductScopedEditorRoute_MismatchedGlobalProduct_IsInvalid()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/planning/product-roadmaps/11?productId=12");
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(FilterResolutionStatus.Invalid, store.CurrentUsage.Status);
+        CollectionAssert.Contains(
+            store.CurrentUsage.StateIssues.ToArray(),
+            "Route product '11' does not match the selected global product '12'.");
+    }
+
+    [TestMethod]
+    public async Task TrackNavigation_ProjectScopedPlanningRoute_ProductOutsideAllowedUniverse_IsInvalid()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/planning/payments-platform/plan-board?productId=99");
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(FilterResolutionStatus.Invalid, store.CurrentUsage.Status);
+        CollectionAssert.Contains(
+            store.CurrentUsage.StateIssues.ToArray(),
+            "Selected global product '99' is not available in project route 'payments-platform'.");
+    }
+
+    [TestMethod]
     public async Task TrackNavigation_RollingQuery_TracksExplicitWindowAndUnit()
     {
         var store = CreateStore();
@@ -97,15 +139,34 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
-    public async Task TrackNavigation_UnknownProjectAlias_ClassifiesStateAsInvalid()
+    public async Task TrackNavigation_UnknownProjectAlias_PreservesRouteAuthority()
     {
         var store = CreateStore();
 
         await store.TrackNavigationAsync("http://localhost/planning/unknown-project/overview");
 
         Assert.IsNotNull(store.CurrentUsage);
-        Assert.AreEqual(FilterResolutionStatus.Invalid, store.CurrentUsage.Status);
-        CollectionAssert.Contains(store.CurrentUsage.StateIssues.ToArray(), "route project alias 'unknown-project' could not be resolved");
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
+        CollectionAssert.Contains(store.CurrentUsage.NormalizationDecisions.ToArray(), "route project alias 'unknown-project' is authoritative without a resolved projectId");
+    }
+
+    [TestMethod]
+    public async Task BuildCorrectedUriAsync_ProjectScopedRouteAliasIssue_DoesNotRedirectAway()
+    {
+        var projectService = new ProjectService(new StubProjectsClient());
+        var projectIdentityMapper = new ProjectIdentityMapper(projectService);
+        var resolver = new FilterStateResolver(projectIdentityMapper);
+        var store = new GlobalFilterStore(NullLogger<GlobalFilterStore>.Instance, resolver);
+        var correctionService = new GlobalFilterCorrectionService(
+            store,
+            new GlobalFilterRouteService(projectIdentityMapper),
+            new GlobalFilterUiState());
+
+        await store.TrackNavigationAsync("http://localhost/planning/unknown-project/overview");
+
+        var correctedUri = await correctionService.BuildCorrectedUriAsync("http://localhost/planning/unknown-project/overview");
+
+        Assert.IsNull(correctedUri, "Project-scoped route aliases should stay on-page so the route itself can handle unknown projects.");
     }
 
     [TestMethod]

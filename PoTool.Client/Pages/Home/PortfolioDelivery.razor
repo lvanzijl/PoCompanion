@@ -496,7 +496,11 @@
             StateHasChanged();
 
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.Loading();
-            var response = await MetricsStateService.GetPortfolioDeliveryStateAsync(_profileId.Value, _selectedSprintIds, productIds: null, CancellationToken.None);
+            var response = await MetricsStateService.GetPortfolioDeliveryStateAsync(
+                _profileId.Value,
+                _selectedSprintIds,
+                GlobalFilterStore.GetState().ProductIds.Count > 0 ? GlobalFilterStore.GetState().ProductIds : null,
+                CancellationToken.None);
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.FromResponse(response, "Portfolio delivery data could not be loaded right now.");
             if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
             {

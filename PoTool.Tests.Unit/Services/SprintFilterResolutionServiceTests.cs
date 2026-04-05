@@ -4,6 +4,7 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
 using PoTool.Core.Filters;
+using PoTool.Core.Metrics.Filters;
 using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Services;
@@ -21,6 +22,10 @@ public sealed class SprintFilterResolutionServiceTests
             PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
             PersistenceTestGraph.CreateProduct(200, "Product 200", 7),
             PersistenceTestGraph.CreateProduct(300, "Product 300", 9));
+        context.ProductTeamLinks.AddRange(
+            new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 200, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 300, TeamId = 3 });
         context.Sprints.AddRange(
             new SprintEntity
             {
@@ -44,6 +49,7 @@ public sealed class SprintFilterResolutionServiceTests
 
         var service = new SprintFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<SprintFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -82,6 +88,7 @@ public sealed class SprintFilterResolutionServiceTests
 
         var service = new SprintFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<SprintFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -92,6 +99,83 @@ public sealed class SprintFilterResolutionServiceTests
         Assert.AreEqual(FilterTimeSelectionMode.Sprint, resolution.EffectiveFilter.Context.Time.Mode);
         Assert.AreEqual(42, resolution.EffectiveFilter.SprintId);
         CollectionAssert.AreEqual(new[] { "\\Project\\Sprint 42" }, resolution.EffectiveFilter.IterationPaths.ToArray());
+    }
+
+    [TestMethod]
+    public async Task ResolveAsync_SelectedSprintOutsideProductScope_IsInvalid()
+    {
+        await using var context = CreateContext();
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
+        PersistenceTestGraph.EnsureTeam(context, 9);
+        context.Products.AddRange(
+            PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
+            PersistenceTestGraph.CreateProduct(200, "Product 200", 7));
+        context.ProductTeamLinks.AddRange(
+            new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 200, TeamId = 9 });
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            Path = "\\Project\\Sprint 42",
+            TeamId = 3,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new SprintFilterResolutionService(
+            context,
+            new ContextResolver(context),
+            NullLogger<SprintFilterResolutionService>.Instance);
+
+        var resolution = await service.ResolveAsync(
+            new SprintFilterBoundaryRequest(
+                ProductOwnerId: 7,
+                ProductIds: [200],
+                SprintId: 42),
+            "TestBoundary",
+            CancellationToken.None);
+
+        Assert.IsFalse(resolution.Validation.IsValid);
+        CollectionAssert.Contains(resolution.Validation.InvalidFields.ToArray(), nameof(ContextResolutionRequest.SprintIds));
+    }
+
+    [TestMethod]
+    public async Task ResolveAsync_SprintExecutionWithoutExplicitProduct_IsInvalidWhenRequired()
+    {
+        await using var context = CreateContext();
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
+        context.Products.Add(PersistenceTestGraph.CreateProduct(100, "Product 100", 7));
+        context.ProductTeamLinks.Add(new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 });
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            Path = "\\Project\\Sprint 42",
+            TeamId = 3,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new SprintFilterResolutionService(
+            context,
+            new ContextResolver(context),
+            NullLogger<SprintFilterResolutionService>.Instance);
+
+        var resolution = await service.ResolveAsync(
+            new SprintFilterBoundaryRequest(
+                ProductOwnerId: 7,
+                RequireExplicitProductScope: true,
+                SprintId: 42),
+            "TestBoundary",
+            CancellationToken.None);
+
+        Assert.IsFalse(resolution.Validation.IsValid);
+        CollectionAssert.Contains(resolution.Validation.InvalidFields.ToArray(), nameof(SprintFilterContext.ProductIds));
     }
 
     private static PoToolDbContext CreateContext()

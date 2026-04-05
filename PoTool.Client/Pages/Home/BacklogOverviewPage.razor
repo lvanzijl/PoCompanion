@@ -5,9 +5,11 @@
 @using PoTool.Shared.Health
 @using PoTool.Shared.WorkItems
 @inherits WorkspaceBase
+@implements IDisposable
 @inject IWorkItemsClient WorkItemsClient
 @inject WorkItemService WorkItemService
 @inject ProductService ProductService
+@inject GlobalFilterRouteService GlobalFilterRouteService
 
 <PageTitle>Backlog Health - PO Companion</PageTitle>
 
@@ -67,6 +69,10 @@
     @if (_isLoading)
     {
         <LoadingIndicator IsLoading="true" />
+    }
+    else if (!string.IsNullOrWhiteSpace(_contextError))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@_contextError</MudAlert>
     }
     else if (_loadError != null)
     {
@@ -340,7 +346,10 @@
 
     // Products
     private List<ProductDto> _products = new();
-    private int? _selectedProductId;
+    private IDisposable? _filterSubscription;
+    private int? _loadedProductId;
+    private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
+    private string? _contextError;
 
     // Loaded backlog state
     private ProductBacklogStateDto? _state;
@@ -352,6 +361,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
+
         try
         {
             ParseContextQueryParameters();
@@ -368,23 +379,9 @@
             }
 
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
-
-            // Resolve initial product selection:
-            //  1. Explicit query param
-            //  2. Auto-select when only one product exists
-            if (ProductId.HasValue && _products.Any(p => p.Id == ProductId.Value))
-            {
-                _selectedProductId = ProductId.Value;
-            }
-            else if (_products.Count == 1)
-            {
-                _selectedProductId = _products[0].Id;
-            }
-
-            if (_selectedProductId.HasValue)
-            {
-                await LoadDataAsync(_selectedProductId.Value);
-            }
+            await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, activeProfile.Id);
+            RefreshContextError();
+            await LoadSelectedProductAsync();
 
             UpdateBreadcrumbs();
         }
@@ -401,27 +398,20 @@
 
     private async Task OnProductSelectedAsync(int? productId)
     {
-        _selectedProductId = productId;
-        if (productId.HasValue)
+        await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            ProfileService.GetActiveProfileId(),
+            FilterLocalBridgeState.FromState(GlobalFilterStore.GetState()) with { ProductId = productId },
+            FilterUpdateSource.Ui);
+
+        var targetUri = await GlobalFilterRouteService.BuildCurrentPageUriAsync(NavigationManager.Uri, GlobalFilterStore.GetState());
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
         {
-            _isLoading = true;
-            _loadError = null;
-            StateHasChanged();
-            try
-            {
-                await LoadDataAsync(productId.Value);
-            }
-            catch (Exception ex)
-            {
-                _loadError = $"Failed to load backlog health: {ex.Message}";
-                Console.WriteLine($"[BacklogOverview] {_loadError}");
-            }
-            finally
-            {
-                _isLoading = false;
-                StateHasChanged();
-            }
+            NavigationManager.NavigateTo(targetUri, forceLoad: false);
+            return;
         }
+
+        await LoadSelectedProductAsync();
     }
 
     private async Task LoadDataAsync(int productId)
@@ -532,4 +522,69 @@
         0   => "Needs description",
         _   => $"Partial readiness"
     };
+
+    private async Task LoadSelectedProductAsync()
+    {
+        RefreshContextError();
+        if (!string.IsNullOrWhiteSpace(_contextError))
+        {
+            _loadedProductId = null;
+            _state = null;
+            _readyEpics.Clear();
+            _refinementEpics.Clear();
+            _siIssueCount = 0;
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        if (_loadedProductId == _selectedProductId)
+        {
+            return;
+        }
+
+        _loadedProductId = _selectedProductId;
+        _state = null;
+        _readyEpics.Clear();
+        _refinementEpics.Clear();
+        _siIssueCount = 0;
+
+        if (!_selectedProductId.HasValue)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _isLoading = true;
+        _loadError = null;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await LoadDataAsync(_selectedProductId.Value);
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Failed to load backlog health: {ex.Message}";
+            Console.WriteLine($"[BacklogOverview] {_loadError}");
+        }
+        finally
+        {
+            _isLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(LoadSelectedProductAsync);
+
+    private void RefreshContextError()
+    {
+        var invalidProductIds = GlobalProductSelectionHelper.ResolveUnavailableSelectedProductIds(GlobalFilterStore.GetState(), _products);
+        _contextError = invalidProductIds.Count > 0
+            ? $"Selected global product '{string.Join(", ", invalidProductIds)}' is not available in the current backlog health scope."
+            : null;
+    }
+
+    public void Dispose()
+        => _filterSubscription?.Dispose();
 }

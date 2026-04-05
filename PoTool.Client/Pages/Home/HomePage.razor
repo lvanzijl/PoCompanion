@@ -11,6 +11,8 @@
 @inject CacheSyncService CacheSyncService
 @inject WorkspaceSignalService WorkspaceSignalService
 @inject HomeProductBarMetricsService HomeProductBarMetricsService
+@inject GlobalFilterStore GlobalFilterStore
+@inject GlobalFilterRouteService GlobalFilterRouteService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 
@@ -267,11 +269,12 @@
     private string? _productMetricsError;
     private string? _syncStatusError;
     private int? _profileId;
-    private int? _selectedProductId;
     private DateTimeOffset? _lastSyncTime;
     private List<ProductDto> _products = new();
     private HomeProductBarMetricsDto? _productBarMetrics;
     private CanonicalFilterMetadata? _productBarFilterMetadata;
+    private IDisposable? _filterSubscription;
+    private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -283,6 +286,7 @@
 
     public void Dispose()
     {
+        _filterSubscription?.Dispose();
         _contextLoadCts?.Cancel();
         _contextLoadCts?.Dispose();
         _lifetimeCts.Cancel();
@@ -312,12 +316,8 @@
 
             var syncTask = LoadSyncStatusAsync(_lifetimeCts.Token);
             await LoadProductsAsync(_lifetimeCts.Token);
-
-            var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
-            if (context.ProductId.HasValue && _products.Any(product => product.Id == context.ProductId.Value))
-            {
-                _selectedProductId = context.ProductId.Value;
-            }
+            await SyncStoreFromCurrentRouteAsync(_lifetimeCts.Token);
+            _filterSubscription ??= GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
 
             await RefreshContextDataAsync();
             await syncTask;
@@ -633,12 +633,19 @@
             return;
         }
 
-        _selectedProductId = productId;
-        NavigationManager.NavigateTo(
-            WorkspaceQueryContextHelper.BuildRoute(
-                WorkspaceRoutes.Home,
-                new WorkspaceQueryContext(ProductId: productId)),
-            forceLoad: false);
+        await GlobalFilterStore.SetStateAsync(
+            NavigationManager.Uri,
+            _profileId,
+            FilterLocalBridgeState.FromState(GlobalFilterStore.GetState()) with { ProductId = productId },
+            FilterUpdateSource.Ui);
+
+        var targetUri = await GlobalFilterRouteService.BuildCurrentPageUriAsync(NavigationManager.Uri, GlobalFilterStore.GetState());
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri, forceLoad: false);
+            return;
+        }
+
         await RefreshContextDataAsync();
     }
 
@@ -849,5 +856,19 @@
             ErrorMessage = errorMessage;
             IsLoading = false;
         }
+    }
+
+    private async Task SyncStoreFromCurrentRouteAsync(CancellationToken cancellationToken)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, cancellationToken: cancellationToken);
+
+    private void HandleGlobalFilterChanged()
+    {
+        if (_profileId is null || _isProductsLoading)
+        {
+            _ = InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _ = InvokeAsync(RefreshContextDataAsync);
     }
 }

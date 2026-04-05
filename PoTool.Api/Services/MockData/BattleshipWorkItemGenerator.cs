@@ -73,7 +73,7 @@ public class BattleshipWorkItemGenerator
                 Description: $"Strategic goal for {goalTitles[g].ToLowerInvariant()} across the mock portfolio.",
                 CreatedDate: goalCreatedDate,
                 ClosedDate: GetClosedDate(goalChangedDate, goalState),
-                Tags: "mock,portfolio,goal",
+                Tags: BuildTags("mock", "portfolio", "goal"),
                 ChangedDate: goalChangedDate,
                 BacklogPriority: GetBacklogPriority()));
 
@@ -107,7 +107,7 @@ public class BattleshipWorkItemGenerator
                     Description: $"Objective to operationalize {objectiveTitle.ToLowerInvariant()} for {program.ToLowerInvariant()} teams.",
                     CreatedDate: objectiveCreatedDate,
                     ClosedDate: GetClosedDate(objectiveChangedDate, objectiveState),
-                    Tags: "mock,portfolio,objective",
+                    Tags: BuildTags("mock", "portfolio", "objective"),
                     ChangedDate: objectiveChangedDate,
                     BacklogPriority: GetBacklogPriority()));
 
@@ -139,7 +139,7 @@ public class BattleshipWorkItemGenerator
                         Description: epicDescription,
                         CreatedDate: epicCreatedDate,
                         ClosedDate: GetClosedDate(epicChangedDate, epicState),
-                        Tags: $"mock,epic,{NormalizeTag(program)},{NormalizeTag(team)}",
+                        Tags: GetEpicTags(program, team, e),
                         IsBlocked: GetBlockedFlag(epicState, 0.04),
                         ChangedDate: epicChangedDate,
                         BacklogPriority: GetBacklogPriority()));
@@ -173,7 +173,7 @@ public class BattleshipWorkItemGenerator
                             Description: featureDescription,
                             CreatedDate: featureCreatedDate,
                             ClosedDate: GetClosedDate(featureChangedDate, featureState),
-                            Tags: $"mock,feature,{NormalizeTag(team)}",
+                            Tags: BuildTags("mock", "feature", NormalizeTag(team)),
                             IsBlocked: GetBlockedFlag(featureState, 0.06),
                             ChangedDate: featureChangedDate,
                             BacklogPriority: GetBacklogPriority()));
@@ -206,7 +206,7 @@ public class BattleshipWorkItemGenerator
                                 Description: pbiDescription,
                                 CreatedDate: pbiCreatedDate,
                                 ClosedDate: GetClosedDate(pbiChangedDate, pbiState),
-                                Tags: $"mock,pbi,{NormalizeTag(team)}",
+                                Tags: BuildTags("mock", "pbi", NormalizeTag(team)),
                                 IsBlocked: GetBlockedFlag(pbiState, 0.08),
                                 ChangedDate: pbiChangedDate,
                                 BusinessValue: pbiSizing.BusinessValue,
@@ -235,7 +235,7 @@ public class BattleshipWorkItemGenerator
                                     Description: $"Implementation task to {taskTitle.ToLowerInvariant()}.",
                                     CreatedDate: taskCreatedDate,
                                     ClosedDate: GetClosedDate(taskChangedDate, taskState),
-                                    Tags: $"mock,task,{NormalizeTag(team)}",
+                                    Tags: BuildTags("mock", "task", NormalizeTag(team)),
                                     ChangedDate: taskChangedDate,
                                     BacklogPriority: GetBacklogPriority()));
                             }
@@ -265,7 +265,7 @@ public class BattleshipWorkItemGenerator
                                 CreatedDate: bugCreatedDate,
                                 ClosedDate: GetClosedDate(bugChangedDate, bugState),
                                 Severity: GetBugSeverity(),
-                                Tags: $"mock,bug,{NormalizeTag(team)}",
+                                Tags: GetBugTags(team, bugState, b),
                                 IsBlocked: GetBlockedFlag(bugState, 0.12),
                                 ChangedDate: bugChangedDate,
                                 BacklogPriority: GetBacklogPriority()));
@@ -292,7 +292,7 @@ public class BattleshipWorkItemGenerator
                                     Description: $"Investigation task to {bugTaskTitle.ToLowerInvariant()}.",
                                     CreatedDate: bugTaskCreatedDate,
                                     ClosedDate: GetClosedDate(bugTaskChangedDate, bugTaskState),
-                                    Tags: $"mock,task,bugfix,{NormalizeTag(team)}",
+                                    Tags: BuildTags("mock", "task", "bugfix", NormalizeTag(team)),
                                     ChangedDate: bugTaskChangedDate,
                                     BacklogPriority: GetBacklogPriority()));
                             }
@@ -447,34 +447,33 @@ public class BattleshipWorkItemGenerator
     {
         return _random.NextDouble() < 0.45
             ? "\\Battleship Systems\\Backlog"
-            : GetSprintPath(GetSprintNumber());
+            : GetSprintPath(GetPlanningSprintNumber());
     }
 
     private string GetDeliveryPath()
     {
         var roll = _random.NextDouble();
-        if (roll < 0.35)
+        if (roll < 0.25)
         {
             return "\\Battleship Systems\\Backlog";
         }
 
         if (roll < 0.75)
         {
-            return GetSprintPath(_random.Next(1, 7));
+            return GetSprintPath(GetDeliverySprintNumber());
         }
 
         if (roll < 0.92)
         {
-            return GetSprintPath(_random.Next(7, 11));
+            return GetSprintPath(_random.Next(13, 15));
         }
 
-        return GetSprintPath(_random.Next(3, 11));
+        return GetSprintPath(_random.Next(10, 15));
     }
 
     private string GetSprintPath(int sprintNumber)
     {
-        var quarter = sprintNumber <= 5 ? "Q1" : "Q2";
-        return $"\\Battleship Systems\\2025\\{quarter}\\Sprint {sprintNumber}";
+        return $"\\Battleship Systems\\Sprint {sprintNumber}";
     }
 
     private string GetQuarterForGoal(int goalIndex, int objectiveIndex)
@@ -485,6 +484,16 @@ public class BattleshipWorkItemGenerator
     private int GetSprintNumber()
     {
         return WeightedRandom([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [0.06, 0.08, 0.11, 0.13, 0.14, 0.15, 0.12, 0.10, 0.07, 0.04]);
+    }
+
+    private int GetPlanningSprintNumber()
+    {
+        return WeightedRandom([10, 11, 12, 13, 14], [0.12, 0.30, 0.28, 0.18, 0.12]);
+    }
+
+    private int GetDeliverySprintNumber()
+    {
+        return WeightedRandom([10, 11, 12, 13, 14], [0.14, 0.34, 0.24, 0.16, 0.12]);
     }
 
     private int? GetParentEffort(string state, double estimatedProbability)
@@ -622,6 +631,69 @@ public class BattleshipWorkItemGenerator
     {
         return value.ToLowerInvariant().Replace(' ', '-').Replace('&', '-');
     }
+
+    private string GetEpicTags(string program, string team, int epicIndex)
+    {
+        var tags = new List<string>
+        {
+            "mock",
+            "epic",
+            NormalizeTag(program),
+            NormalizeTag(team)
+        };
+
+        if (epicIndex < 2)
+        {
+            tags.Add("roadmap");
+            tags.Add(epicIndex == 0 ? "priority-high" : "priority-medium");
+        }
+        else if (epicIndex == 2)
+        {
+            tags.Add("priority-low");
+        }
+
+        return BuildTags(tags.ToArray());
+    }
+
+    private string GetBugTags(string team, string bugState, int bugIndex)
+    {
+        var tags = new List<string>
+        {
+            "mock",
+            "bug",
+            NormalizeTag(team),
+            MockBugTriageTags[(bugIndex + team.Length) % MockBugTriageTags.Length]
+        };
+
+        if (!IsTerminalState(bugState))
+        {
+            tags.Add("Needs Investigation");
+        }
+
+        if (bugIndex % 3 == 0)
+        {
+            tags.Add("Regression");
+        }
+
+        return BuildTags(tags.ToArray());
+    }
+
+    private static string BuildTags(params string[] tags)
+    {
+        return string.Join(
+            "; ",
+            tags.Where(static tag => !string.IsNullOrWhiteSpace(tag))
+                .Distinct(StringComparer.OrdinalIgnoreCase));
+    }
+
+    private static readonly string[] MockBugTriageTags =
+    [
+        "Customer Reported",
+        "Regression",
+        "Operational Risk",
+        "Hotfix Candidate",
+        "Needs Repro"
+    ];
 
     private string GetGoalState()
     {

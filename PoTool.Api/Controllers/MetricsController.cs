@@ -92,6 +92,10 @@ public class MetricsController : ControllerBase
                     SprintId: sprintId),
                 nameof(GetSprintMetrics),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var metrics = await _mediator.Send(
                 new GetSprintMetricsQuery(resolution.EffectiveFilter),
@@ -141,6 +145,10 @@ public class MetricsController : ControllerBase
                     SprintId: sprintId),
                 nameof(GetBacklogHealth),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var health = await _mediator.Send(
                 new GetBacklogHealthQuery(resolution.EffectiveFilter),
@@ -191,6 +199,10 @@ public class MetricsController : ControllerBase
                     AreaPath: areaPath),
                 nameof(GetMultiIterationBacklogHealth),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var health = await _mediator.Send(
                 new GetMultiIterationBacklogHealthQuery(resolution.EffectiveFilter, maxIterations),
@@ -283,6 +295,10 @@ public class MetricsController : ControllerBase
                     SprintId: sprintId),
                 nameof(GetSprintCapacityPlan),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var plan = await _mediator.Send(
                 new GetSprintCapacityPlanQuery(resolution.EffectiveFilter, defaultCapacity),
@@ -769,6 +785,10 @@ public class MetricsController : ControllerBase
                     SprintIds: sprintIds),
                 nameof(GetSprintTrendMetrics),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var response = await _mediator.Send(
                 new GetSprintTrendMetricsQuery(productOwnerId, resolution.EffectiveFilter, recompute, includeDetails),
@@ -820,6 +840,10 @@ public class MetricsController : ControllerBase
                     SprintIds: sprintIds),
                 nameof(GetPortfolioProgressTrend),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetPortfolioProgressTrendQuery(resolution.EffectiveFilter),
@@ -865,6 +889,10 @@ public class MetricsController : ControllerBase
                     SprintIds: sprintIds),
                 nameof(GetCapacityCalibration),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetCapacityCalibrationQuery(resolution.EffectiveFilter),
@@ -909,6 +937,10 @@ public class MetricsController : ControllerBase
                     SprintIds: sprintIds),
                 nameof(GetPortfolioDelivery),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetPortfolioDeliveryQuery(resolution.EffectiveFilter),
@@ -940,6 +972,10 @@ public class MetricsController : ControllerBase
                     ProductIds: productId.HasValue ? [productId.Value] : null),
                 nameof(GetHomeProductBarMetrics),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetHomeProductBarMetricsQuery(productOwnerId, resolution.EffectiveFilter),
@@ -978,9 +1014,14 @@ public class MetricsController : ControllerBase
                 new SprintFilterBoundaryRequest(
                     ProductOwnerId: productOwnerId,
                     ProductIds: productId.HasValue ? [productId.Value] : null,
+                    RequireExplicitProductScope: true,
                     SprintId: sprintId),
                 nameof(GetSprintExecution),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetSprintExecutionQuery(productOwnerId, resolution.EffectiveFilter),
@@ -1017,6 +1058,10 @@ public class MetricsController : ControllerBase
                     RangeEndUtc: periodEndUtc),
                 nameof(GetWorkItemActivityDetails),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var details = await _mediator.Send(
                 new GetWorkItemActivityDetailsQuery(productOwnerId, workItemId, resolution.EffectiveFilter),
@@ -1096,4 +1141,5 @@ public class MetricsController : ControllerBase
 
         return sprintId.HasValue ? $"Sprint {sprintId.Value}" : "Unknown sprint";
     }
+
 }

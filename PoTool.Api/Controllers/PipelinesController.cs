@@ -93,6 +93,10 @@ public class PipelinesController : ControllerBase
                     RangeEndUtc: toDate),
                 nameof(GetMetrics),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var metrics = (await _mediator.Send(
                     new GetPipelineMetricsQuery(resolution.EffectiveFilter),
@@ -133,6 +137,10 @@ public class PipelinesController : ControllerBase
                     RangeEndUtc: toDate),
                 nameof(GetRunsForProducts),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var runs = (await _mediator.Send(
                     new GetPipelineRunsForProductsQuery(resolution.EffectiveFilter),
@@ -180,6 +188,7 @@ public class PipelinesController : ControllerBase
     public async Task<ActionResult<PipelineQueryResponseDto<PipelineInsightsDto>>> GetInsights(
         [FromQuery] int productOwnerId,
         [FromQuery] int sprintId,
+        [FromQuery] int[]? productIds = null,
         [FromQuery] bool includePartiallySucceeded = true,
         [FromQuery] bool includeCanceled = false,
         CancellationToken cancellationToken = default)
@@ -189,9 +198,14 @@ public class PipelinesController : ControllerBase
             var resolution = await _filterResolutionService.ResolveAsync(
                 new PipelineFilterBoundaryRequest(
                     ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
                     SprintId: sprintId),
                 nameof(GetInsights),
                 cancellationToken);
+            if (!resolution.Validation.IsValid)
+            {
+                return FilterValidationResponseHelper.CreateBadRequest(this, resolution.Validation);
+            }
 
             var result = await _mediator.Send(
                 new GetPipelineInsightsQuery(

@@ -21,6 +21,10 @@ public sealed class DeliveryFilterResolutionServiceTests
             PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
             PersistenceTestGraph.CreateProduct(200, "Product 200", 7),
             PersistenceTestGraph.CreateProduct(300, "Product 300", 9));
+        context.ProductTeamLinks.AddRange(
+            new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 200, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 300, TeamId = 3 });
         context.Sprints.AddRange(
             new SprintEntity
             {
@@ -42,6 +46,7 @@ public sealed class DeliveryFilterResolutionServiceTests
 
         var service = new DeliveryFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<DeliveryFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -69,6 +74,10 @@ public sealed class DeliveryFilterResolutionServiceTests
             PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
             PersistenceTestGraph.CreateProduct(200, "Product 200", 7),
             PersistenceTestGraph.CreateProduct(300, "Product 300", 9));
+        context.ProductTeamLinks.AddRange(
+            new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 200, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 300, TeamId = 3 });
         context.Sprints.Add(new SprintEntity
         {
             Id = 42,
@@ -81,6 +90,7 @@ public sealed class DeliveryFilterResolutionServiceTests
 
         var service = new DeliveryFilterResolutionService(
             context,
+            new ContextResolver(context),
             NullLogger<DeliveryFilterResolutionService>.Instance);
 
         var resolution = await service.ResolveAsync(
@@ -94,6 +104,43 @@ public sealed class DeliveryFilterResolutionServiceTests
         CollectionAssert.AreEqual(new[] { 100, 200 }, resolution.EffectiveFilter.Context.ProductIds.Values.ToArray());
         CollectionAssert.AreEqual(new[] { nameof(PoTool.Core.Delivery.Filters.DeliveryFilterContext.ProductIds) }, resolution.Validation.InvalidFields.ToArray());
         Assert.IsTrue(resolution.Validation.Messages.Any(message => message.Field == nameof(PoTool.Core.Delivery.Filters.DeliveryFilterContext.ProductIds)));
+    }
+
+    [TestMethod]
+    public async Task ResolveAsync_SprintOutsideSelectedProductScope_IsInvalid()
+    {
+        await using var context = CreateContext();
+        PersistenceTestGraph.EnsureProject(context);
+        PersistenceTestGraph.EnsureTeam(context, 3);
+        PersistenceTestGraph.EnsureTeam(context, 9);
+        context.Products.AddRange(
+            PersistenceTestGraph.CreateProduct(100, "Product 100", 7),
+            PersistenceTestGraph.CreateProduct(200, "Product 200", 7));
+        context.ProductTeamLinks.AddRange(
+            new ProductTeamLinkEntity { ProductId = 100, TeamId = 3 },
+            new ProductTeamLinkEntity { ProductId = 200, TeamId = 9 });
+        context.Sprints.Add(new SprintEntity
+        {
+            Id = 42,
+            Name = "Sprint 42",
+            TeamId = 3,
+            StartDateUtc = new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc),
+            EndDateUtc = new DateTime(2026, 2, 14, 0, 0, 0, DateTimeKind.Utc)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new DeliveryFilterResolutionService(
+            context,
+            new ContextResolver(context),
+            NullLogger<DeliveryFilterResolutionService>.Instance);
+
+        var resolution = await service.ResolveAsync(
+            new DeliveryFilterBoundaryRequest(ProductIds: [200], SprintId: 42),
+            "TestBoundary",
+            CancellationToken.None);
+
+        Assert.IsFalse(resolution.Validation.IsValid);
+        CollectionAssert.Contains(resolution.Validation.InvalidFields.ToArray(), nameof(ContextResolutionRequest.SprintIds));
     }
 
     private static PoToolDbContext CreateContext()
