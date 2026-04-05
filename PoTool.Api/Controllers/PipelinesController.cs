@@ -188,6 +188,7 @@ public class PipelinesController : ControllerBase
     public async Task<ActionResult<PipelineQueryResponseDto<PipelineInsightsDto>>> GetInsights(
         [FromQuery] int productOwnerId,
         [FromQuery] int sprintId,
+        [FromQuery] int[]? productIds = null,
         [FromQuery] bool includePartiallySucceeded = true,
         [FromQuery] bool includeCanceled = false,
         CancellationToken cancellationToken = default)
@@ -197,6 +198,7 @@ public class PipelinesController : ControllerBase
             var resolution = await _filterResolutionService.ResolveAsync(
                 new PipelineFilterBoundaryRequest(
                     ProductOwnerId: productOwnerId,
+                    ProductIds: productIds,
                     SprintId: sprintId),
                 nameof(GetInsights),
                 cancellationToken);

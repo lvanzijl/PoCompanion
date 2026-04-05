@@ -3076,13 +3076,28 @@
             "x-position": 2
           },
           {
+            "name": "productIds",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "x-position": 3
+          },
+          {
             "name": "includePartiallySucceeded",
             "in": "query",
             "schema": {
               "type": "boolean",
               "default": true
             },
-            "x-position": 3
+            "x-position": 4
           },
           {
             "name": "includeCanceled",
@@ -3091,7 +3106,7 @@
               "type": "boolean",
               "default": false
             },
-            "x-position": 4
+            "x-position": 5
           }
         ],
         "responses": {

@@ -45,7 +45,7 @@ public sealed class GeneratedClientStateServiceTests
             BaseUrl = "http://localhost"
         });
 
-        var response = await service.GetInsightsStateAsync(7, 11, true, false);
+        var response = await service.GetInsightsStateAsync(7, 11, null, true, false);
 
         Assert.IsNotNull(response);
         Assert.AreEqual(DataStateDto.Failed, response.State);
