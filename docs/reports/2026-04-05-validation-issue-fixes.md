@@ -28,8 +28,8 @@ Reproduced on `/home/delivery/execution?productId=1&teamId=4&sprintId=2&timeMode
 Sprint 11 execution data for product 1 should show committed/unfinished/completed scope, because the page is explicitly scoped to product 1 and Sprint 11.
 
 ### Mock data present
-Before fix: **nee** for the required current sprint path alignment.
-After fix: **ja**.
+Before fix: **no** for the required current sprint path alignment.
+After fix: **yes**.
 
 Evidence:
 - Before fix, product 1 PBI/Bug work items were still assigned to legacy iteration paths like `\Battleship Systems\2025\Q1\Sprint 3` and `\Battleship Systems\2025\Q2\Sprint 9`.
@@ -67,7 +67,7 @@ Reproduced on `/planning/battleship-systems/overview?productId=1` before the fix
 The project route should resolve `battleship-systems` to the Battleship project and render the read-only summary across the project’s products.
 
 ### Mock data present
-**Ja**
+**Yes**
 
 Evidence:
 - API returned valid project summary data for `battleship-systems`.
@@ -107,7 +107,7 @@ Reproduced on `/planning/multi-product` before the fixes.
 With products 1 and 2 selected, the page should use the same product set for selection state, sprint cadence resolution, projection requests, and rendering.
 
 ### Mock data present
-**Ja**, but it was partly unusable before the fixes.
+**Yes**, but it was partly unusable before the fixes.
 
 Evidence:
 - Planning projection endpoints returned roadmap epics for products 1 and 2.
