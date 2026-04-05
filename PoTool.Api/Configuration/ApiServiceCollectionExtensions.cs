@@ -3,10 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Filters;
 using PoTool.Api.Hubs;
 using PoTool.Api.Persistence;
+using PoTool.Api.Persistence.Entities.Onboarding;
 using PoTool.Api.Repositories;
 using PoTool.Api.Services;
 using PoTool.Api.Services.BuildQuality;
 using PoTool.Api.Services.Configuration;
+using PoTool.Api.Services.Onboarding;
+using PoTool.Api.Handlers.Onboarding;
 using PoTool.Api.Services.MockData;
 using PoTool.Api.Services.Sync;
 using PoTool.Integrations.Tfs.Clients;
@@ -174,6 +177,13 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IBuildQualityReadStore, EfBuildQualityReadStore>();
         services.AddScoped<IBuildQualityProvider, BuildQualityProvider>();
         services.AddScoped<ContextResolver>();
+        services.AddScoped<IOnboardingObservability, OnboardingObservability>();
+        services.AddScoped<IOnboardingScopedTfsClientFactory, OnboardingScopedTfsClientFactory>();
+        services.AddScoped<IOnboardingSnapshotMapper, OnboardingSnapshotMapper>();
+        services.AddScoped<IOnboardingLiveLookupClient, OnboardingLiveLookupClient>();
+        services.AddScoped<IOnboardingLookupService, OnboardingLookupService>();
+        services.AddScoped<IOnboardingValidationService, OnboardingValidationService>();
+        services.AddScoped<IOnboardingLookupHandler, OnboardingLookupHandler>();
         services.AddScoped<DeliveryFilterResolutionService>();
         services.AddScoped<PipelineFilterResolutionService>();
         services.AddScoped<IPipelineInsightsReadStore, EfPipelineInsightsReadStore>();
@@ -444,5 +454,112 @@ public static class ApiServiceCollectionExtensions
         });
 
         return services;
+    }
+}
+
+public interface IOnboardingScopedTfsClientFactory
+{
+    IAsyncDisposableTfsClientSession CreateSession(TfsConnection connection, string? projectName = null, string? defaultAreaPath = null);
+}
+
+public interface IAsyncDisposableTfsClientSession : IAsyncDisposable
+{
+    ITfsClient Client { get; }
+}
+
+public sealed class OnboardingScopedTfsClientFactory : IOnboardingScopedTfsClientFactory
+{
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly TfsRuntimeMode _runtimeMode;
+
+    public OnboardingScopedTfsClientFactory(IServiceScopeFactory scopeFactory, TfsRuntimeMode runtimeMode)
+    {
+        _scopeFactory = scopeFactory;
+        _runtimeMode = runtimeMode;
+    }
+
+    public IAsyncDisposableTfsClientSession CreateSession(TfsConnection connection, string? projectName = null, string? defaultAreaPath = null)
+    {
+        var scope = _scopeFactory.CreateAsyncScope();
+        var configService = new InMemoryTfsConfigurationService(CreateConfig(connection, projectName, defaultAreaPath));
+        var provider = new OverriddenServiceProvider(scope.ServiceProvider, configService);
+        ITfsClient client = _runtimeMode.UseMockClient
+            ? ActivatorUtilities.CreateInstance<MockTfsClient>(provider)
+            : RealTfsClientFactory.Create(provider);
+
+        return new AsyncDisposableTfsClientSession(scope, client);
+    }
+
+    private static TfsConfigEntity CreateConfig(TfsConnection connection, string? projectName, string? defaultAreaPath)
+    {
+        var resolvedProject = projectName ?? string.Empty;
+        var resolvedAreaPath = defaultAreaPath ?? resolvedProject;
+        return new TfsConfigEntity
+        {
+            Url = connection.OrganizationUrl,
+            Project = resolvedProject,
+            DefaultAreaPath = resolvedAreaPath,
+            TimeoutSeconds = connection.TimeoutSeconds,
+            ApiVersion = connection.ApiVersion,
+            UseDefaultCredentials = true,
+            LastValidated = connection.LastSuccessfulValidationAtUtc.HasValue
+                ? new DateTimeOffset(DateTime.SpecifyKind(connection.LastSuccessfulValidationAtUtc.Value, DateTimeKind.Utc))
+                : null
+        };
+    }
+
+    private sealed class AsyncDisposableTfsClientSession : IAsyncDisposableTfsClientSession
+    {
+        private readonly AsyncServiceScope _scope;
+
+        public AsyncDisposableTfsClientSession(AsyncServiceScope scope, ITfsClient client)
+        {
+            _scope = scope;
+            Client = client;
+        }
+
+        public ITfsClient Client { get; }
+
+        public ValueTask DisposeAsync() => _scope.DisposeAsync();
+    }
+
+    private sealed class InMemoryTfsConfigurationService : ITfsConfigurationService
+    {
+        private TfsConfigEntity _entity;
+
+        public InMemoryTfsConfigurationService(TfsConfigEntity entity)
+        {
+            _entity = entity;
+        }
+
+        public Task<TfsConfigEntity?> GetConfigEntityAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<TfsConfigEntity?>(_entity);
+
+        public Task SaveConfigEntityAsync(TfsConfigEntity entity, CancellationToken cancellationToken = default)
+        {
+            _entity = entity;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class OverriddenServiceProvider : IServiceProvider, ISupportRequiredService
+    {
+        private readonly IServiceProvider _innerProvider;
+        private readonly ITfsConfigurationService _configService;
+
+        public OverriddenServiceProvider(IServiceProvider innerProvider, ITfsConfigurationService configService)
+        {
+            _innerProvider = innerProvider;
+            _configService = configService;
+        }
+
+        public object? GetService(Type serviceType)
+            => serviceType == typeof(ITfsConfigurationService)
+                ? _configService
+                : _innerProvider.GetService(serviceType);
+
+        public object GetRequiredService(Type serviceType)
+            => GetService(serviceType)
+                ?? throw new InvalidOperationException($"Service '{serviceType.FullName}' is not registered.");
     }
 }
