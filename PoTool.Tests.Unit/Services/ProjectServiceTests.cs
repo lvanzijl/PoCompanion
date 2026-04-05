@@ -31,7 +31,10 @@ public class ProjectServiceTests
             "JsonSerializerSettings",
             BindingFlags.Instance | BindingFlags.NonPublic);
 
-        var settings = settingsProperty?.GetValue(client) as System.Text.Json.JsonSerializerOptions;
+        Assert.IsNotNull(settingsProperty);
+        Assert.AreEqual(typeof(System.Text.Json.JsonSerializerOptions), settingsProperty.PropertyType);
+
+        var settings = settingsProperty.GetValue(client) as System.Text.Json.JsonSerializerOptions;
 
         Assert.IsNotNull(settings);
         Assert.IsTrue(settings.PropertyNameCaseInsensitive);
