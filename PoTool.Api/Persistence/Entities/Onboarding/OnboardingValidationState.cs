@@ -2,9 +2,14 @@ namespace PoTool.Api.Persistence.Entities.Onboarding;
 
 public sealed class OnboardingValidationState
 {
+    public OnboardingValidationState()
+    {
+        ValidatedAtUtc = DateTime.UtcNow;
+    }
+
     public string Status { get; set; } = "Unknown";
 
-    public DateTime ValidatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime ValidatedAtUtc { get; set; }
 
     public string? ErrorCode { get; set; }
 

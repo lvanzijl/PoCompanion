@@ -2,6 +2,11 @@ namespace PoTool.Api.Persistence.Entities.Onboarding;
 
 public sealed class TfsConnection : OnboardingEntityBase
 {
+    public TfsConnection()
+    {
+        LastAttemptedValidationAtUtc = DateTime.UtcNow;
+    }
+
     public string ConnectionKey { get; set; } = "connection";
 
     public string OrganizationUrl { get; set; } = string.Empty;
@@ -20,7 +25,7 @@ public sealed class TfsConnection : OnboardingEntityBase
 
     public DateTime? LastSuccessfulValidationAtUtc { get; set; }
 
-    public DateTime LastAttemptedValidationAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime LastAttemptedValidationAtUtc { get; set; }
 
     public string? ValidationFailureReason { get; set; }
 

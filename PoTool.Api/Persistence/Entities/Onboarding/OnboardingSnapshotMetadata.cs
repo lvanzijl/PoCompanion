@@ -2,9 +2,16 @@ namespace PoTool.Api.Persistence.Entities.Onboarding;
 
 public sealed class OnboardingSnapshotMetadata
 {
-    public DateTime ConfirmedAtUtc { get; set; } = DateTime.UtcNow;
+    public OnboardingSnapshotMetadata()
+    {
+        var utcNow = DateTime.UtcNow;
+        ConfirmedAtUtc = utcNow;
+        LastSeenAtUtc = utcNow;
+    }
 
-    public DateTime LastSeenAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime ConfirmedAtUtc { get; set; }
+
+    public DateTime LastSeenAtUtc { get; set; }
 
     public bool IsCurrent { get; set; }
 
