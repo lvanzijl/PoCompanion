@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-05",
+    "type": "Fixed",
+    "title": "Battleship planning and execution pages now render current sprint and project data consistently",
+    "impact": "Sprint Execution now shows Battleship Sprint 11 scope instead of an empty state, project planning overview now deserializes and renders the Battleship project summary correctly, Multi-Product Planning now uses real team sprint cadence with visible product lanes, and Plan Board restores sprint columns for the selected product teams.",
+    "area": "Planning / Delivery",
+    "link": "/planning/plan-board"
+  },
+  {
     "date": "2026-04-04",
     "type": "Changed",
     "title": "Product selection now stays global across planning, health, bug, and work-item pages",
