@@ -98,6 +98,34 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
+    public async Task TrackNavigation_ProductScopedEditorRoute_MismatchedGlobalProduct_IsInvalid()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/planning/product-roadmaps/11?productId=12");
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(FilterResolutionStatus.Invalid, store.CurrentUsage.Status);
+        CollectionAssert.Contains(
+            store.CurrentUsage.StateIssues.ToArray(),
+            "Route product '11' does not match the selected global product '12'.");
+    }
+
+    [TestMethod]
+    public async Task TrackNavigation_ProjectScopedPlanningRoute_ProductOutsideAllowedUniverse_IsInvalid()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/planning/payments-platform/plan-board?productId=99");
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(FilterResolutionStatus.Invalid, store.CurrentUsage.Status);
+        CollectionAssert.Contains(
+            store.CurrentUsage.StateIssues.ToArray(),
+            "Selected global product '99' is not available in project route 'payments-platform'.");
+    }
+
+    [TestMethod]
     public async Task TrackNavigation_RollingQuery_TracksExplicitWindowAndUnit()
     {
         var store = CreateStore();

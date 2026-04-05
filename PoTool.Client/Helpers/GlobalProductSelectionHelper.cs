@@ -30,4 +30,23 @@ public static class GlobalProductSelectionHelper
             ? selectedProductId
             : null;
     }
+
+    public static IReadOnlyList<int> ResolveUnavailableSelectedProductIds(
+        FilterState state,
+        IReadOnlyCollection<ProductDto> availableProducts)
+    {
+        if (state.ProductIds.Count == 0)
+        {
+            return Array.Empty<int>();
+        }
+
+        var availableProductIds = availableProducts
+            .Select(product => product.Id)
+            .ToHashSet();
+
+        return state.ProductIds
+            .Where(productId => !availableProductIds.Contains(productId))
+            .Distinct()
+            .ToArray();
+    }
 }

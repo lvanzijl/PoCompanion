@@ -34,13 +34,22 @@ public sealed class FilterStateResolver
         var routeProductAuthority = false;
         var routeProjectAuthority = !string.IsNullOrWhiteSpace(GlobalFilterPageCatalog.ResolveRouteProjectAlias(route));
 
-        var productIds = ResolveProducts(route, context, localState, decisions, ref lastUpdateSource, localSource);
         var projectResolution = await ResolveProjectsAsync(route, context, localState, decisions, issues, localSource, cancellationToken);
         var projectIds = projectResolution.ProjectIds;
         if (projectResolution.Source != FilterUpdateSource.Default)
         {
             lastUpdateSource = projectResolution.Source;
         }
+        var productIds = ResolveProducts(
+            route,
+            context,
+            localState,
+            decisions,
+            issues,
+            ref lastUpdateSource,
+            localSource,
+            projectResolution.AllowedProductIds,
+            projectResolution.RouteProjectAlias);
         var teamId = ResolveScalar(
             context.TeamId,
             localState?.TeamId,
@@ -80,8 +89,11 @@ public sealed class FilterStateResolver
         WorkspaceQueryContext context,
         FilterLocalBridgeState? localState,
         ICollection<string> decisions,
+        ICollection<string> issues,
         ref FilterUpdateSource lastUpdateSource,
-        FilterUpdateSource localSource)
+        FilterUpdateSource localSource,
+        IReadOnlyCollection<int>? allowedProductIds,
+        string? routeProjectAlias)
     {
         var routeProductId = GlobalFilterPageCatalog.ResolveRouteProductId(route);
         if (routeProductId.HasValue)
@@ -89,23 +101,52 @@ public sealed class FilterStateResolver
             decisions.Add($"route productId {routeProductId.Value} is treated as a lookup hint only");
         }
 
+        IReadOnlyList<int> selectedProductIds;
         if (context.ProductId.HasValue)
         {
             lastUpdateSource = FilterUpdateSource.Query;
-            return new[] { context.ProductId.Value };
+            selectedProductIds = [context.ProductId.Value];
         }
-
-        if (localState?.ProductId.HasValue == true)
+        else if (localState?.ProductId.HasValue == true)
         {
             decisions.Add("local bridge supplied productId");
             lastUpdateSource = localSource;
-            return new[] { localState.ProductId.Value };
+            selectedProductIds = [localState.ProductId.Value];
+        }
+        else
+        {
+            selectedProductIds = Array.Empty<int>();
         }
 
-        return Array.Empty<int>();
+        if (routeProductId.HasValue
+            && selectedProductIds.Count == 1
+            && selectedProductIds[0] != routeProductId.Value)
+        {
+            issues.Add($"Route product '{routeProductId.Value}' does not match the selected global product '{selectedProductIds[0]}'.");
+        }
+
+        if (allowedProductIds is not null && selectedProductIds.Count > 0)
+        {
+            var allowedProductSet = allowedProductIds.ToHashSet();
+            var invalidProductIds = selectedProductIds
+                .Where(productId => !allowedProductSet.Contains(productId))
+                .Distinct()
+                .ToArray();
+
+            if (invalidProductIds.Length > 0)
+            {
+                var invalidIds = string.Join(", ", invalidProductIds);
+                var scopeLabel = string.IsNullOrWhiteSpace(routeProjectAlias)
+                    ? "the current route scope"
+                    : $"project route '{routeProjectAlias}'";
+                issues.Add($"Selected global product '{invalidIds}' is not available in {scopeLabel}.");
+            }
+        }
+
+        return selectedProductIds;
     }
 
-    private async Task<(IReadOnlyList<string> ProjectIds, FilterUpdateSource Source)> ResolveProjectsAsync(
+    private async Task<(IReadOnlyList<string> ProjectIds, FilterUpdateSource Source, IReadOnlyCollection<int>? AllowedProductIds, string? RouteProjectAlias)> ResolveProjectsAsync(
         string route,
         WorkspaceQueryContext context,
         FilterLocalBridgeState? localState,
@@ -132,17 +173,22 @@ public sealed class FilterStateResolver
                 decisions.Add($"route project alias '{routeAlias}' overrode query projectId '{queryProjectId}'");
             }
 
-            var projectId = await ResolveProjectIdAsync(routeAlias, cancellationToken);
+            var routeProject = await _projectIdentityMapper.ResolveProjectAsync(routeAlias, cancellationToken);
+            var projectId = routeProject?.Id;
             if (string.IsNullOrWhiteSpace(projectId))
             {
                 decisions.Add($"route project alias '{routeAlias}' is authoritative without a resolved projectId");
             }
-            return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : new[] { projectId }, FilterUpdateSource.Route);
+            return (
+                string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : [projectId],
+                FilterUpdateSource.Route,
+                routeProject?.ProductIds,
+                routeAlias);
         }
 
         if (!string.IsNullOrWhiteSpace(queryProjectId))
         {
-            return (new[] { queryProjectId }, FilterUpdateSource.Query);
+            return ([queryProjectId], FilterUpdateSource.Query, null, null);
         }
 
         if (!string.IsNullOrWhiteSpace(queryAlias))
@@ -152,13 +198,13 @@ public sealed class FilterStateResolver
             {
                 issues.Add($"query project alias '{queryAlias}' could not be resolved");
             }
-            return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : new[] { projectId }, FilterUpdateSource.Query);
+            return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : [projectId], FilterUpdateSource.Query, null, null);
         }
 
         if (!string.IsNullOrWhiteSpace(localProjectId))
         {
             decisions.Add("local bridge supplied projectId");
-            return (new[] { localProjectId }, localSource);
+            return ([localProjectId], localSource, null, null);
         }
 
         if (!string.IsNullOrWhiteSpace(localProjectAlias))
@@ -169,10 +215,10 @@ public sealed class FilterStateResolver
             {
                 issues.Add($"local project alias '{localProjectAlias}' could not be resolved");
             }
-            return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : new[] { projectId }, localSource);
+            return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : [projectId], localSource, null, null);
         }
 
-        return (Array.Empty<string>(), FilterUpdateSource.Default);
+        return (Array.Empty<string>(), FilterUpdateSource.Default, null, null);
     }
 
     private static int? ResolveScalar(

@@ -165,6 +165,18 @@
         {
             // Load products for the active profile (Product Owner)
             var availableProducts = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
+            var invalidProductIds = GlobalProductSelectionHelper.ResolveUnavailableSelectedProductIds(GlobalFilterStore.GetState(), availableProducts);
+            if (invalidProductIds.Count > 0)
+            {
+                _errorResponse = new ErrorResponse
+                {
+                    UserMessage = "Invalid product selection for Work Item Explorer.",
+                    Suggestion = $"Choose All products or a product available in your current scope. Invalid selection: {string.Join(", ", invalidProductIds)}."
+                };
+                return new List<ProductDto>();
+            }
+
+            _errorResponse = null;
             var profileProducts = GlobalProductSelectionHelper.ResolveScopedProducts(GlobalFilterStore.GetState(), availableProducts).ToList();
             Console.WriteLine($"[WorkItemExplorer] Loaded {profileProducts.Count} products for active profile '{activeProfile.Name}' (ID: {activeProfile.Id})");
             return profileProducts;
@@ -172,9 +184,22 @@
         else
         {
             // No active profile - load all products as fallback
+            var availableProducts = (await ProductService.GetAllProductsAsync()).ToList();
+            var invalidProductIds = GlobalProductSelectionHelper.ResolveUnavailableSelectedProductIds(GlobalFilterStore.GetState(), availableProducts);
+            if (invalidProductIds.Count > 0)
+            {
+                _errorResponse = new ErrorResponse
+                {
+                    UserMessage = "Invalid product selection for Work Item Explorer.",
+                    Suggestion = $"Choose All products or a product available in the current scope. Invalid selection: {string.Join(", ", invalidProductIds)}."
+                };
+                return new List<ProductDto>();
+            }
+
+            _errorResponse = null;
             var allProducts = GlobalProductSelectionHelper.ResolveScopedProducts(
                 GlobalFilterStore.GetState(),
-                (await ProductService.GetAllProductsAsync()).ToList()).ToList();
+                availableProducts).ToList();
             Console.WriteLine($"[WorkItemExplorer] No active profile, loaded all {allProducts.Count} products");
             return allProducts;
         }

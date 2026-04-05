@@ -149,10 +149,10 @@ public sealed class GlobalFilterRouteService
             "PlanBoard" => string.IsNullOrWhiteSpace(projectAlias)
                 ? (!string.IsNullOrWhiteSpace(routeProjectAlias) ? defaultPath : WorkspaceRoutes.PlanBoard)
                 : WorkspaceRoutes.GetProjectPlanBoard(projectAlias),
-            "ProductRoadmapEditor" when state.PrimaryProductId.HasValue
-                => WorkspaceRoutes.GetProductRoadmapEditor(state.PrimaryProductId.Value),
             "ProductRoadmapEditor" when routeProductId.HasValue
                 => defaultPath,
+            "ProductRoadmapEditor" when state.PrimaryProductId.HasValue
+                => WorkspaceRoutes.GetProductRoadmapEditor(state.PrimaryProductId.Value),
             _ => defaultPath
         };
     }
