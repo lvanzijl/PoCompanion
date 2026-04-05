@@ -127,8 +127,8 @@ public sealed class MetricsControllerDeliveryCanonicalFilterTests
             .ReturnsAsync(new PortfolioDeliveryDto
             {
                 Summary = new PortfolioDeliverySummaryDto(),
-                ProductContributions = Array.Empty<PortfolioProductContributionDto>(),
-                FeatureContributions = Array.Empty<PortfolioFeatureContributionDto>()
+                Products = Array.Empty<ProductDeliveryDto>(),
+                TopFeatures = Array.Empty<FeatureDeliveryDto>()
             });
 
         var filterService = new DeliveryFilterResolutionService(

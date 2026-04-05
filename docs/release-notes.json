@@ -2,6 +2,14 @@
   {
     "date": "2026-04-05",
     "type": "Changed",
+    "title": "Portfolio Delivery and Pipeline Insights now honor the shared product filter",
+    "impact": "Portfolio Delivery and Pipeline Insights now send the selected product scope through their canonical API filters instead of silently reading all products, so single-product analysis matches the shared filter state while all-products mode stays explicit when no product is selected.",
+    "area": "Delivery / Pipelines",
+    "link": "/home/delivery/portfolio"
+  },
+  {
+    "date": "2026-04-05",
+    "type": "Changed",
     "title": "Shared product, team, and sprint filters now allow only structurally valid combinations",
     "impact": "Planning, delivery, pipeline, pull-request, and build-quality reads now resolve product/team/sprint context through one canonical backend graph, incompatible combinations are rejected before handlers run, and the shared filter UI now limits team choices to the selected product so invalid team-sprint combinations cannot be created from the client.",
     "area": "Planning / Delivery / Pipelines / Pull Requests",
