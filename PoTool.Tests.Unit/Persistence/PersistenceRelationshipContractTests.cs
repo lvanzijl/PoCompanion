@@ -17,6 +17,8 @@ public sealed class PersistenceRelationshipContractTests
             ["CachedPipelineRunEntity:ProductOwnerId->ProfileEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["CoverageEntity:BuildId->CachedPipelineRunEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["EpicPlacementEntity:LaneId->LaneEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
+            ["MigrationIssue:MigrationRunId->MigrationRun"] = [nameof(OnboardingMigrationInfrastructurePersistenceTests.InsertValidMigrationGraph_Succeeds)],
+            ["MigrationUnit:MigrationRunId->MigrationRun"] = [nameof(OnboardingMigrationInfrastructurePersistenceTests.InsertValidMigrationGraph_Succeeds)],
             ["OnboardingSnapshotMetadata:PipelineSnapshotPipelineSourceId->PipelineSnapshot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
             ["OnboardingSnapshotMetadata:ProductRootSnapshotProductRootId->ProductRootSnapshot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
             ["OnboardingSnapshotMetadata:ProjectSnapshotProjectSourceId->ProjectSnapshot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],

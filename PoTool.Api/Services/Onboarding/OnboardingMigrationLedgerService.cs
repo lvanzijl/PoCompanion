@@ -437,7 +437,10 @@ public sealed class OnboardingMigrationLedgerService : IOnboardingMigrationLedge
     }
 
     private static OnboardingMigrationRunSummary MapSummary(MigrationRun run)
-        => new(
+    {
+        var unitIdentifiersById = run.Units.ToDictionary(unit => unit.Id, unit => unit.UnitIdentifier);
+
+        return new OnboardingMigrationRunSummary(
             run.RunIdentifier,
             run.MigrationVersion,
             run.EnvironmentRing,
@@ -476,7 +479,9 @@ public sealed class OnboardingMigrationLedgerService : IOnboardingMigrationLedge
                 .Select(issue => new OnboardingMigrationIssueSummary(
                     issue.IssueIdentifier,
                     run.RunIdentifier,
-                    issue.MigrationUnit?.UnitIdentifier,
+                    issue.MigrationUnitId.HasValue && unitIdentifiersById.TryGetValue(issue.MigrationUnitId.Value, out var unitIdentifier)
+                        ? unitIdentifier
+                        : null,
                     issue.IssueType,
                     issue.IssueCategory,
                     issue.Severity,
@@ -488,4 +493,5 @@ public sealed class OnboardingMigrationLedgerService : IOnboardingMigrationLedge
                     issue.IsBlocking,
                     issue.CreatedAtUtc))
                 .ToArray());
+    }
 }
