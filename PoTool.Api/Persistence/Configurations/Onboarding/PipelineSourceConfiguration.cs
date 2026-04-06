@@ -12,17 +12,13 @@ internal sealed class PipelineSourceConfiguration : IEntityTypeConfiguration<Pip
 
         builder.HasKey(pipeline => pipeline.Id);
 
+        OnboardingEntityConfigurationHelpers.ConfigureEntityBase(builder);
+
         builder.Property(pipeline => pipeline.PipelineExternalId)
             .HasMaxLength(128)
             .IsRequired();
 
         builder.Property(pipeline => pipeline.Enabled)
-            .IsRequired();
-
-        builder.Property(pipeline => pipeline.CreatedAtUtc)
-            .IsRequired();
-
-        builder.Property(pipeline => pipeline.UpdatedAtUtc)
             .IsRequired();
 
         builder.HasIndex(pipeline => new { pipeline.ProjectSourceId, pipeline.PipelineExternalId })

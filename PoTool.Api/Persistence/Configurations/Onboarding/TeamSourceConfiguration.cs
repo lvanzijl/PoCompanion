@@ -12,17 +12,13 @@ internal sealed class TeamSourceConfiguration : IEntityTypeConfiguration<TeamSou
 
         builder.HasKey(team => team.Id);
 
+        OnboardingEntityConfigurationHelpers.ConfigureEntityBase(builder);
+
         builder.Property(team => team.TeamExternalId)
             .HasMaxLength(128)
             .IsRequired();
 
         builder.Property(team => team.Enabled)
-            .IsRequired();
-
-        builder.Property(team => team.CreatedAtUtc)
-            .IsRequired();
-
-        builder.Property(team => team.UpdatedAtUtc)
             .IsRequired();
 
         builder.HasIndex(team => new { team.ProjectSourceId, team.TeamExternalId })

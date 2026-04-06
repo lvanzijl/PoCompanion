@@ -20,6 +20,8 @@ internal sealed class ProductSourceBindingConfiguration : IEntityTypeConfigurati
 
         builder.HasKey(binding => binding.Id);
 
+        OnboardingEntityConfigurationHelpers.ConfigureEntityBase(builder);
+
         builder.Property(binding => binding.SourceType)
             .HasConversion<string>()
             .HasMaxLength(32)
@@ -30,12 +32,6 @@ internal sealed class ProductSourceBindingConfiguration : IEntityTypeConfigurati
             .IsRequired();
 
         builder.Property(binding => binding.Enabled)
-            .IsRequired();
-
-        builder.Property(binding => binding.CreatedAtUtc)
-            .IsRequired();
-
-        builder.Property(binding => binding.UpdatedAtUtc)
             .IsRequired();
 
         builder.HasIndex(binding => new

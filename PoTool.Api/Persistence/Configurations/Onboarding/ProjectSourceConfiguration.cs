@@ -12,17 +12,13 @@ internal sealed class ProjectSourceConfiguration : IEntityTypeConfiguration<Proj
 
         builder.HasKey(project => project.Id);
 
+        OnboardingEntityConfigurationHelpers.ConfigureEntityBase(builder);
+
         builder.Property(project => project.ProjectExternalId)
             .HasMaxLength(128)
             .IsRequired();
 
         builder.Property(project => project.Enabled)
-            .IsRequired();
-
-        builder.Property(project => project.CreatedAtUtc)
-            .IsRequired();
-
-        builder.Property(project => project.UpdatedAtUtc)
             .IsRequired();
 
         builder.HasIndex(project => new { project.TfsConnectionId, project.ProjectExternalId })

@@ -28,31 +28,37 @@ public sealed class OnboardingStatusService : IOnboardingStatusService
     {
         var connection = await _dbContext.OnboardingTfsConnections
             .AsNoTracking()
+            .Where(connectionEntity => !connectionEntity.IsDeleted)
             .OrderBy(connectionEntity => connectionEntity.Id)
             .SingleOrDefaultAsync(cancellationToken);
 
         var projectSources = await _dbContext.OnboardingProjectSources
             .AsNoTracking()
+            .Where(project => !project.IsDeleted)
             .OrderBy(project => project.ProjectExternalId)
             .ToListAsync(cancellationToken);
 
         var teamSources = await _dbContext.OnboardingTeamSources
             .AsNoTracking()
+            .Where(team => !team.IsDeleted)
             .OrderBy(team => team.TeamExternalId)
             .ToListAsync(cancellationToken);
 
         var pipelineSources = await _dbContext.OnboardingPipelineSources
             .AsNoTracking()
+            .Where(pipeline => !pipeline.IsDeleted)
             .OrderBy(pipeline => pipeline.PipelineExternalId)
             .ToListAsync(cancellationToken);
 
         var productRoots = await _dbContext.OnboardingProductRoots
             .AsNoTracking()
+            .Where(root => !root.IsDeleted)
             .OrderBy(root => root.WorkItemExternalId)
             .ToListAsync(cancellationToken);
 
         var bindings = await _dbContext.OnboardingProductSourceBindings
             .AsNoTracking()
+            .Where(binding => !binding.IsDeleted)
             .OrderBy(binding => binding.ProductRootId)
             .ThenBy(binding => binding.SourceType)
             .ThenBy(binding => binding.SourceExternalId)

@@ -45,6 +45,7 @@ public sealed class OnboardingLookupService : IOnboardingLookupService
     {
         var connection = await _dbContext.OnboardingTfsConnections
             .AsNoTracking()
+            .Where(item => !item.IsDeleted)
             .SingleOrDefaultAsync(cancellationToken);
 
         if (connection is null)

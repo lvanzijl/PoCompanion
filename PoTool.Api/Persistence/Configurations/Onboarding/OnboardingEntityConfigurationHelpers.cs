@@ -5,6 +5,26 @@ namespace PoTool.Api.Persistence.Configurations.Onboarding;
 
 internal static class OnboardingEntityConfigurationHelpers
 {
+    internal static void ConfigureEntityBase<T>(EntityTypeBuilder<T> builder)
+        where T : OnboardingEntityBase
+    {
+        builder.Property(entity => entity.CreatedAtUtc)
+            .IsRequired();
+
+        builder.Property(entity => entity.UpdatedAtUtc)
+            .IsRequired();
+
+        builder.Property(entity => entity.DeletedAtUtc);
+
+        builder.Property(entity => entity.DeletionReason)
+            .HasMaxLength(2048);
+
+        builder.Property(entity => entity.IsDeleted)
+            .IsRequired();
+
+        builder.HasIndex(entity => entity.IsDeleted);
+    }
+
     internal static void ConfigureAuditFields<T>(OwnedNavigationBuilder<T, OnboardingValidationState> builder)
         where T : class
     {

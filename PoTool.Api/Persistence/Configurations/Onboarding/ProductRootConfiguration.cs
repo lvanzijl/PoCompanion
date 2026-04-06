@@ -12,17 +12,13 @@ internal sealed class ProductRootConfiguration : IEntityTypeConfiguration<Produc
 
         builder.HasKey(root => root.Id);
 
+        OnboardingEntityConfigurationHelpers.ConfigureEntityBase(builder);
+
         builder.Property(root => root.WorkItemExternalId)
             .HasMaxLength(64)
             .IsRequired();
 
         builder.Property(root => root.Enabled)
-            .IsRequired();
-
-        builder.Property(root => root.CreatedAtUtc)
-            .IsRequired();
-
-        builder.Property(root => root.UpdatedAtUtc)
             .IsRequired();
 
         builder.HasIndex(root => new { root.ProjectSourceId, root.WorkItemExternalId })

@@ -12,6 +12,8 @@ internal sealed class TfsConnectionConfiguration : IEntityTypeConfiguration<TfsC
 
         builder.HasKey(connection => connection.Id);
 
+        OnboardingEntityConfigurationHelpers.ConfigureEntityBase(builder);
+
         builder.Property(connection => connection.ConnectionKey)
             .HasMaxLength(32)
             .IsRequired();
@@ -39,12 +41,6 @@ internal sealed class TfsConnectionConfiguration : IEntityTypeConfiguration<TfsC
 
         builder.Property(connection => connection.LastVerifiedCapabilitiesSummary)
             .HasMaxLength(2048);
-
-        builder.Property(connection => connection.CreatedAtUtc)
-            .IsRequired();
-
-        builder.Property(connection => connection.UpdatedAtUtc)
-            .IsRequired();
 
         builder.HasIndex(connection => connection.ConnectionKey)
             .IsUnique();
