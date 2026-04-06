@@ -184,6 +184,8 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IOnboardingLookupService, OnboardingLookupService>();
         services.AddScoped<IOnboardingValidationService, OnboardingValidationService>();
         services.AddScoped<IOnboardingLookupHandler, OnboardingLookupHandler>();
+        services.AddScoped<IOnboardingStatusService, OnboardingStatusService>();
+        services.AddScoped<IOnboardingStatusHandler, OnboardingStatusHandler>();
         services.AddScoped<DeliveryFilterResolutionService>();
         services.AddScoped<PipelineFilterResolutionService>();
         services.AddScoped<IPipelineInsightsReadStore, EfPipelineInsightsReadStore>();

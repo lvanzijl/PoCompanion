@@ -8,8 +8,11 @@ public interface IOnboardingObservability
 {
     void RecordLookupCompleted(string operation, bool success, OnboardingErrorCode? errorCode);
     void RecordValidationCompleted(string entityType, bool success, OnboardingErrorCode? errorCode);
+    void RecordStatusComputed(string overallStatus, int blockerCount, int warningCount);
     void LogLookupStarted(string operation);
     void LogLookupCompleted(string operation, bool success, OnboardingErrorCode? errorCode);
+    void LogStatusComputed(string overallStatus, int blockerCount, int warningCount);
+    void LogStatusIssue(string severity, string code, string? entityType, string? entityExternalId);
     void LogValidationCompleted(string entityType, bool success, OnboardingErrorCode? errorCode);
 }
 
@@ -20,6 +23,9 @@ public sealed class OnboardingObservability : IOnboardingObservability
     private static readonly Counter<long> LookupFailureCount = Meter.CreateCounter<long>("onboarding.lookup.failure.count");
     private static readonly Counter<long> ValidationCount = Meter.CreateCounter<long>("onboarding.validation.count");
     private static readonly Counter<long> ValidationFailureCount = Meter.CreateCounter<long>("onboarding.validation.failure.count");
+    private static readonly Counter<long> StatusComputationCount = Meter.CreateCounter<long>("onboarding.status.count");
+    private static readonly Histogram<long> StatusBlockerCount = Meter.CreateHistogram<long>("onboarding.status.blocker.count");
+    private static readonly Histogram<long> StatusWarningCount = Meter.CreateHistogram<long>("onboarding.status.warning.count");
 
     private readonly ILogger<OnboardingObservability> _logger;
 
@@ -51,6 +57,25 @@ public sealed class OnboardingObservability : IOnboardingObservability
             errorCode?.ToString() ?? "None");
     }
 
+    public void LogStatusComputed(string overallStatus, int blockerCount, int warningCount)
+    {
+        _logger.LogInformation(
+            "Onboarding status computed. OverallStatus={OverallStatus} BlockerCount={BlockerCount} WarningCount={WarningCount}",
+            overallStatus,
+            blockerCount,
+            warningCount);
+    }
+
+    public void LogStatusIssue(string severity, string code, string? entityType, string? entityExternalId)
+    {
+        _logger.LogInformation(
+            "Onboarding status issue detected. Severity={Severity} Code={Code} EntityType={EntityType} EntityExternalId={EntityExternalId}",
+            severity,
+            code,
+            entityType ?? "None",
+            entityExternalId ?? "None");
+    }
+
     public void RecordLookupCompleted(string operation, bool success, OnboardingErrorCode? errorCode)
     {
         LookupCount.Add(1, new KeyValuePair<string, object?>("operation", operation));
@@ -73,5 +98,12 @@ public sealed class OnboardingObservability : IOnboardingObservability
                 new KeyValuePair<string, object?>("entity_type", entityType),
                 new KeyValuePair<string, object?>("error_code", errorCode?.ToString() ?? "Unknown"));
         }
+    }
+
+    public void RecordStatusComputed(string overallStatus, int blockerCount, int warningCount)
+    {
+        StatusComputationCount.Add(1, new KeyValuePair<string, object?>("overall_status", overallStatus));
+        StatusBlockerCount.Record(blockerCount, new KeyValuePair<string, object?>("overall_status", overallStatus));
+        StatusWarningCount.Record(warningCount, new KeyValuePair<string, object?>("overall_status", overallStatus));
     }
 }
