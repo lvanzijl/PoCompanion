@@ -6,6 +6,7 @@ namespace PoTool.Client.Services;
 public sealed class OnboardingWorkspaceViewModelFactory
 {
     private const int TopBlockerLimit = 5;
+    private readonly OnboardingActionSuggestionService _actionSuggestionService = new();
 
     public OnboardingWorkspaceViewModel CreateLoading(OnboardingWorkspaceFilter filter)
         => new(
@@ -23,6 +24,7 @@ public sealed class OnboardingWorkspaceViewModelFactory
             [],
             [],
             null,
+            [],
             [],
             [],
             null);
@@ -43,6 +45,7 @@ public sealed class OnboardingWorkspaceViewModelFactory
             [],
             [],
             null,
+            [],
             [],
             [],
             errorMessage);
@@ -76,9 +79,18 @@ public sealed class OnboardingWorkspaceViewModelFactory
             ? "No onboarding data is currently visible. Configure the backend onboarding graph before using this read-only workspace."
             : "Read-only onboarding status and graph view. No changes can be made from this workspace.";
 
-        var problems = CreateProblems(data);
-        var orderedProblems = OrderProblems(problems);
-        var problemSummary = CreateProblemSummary(orderedProblems);
+        var orderedProblems = OrderProblems(CreateProblems(data));
+        var rootCauseGroups = CreateRootCauseGroups(orderedProblems);
+        var fixFirstRootCauseKeys = rootCauseGroups
+            .Where(group => group.Severity == OnboardingProblemSeverity.Blocking)
+            .Take(TopBlockerLimit)
+            .Select(group => group.RootCauseGroupingKey)
+            .ToHashSet(StringComparer.Ordinal);
+
+        orderedProblems = ApplyFixFirst(orderedProblems, fixFirstRootCauseKeys);
+        rootCauseGroups = ApplyFixFirst(rootCauseGroups, fixFirstRootCauseKeys);
+
+        var problemSummary = CreateProblemSummary(orderedProblems, rootCauseGroups);
         var problemGroups = CreateProblemGroups(orderedProblems);
         var graphSections = CreateGraphSectionStates(orderedProblems);
 
@@ -97,21 +109,16 @@ public sealed class OnboardingWorkspaceViewModelFactory
             GroupRoots(data.Projects, data.ProductRoots),
             GroupBindings(data.Projects, data.ProductRoots, data.Bindings),
             problemSummary,
+            rootCauseGroups,
             problemGroups,
             graphSections,
             null);
     }
 
-    private static IReadOnlyList<OnboardingProblemItemViewModel> CreateProblems(OnboardingWorkspaceData data)
+    private IReadOnlyList<ActionableProblemViewModel> CreateProblems(OnboardingWorkspaceData data)
     {
-        var problems = new List<OnboardingProblemItemViewModel>();
-        var visibleImpactCount = data.Connections.Count
-                                 + data.Projects.Count
-                                 + data.Teams.Count
-                                 + data.Pipelines.Count
-                                 + data.ProductRoots.Count
-                                 + data.Bindings.Count;
-
+        var problems = new List<ActionableProblemViewModel>();
+        var globalImpact = BuildGlobalImpactDescriptor(data);
         var projectsById = data.Projects.ToDictionary(project => project.Id);
         var rootsById = data.ProductRoots.ToDictionary(root => root.Id);
 
@@ -127,7 +134,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 OnboardingProblemScope.Global,
                 OnboardingGraphSection.Connections,
                 GetSectionAnchorId(OnboardingGraphSection.Connections),
-                visibleImpactCount));
+                globalImpact.Total,
+                BuildExpectedImpact(OnboardingGraphSection.Connections, globalImpact),
+                "Global onboarding scope",
+                OnboardingGraphSection.Connections,
+                GetSectionAnchorId(OnboardingGraphSection.Connections)));
         }
 
         foreach (var issue in data.Status.Warnings)
@@ -142,20 +153,31 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 OnboardingProblemScope.Global,
                 OnboardingGraphSection.Connections,
                 GetSectionAnchorId(OnboardingGraphSection.Connections),
-                visibleImpactCount));
+                globalImpact.Total,
+                BuildExpectedImpact(OnboardingGraphSection.Connections, globalImpact),
+                "Global onboarding scope",
+                OnboardingGraphSection.Connections,
+                GetSectionAnchorId(OnboardingGraphSection.Connections)));
         }
 
         foreach (var connection in data.Connections)
         {
+            var elementId = CreateElementId("connection", connection.Id);
+            var location = $"Connection {connection.OrganizationUrl}";
+            var impact = BuildConnectionImpactDescriptor(connection.Id, data);
+
             AddEntityStatusProblems(
                 problems,
                 connection.Status,
                 OnboardingProblemScope.Global,
                 connection.OrganizationUrl,
-                $"Connection {connection.OrganizationUrl}",
+                location,
                 OnboardingGraphSection.Connections,
-                CreateElementId("connection", connection.Id),
-                CountConnectionImpact(connection.Id, data),
+                elementId,
+                impact,
+                location,
+                OnboardingGraphSection.Connections,
+                elementId,
                 "connection-status");
 
             AddValidationProblem(
@@ -163,10 +185,13 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 connection.Validation.AvailabilityValidationState,
                 OnboardingProblemScope.Global,
                 $"Connection availability — {connection.OrganizationUrl}",
-                $"Connection {connection.OrganizationUrl}",
+                location,
                 OnboardingGraphSection.Connections,
-                CreateElementId("connection", connection.Id),
-                CountConnectionImpact(connection.Id, data),
+                elementId,
+                impact,
+                location,
+                OnboardingGraphSection.Connections,
+                elementId,
                 $"connection-{connection.Id}-availability");
 
             AddValidationProblem(
@@ -174,10 +199,13 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 connection.Validation.PermissionValidationState,
                 OnboardingProblemScope.Global,
                 $"Connection permissions — {connection.OrganizationUrl}",
-                $"Connection {connection.OrganizationUrl}",
+                location,
                 OnboardingGraphSection.Connections,
-                CreateElementId("connection", connection.Id),
-                CountConnectionImpact(connection.Id, data),
+                elementId,
+                impact,
+                location,
+                OnboardingGraphSection.Connections,
+                elementId,
                 $"connection-{connection.Id}-permission");
 
             AddValidationProblem(
@@ -185,17 +213,21 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 connection.Validation.CapabilityValidationState,
                 OnboardingProblemScope.Global,
                 $"Connection capabilities — {connection.OrganizationUrl}",
-                $"Connection {connection.OrganizationUrl}",
+                location,
                 OnboardingGraphSection.Connections,
-                CreateElementId("connection", connection.Id),
-                CountConnectionImpact(connection.Id, data),
+                elementId,
+                impact,
+                location,
+                OnboardingGraphSection.Connections,
+                elementId,
                 $"connection-{connection.Id}-capability");
         }
 
         foreach (var project in data.Projects)
         {
+            var elementId = CreateElementId("project", project.Id);
             var location = $"Project {project.Snapshot.Name} ({project.ProjectExternalId})";
-            var impact = CountProjectImpact(project.Id, data);
+            var impact = BuildProjectImpactDescriptor(project.Id, data);
 
             AddEntityStatusProblems(
                 problems,
@@ -204,8 +236,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 project.Snapshot.Name,
                 location,
                 OnboardingGraphSection.Projects,
-                CreateElementId("project", project.Id),
+                elementId,
                 impact,
+                $"Project {project.Snapshot.Name}",
+                OnboardingGraphSection.Projects,
+                elementId,
                 "project-status");
 
             AddValidationProblem(
@@ -215,8 +250,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 project.Snapshot.Name,
                 location,
                 OnboardingGraphSection.Projects,
-                CreateElementId("project", project.Id),
+                elementId,
                 impact,
+                $"Project {project.Snapshot.Name}",
+                OnboardingGraphSection.Projects,
+                elementId,
                 $"project-{project.Id}-validation");
         }
 
@@ -227,7 +265,9 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 continue;
             }
 
+            var elementId = CreateElementId("team", team.Id);
             var location = $"Project {project.Snapshot.Name} ({project.ProjectExternalId})";
+            var impact = BuildDirectImpactDescriptor();
 
             AddEntityStatusProblems(
                 problems,
@@ -236,8 +276,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 $"Team {team.Snapshot.Name}",
                 location,
                 OnboardingGraphSection.Teams,
-                CreateElementId("team", team.Id),
-                0,
+                elementId,
+                impact,
+                $"Project {project.Snapshot.Name}",
+                OnboardingGraphSection.Projects,
+                CreateElementId("project", project.Id),
                 "team-status");
 
             AddValidationProblem(
@@ -247,8 +290,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 $"Team {team.Snapshot.Name}",
                 location,
                 OnboardingGraphSection.Teams,
-                CreateElementId("team", team.Id),
-                0,
+                elementId,
+                impact,
+                $"Project {project.Snapshot.Name}",
+                OnboardingGraphSection.Projects,
+                CreateElementId("project", project.Id),
                 $"team-{team.Id}-validation");
         }
 
@@ -259,7 +305,9 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 continue;
             }
 
+            var elementId = CreateElementId("pipeline", pipeline.Id);
             var location = $"Project {project.Snapshot.Name} ({project.ProjectExternalId})";
+            var impact = BuildDirectImpactDescriptor();
 
             AddEntityStatusProblems(
                 problems,
@@ -268,8 +316,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 $"Pipeline {pipeline.Snapshot.Name}",
                 location,
                 OnboardingGraphSection.Pipelines,
-                CreateElementId("pipeline", pipeline.Id),
-                0,
+                elementId,
+                impact,
+                $"Project {project.Snapshot.Name}",
+                OnboardingGraphSection.Projects,
+                CreateElementId("project", project.Id),
                 "pipeline-status");
 
             AddValidationProblem(
@@ -279,8 +330,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 $"Pipeline {pipeline.Snapshot.Name}",
                 location,
                 OnboardingGraphSection.Pipelines,
-                CreateElementId("pipeline", pipeline.Id),
-                0,
+                elementId,
+                impact,
+                $"Project {project.Snapshot.Name}",
+                OnboardingGraphSection.Projects,
+                CreateElementId("project", project.Id),
                 $"pipeline-{pipeline.Id}-validation");
         }
 
@@ -291,8 +345,9 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 continue;
             }
 
+            var elementId = CreateElementId("root", root.Id);
             var location = $"Root {root.Snapshot.Title} in project {project.Snapshot.Name}";
-            var impact = CountRootImpact(root.Id, data);
+            var impact = BuildRootImpactDescriptor(root.Id, data);
 
             AddEntityStatusProblems(
                 problems,
@@ -301,8 +356,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 root.Snapshot.Title,
                 location,
                 OnboardingGraphSection.ProductRoots,
-                CreateElementId("root", root.Id),
+                elementId,
                 impact,
+                $"Root {root.Snapshot.Title}",
+                OnboardingGraphSection.ProductRoots,
+                elementId,
                 "root-status");
 
             AddValidationProblem(
@@ -312,8 +370,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 root.Snapshot.Title,
                 location,
                 OnboardingGraphSection.ProductRoots,
-                CreateElementId("root", root.Id),
+                elementId,
                 impact,
+                $"Root {root.Snapshot.Title}",
+                OnboardingGraphSection.ProductRoots,
+                elementId,
                 $"root-{root.Id}-validation");
         }
 
@@ -325,8 +386,10 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 continue;
             }
 
+            var elementId = CreateElementId("binding", binding.Id);
             var affectedEntity = $"{binding.SourceType} binding — {binding.SourceExternalId}";
             var location = $"Root {root.Snapshot.Title} in project {project.Snapshot.Name}";
+            var impact = BuildDirectImpactDescriptor();
 
             AddEntityStatusProblems(
                 problems,
@@ -335,8 +398,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 affectedEntity,
                 location,
                 OnboardingGraphSection.Bindings,
-                CreateElementId("binding", binding.Id),
-                0,
+                elementId,
+                impact,
+                $"Root {root.Snapshot.Title}",
+                OnboardingGraphSection.ProductRoots,
+                CreateElementId("root", root.Id),
                 "binding-status");
 
             AddValidationProblem(
@@ -346,23 +412,29 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 affectedEntity,
                 location,
                 OnboardingGraphSection.Bindings,
-                CreateElementId("binding", binding.Id),
-                0,
+                elementId,
+                impact,
+                $"Root {root.Snapshot.Title}",
+                OnboardingGraphSection.ProductRoots,
+                CreateElementId("root", root.Id),
                 $"binding-{binding.Id}-validation");
         }
 
         return problems;
     }
 
-    private static void AddEntityStatusProblems(
-        ICollection<OnboardingProblemItemViewModel> problems,
+    private void AddEntityStatusProblems(
+        ICollection<ActionableProblemViewModel> problems,
         OnboardingEntityStatusDto status,
         OnboardingProblemScope scope,
         string affectedEntity,
         string location,
         OnboardingGraphSection section,
         string targetElementId,
-        int impactedChildrenCount,
+        ImpactDescriptor impact,
+        string rootCauseEntity,
+        OnboardingGraphSection rootCauseSection,
+        string rootCauseTargetElementId,
         string keySuffix)
     {
         foreach (var issue in status.BlockingReasons)
@@ -377,7 +449,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 scope,
                 section,
                 targetElementId,
-                impactedChildrenCount));
+                impact.Total,
+                BuildExpectedImpact(section, impact),
+                rootCauseEntity,
+                rootCauseSection,
+                rootCauseTargetElementId));
         }
 
         foreach (var issue in status.Warnings)
@@ -392,19 +468,26 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 scope,
                 section,
                 targetElementId,
-                impactedChildrenCount));
+                impact.Total,
+                BuildExpectedImpact(section, impact),
+                rootCauseEntity,
+                rootCauseSection,
+                rootCauseTargetElementId));
         }
     }
 
-    private static void AddValidationProblem(
-        ICollection<OnboardingProblemItemViewModel> problems,
+    private void AddValidationProblem(
+        ICollection<ActionableProblemViewModel> problems,
         OnboardingValidationStateDto validationState,
         OnboardingProblemScope scope,
         string affectedEntity,
         string location,
         OnboardingGraphSection section,
         string targetElementId,
-        int impactedChildrenCount,
+        ImpactDescriptor impact,
+        string rootCauseEntity,
+        OnboardingGraphSection rootCauseSection,
+        string rootCauseTargetElementId,
         string keySuffix)
     {
         if (!OnboardingSignalPresentation.TryMapValidationSeverity(validationState.Status, out var severity))
@@ -414,7 +497,7 @@ public sealed class OnboardingWorkspaceViewModelFactory
 
         problems.Add(CreateProblem(
             $"{severity}-{scope}-{targetElementId}-{validationState.Status}-{keySuffix}",
-            $"{affectedEntity} requires attention",
+            OnboardingSignalPresentation.BuildValidationTitle(affectedEntity, validationState.Status),
             affectedEntity,
             location,
             OnboardingSignalPresentation.BuildValidationReason(validationState),
@@ -422,12 +505,15 @@ public sealed class OnboardingWorkspaceViewModelFactory
             scope,
             section,
             targetElementId,
-            impactedChildrenCount));
+            impact.Total,
+            BuildExpectedImpact(section, impact),
+            rootCauseEntity,
+            rootCauseSection,
+            rootCauseTargetElementId));
     }
 
-    private static IReadOnlyList<OnboardingProblemItemViewModel> OrderProblems(IEnumerable<OnboardingProblemItemViewModel> problems)
-    {
-        var ordered = problems
+    private IReadOnlyList<ActionableProblemViewModel> OrderProblems(IEnumerable<ActionableProblemViewModel> problems)
+        => problems
             .OrderBy(problem => problem.Severity)
             .ThenBy(problem => problem.Scope)
             .ThenByDescending(problem => problem.ImpactedChildrenCount)
@@ -436,21 +522,76 @@ public sealed class OnboardingWorkspaceViewModelFactory
             .ThenBy(problem => problem.Title, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var topBlockers = ordered
-            .Where(problem => problem.Severity == OnboardingProblemSeverity.Blocking)
-            .Take(TopBlockerLimit)
-            .Select(problem => problem.ProblemKey)
-            .ToHashSet(StringComparer.Ordinal);
-
-        return ordered
+    private static IReadOnlyList<ActionableProblemViewModel> ApplyFixFirst(
+        IReadOnlyList<ActionableProblemViewModel> problems,
+        IReadOnlySet<string> fixFirstRootCauseKeys)
+        => problems
             .Select(problem => problem with
             {
-                FixFirst = topBlockers.Contains(problem.ProblemKey)
+                FixFirst = fixFirstRootCauseKeys.Contains(problem.RootCauseGroupingKey)
             })
             .ToList();
-    }
 
-    private static OnboardingProblemSummaryViewModel CreateProblemSummary(IReadOnlyList<OnboardingProblemItemViewModel> problems)
+    private static IReadOnlyList<OnboardingRootCauseGroupViewModel> CreateRootCauseGroups(IReadOnlyList<ActionableProblemViewModel> problems)
+        => problems
+            .GroupBy(problem => problem.RootCauseGroupingKey)
+            .Select(group =>
+            {
+                var items = group.ToList();
+                var primary = items[0];
+                var visibleIssueCount = items.Count;
+                var derivedIssueCount = Math.Max(0, visibleIssueCount - 1);
+                var title = visibleIssueCount > 1
+                    ? primary.Reason
+                    : primary.Title;
+                var expectedImpact = derivedIssueCount > 0
+                    ? $"{primary.ExpectedImpact} Groups {visibleIssueCount} visible issue(s) under the same root cause."
+                    : primary.ExpectedImpact;
+
+                return new OnboardingRootCauseGroupViewModel(
+                    primary.RootCauseGroupingKey,
+                    title,
+                    primary.RootCauseEntity,
+                    primary.RootCauseLabel,
+                    primary.Severity,
+                    primary.Scope,
+                    primary.SuggestedAction,
+                    expectedImpact,
+                    visibleIssueCount,
+                    derivedIssueCount,
+                    false,
+                    primary.RootCauseGraphSection,
+                    primary.RootCauseTargetElementId,
+                    primary,
+                    items);
+            })
+            .OrderBy(group => group.Severity)
+            .ThenBy(group => group.Scope)
+            .ThenByDescending(group => group.PrimaryProblem.ImpactedChildrenCount)
+            .ThenByDescending(group => group.VisibleIssueCount)
+            .ThenBy(group => group.RootCauseEntity, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(group => group.Title, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static IReadOnlyList<OnboardingRootCauseGroupViewModel> ApplyFixFirst(
+        IReadOnlyList<OnboardingRootCauseGroupViewModel> groups,
+        IReadOnlySet<string> fixFirstRootCauseKeys)
+        => groups
+            .Select(group =>
+            {
+                var fixFirst = fixFirstRootCauseKeys.Contains(group.RootCauseGroupingKey);
+                return group with
+                {
+                    FixFirst = fixFirst,
+                    PrimaryProblem = group.PrimaryProblem with { FixFirst = fixFirst },
+                    Items = group.Items.Select(item => item with { FixFirst = fixFirst }).ToList()
+                };
+            })
+            .ToList();
+
+    private static OnboardingProblemSummaryViewModel CreateProblemSummary(
+        IReadOnlyList<ActionableProblemViewModel> problems,
+        IReadOnlyList<OnboardingRootCauseGroupViewModel> rootCauseGroups)
     {
         var blockers = problems
             .Where(problem => problem.Severity == OnboardingProblemSeverity.Blocking)
@@ -458,17 +599,25 @@ public sealed class OnboardingWorkspaceViewModelFactory
         var warnings = problems
             .Where(problem => problem.Severity == OnboardingProblemSeverity.Warning)
             .ToList();
+        var blockingRootCauses = rootCauseGroups
+            .Where(group => group.Severity == OnboardingProblemSeverity.Blocking)
+            .ToList();
+        var warningRootCauses = rootCauseGroups
+            .Where(group => group.Severity == OnboardingProblemSeverity.Warning)
+            .ToList();
 
         return new OnboardingProblemSummaryViewModel(
-            blockers.Where(problem => problem.FixFirst).ToList(),
-            blockers.Where(problem => !problem.FixFirst).ToList(),
-            warnings,
+            blockingRootCauses.Where(group => group.FixFirst).ToList(),
+            blockingRootCauses.Where(group => !group.FixFirst).ToList(),
+            warningRootCauses,
             blockers.Count,
             warnings.Count,
+            blockingRootCauses.Count,
+            warningRootCauses.Count,
             blockers.Count > 0 || warnings.Count > 0);
     }
 
-    private static IReadOnlyList<OnboardingProblemGroupViewModel> CreateProblemGroups(IReadOnlyList<OnboardingProblemItemViewModel> problems)
+    private static IReadOnlyList<OnboardingProblemGroupViewModel> CreateProblemGroups(IReadOnlyList<ActionableProblemViewModel> problems)
         => problems
             .GroupBy(problem => problem.Scope)
             .OrderBy(group => group.Key)
@@ -478,7 +627,7 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 group.ToList()))
             .ToList();
 
-    private static IReadOnlyList<OnboardingGraphSectionStateViewModel> CreateGraphSectionStates(IReadOnlyList<OnboardingProblemItemViewModel> problems)
+    private static IReadOnlyList<OnboardingGraphSectionStateViewModel> CreateGraphSectionStates(IReadOnlyList<ActionableProblemViewModel> problems)
         => Enum.GetValues<OnboardingGraphSection>()
             .Select(section =>
             {
@@ -493,7 +642,7 @@ public sealed class OnboardingWorkspaceViewModelFactory
             })
             .ToList();
 
-    private static OnboardingProblemItemViewModel CreateProblem(
+    private ActionableProblemViewModel CreateProblem(
         string problemKey,
         string title,
         string affectedEntity,
@@ -503,7 +652,11 @@ public sealed class OnboardingWorkspaceViewModelFactory
         OnboardingProblemScope scope,
         OnboardingGraphSection section,
         string targetElementId,
-        int impactedChildrenCount)
+        int impactedChildrenCount,
+        string expectedImpact,
+        string rootCauseEntity,
+        OnboardingGraphSection rootCauseGraphSection,
+        string rootCauseTargetElementId)
         => new(
             problemKey,
             title,
@@ -515,7 +668,28 @@ public sealed class OnboardingWorkspaceViewModelFactory
             impactedChildrenCount,
             false,
             section,
-            targetElementId);
+            targetElementId,
+            _actionSuggestionService.GetSuggestedAction(scope, title, reason, affectedEntity),
+            expectedImpact,
+            BuildRootCauseGroupingKey(rootCauseTargetElementId, reason, severity),
+            rootCauseEntity,
+            rootCauseGraphSection,
+            rootCauseTargetElementId,
+            $"{rootCauseEntity} — {reason}");
+
+    private static string BuildRootCauseGroupingKey(string rootCauseTargetElementId, string reason, OnboardingProblemSeverity severity)
+        => $"{severity}:{rootCauseTargetElementId}:{NormalizeRootCauseFragment(reason)}";
+
+    private static string NormalizeRootCauseFragment(string value)
+        => value
+            .Trim()
+            .ToLowerInvariant()
+            .Replace(' ', '-')
+            .Replace(':', '-')
+            .Replace('/', '-')
+            .Replace('.', '-')
+            .Replace(',', '-')
+            .Replace('—', '-');
 
     private static string GetScopeTitle(OnboardingProblemScope scope)
         => scope switch
@@ -545,40 +719,117 @@ public sealed class OnboardingWorkspaceViewModelFactory
     private static string CreateElementId(string prefix, int id)
         => $"{prefix}-{id}";
 
-    private static int CountConnectionImpact(int connectionId, OnboardingWorkspaceData data)
+    private static ImpactDescriptor BuildGlobalImpactDescriptor(OnboardingWorkspaceData data)
+        => new(
+            data.Projects.Count,
+            data.Teams.Count,
+            data.Pipelines.Count,
+            data.ProductRoots.Count,
+            data.Bindings.Count);
+
+    private static ImpactDescriptor BuildConnectionImpactDescriptor(int connectionId, OnboardingWorkspaceData data)
     {
         var projectIds = data.Projects
             .Where(project => project.TfsConnectionId == connectionId)
             .Select(project => project.Id)
             .ToHashSet();
-
         var rootIds = data.ProductRoots
             .Where(root => projectIds.Contains(root.ProjectSourceId))
             .Select(root => root.Id)
             .ToHashSet();
 
-        return data.Projects.Count(project => project.TfsConnectionId == connectionId)
-               + data.Teams.Count(team => projectIds.Contains(team.ProjectSourceId))
-               + data.Pipelines.Count(pipeline => projectIds.Contains(pipeline.ProjectSourceId))
-               + data.ProductRoots.Count(root => projectIds.Contains(root.ProjectSourceId))
-               + data.Bindings.Count(binding => rootIds.Contains(binding.ProductRootId));
+        return new ImpactDescriptor(
+            data.Projects.Count(project => project.TfsConnectionId == connectionId),
+            data.Teams.Count(team => projectIds.Contains(team.ProjectSourceId)),
+            data.Pipelines.Count(pipeline => projectIds.Contains(pipeline.ProjectSourceId)),
+            data.ProductRoots.Count(root => projectIds.Contains(root.ProjectSourceId)),
+            data.Bindings.Count(binding => rootIds.Contains(binding.ProductRootId)));
     }
 
-    private static int CountProjectImpact(int projectId, OnboardingWorkspaceData data)
+    private static ImpactDescriptor BuildProjectImpactDescriptor(int projectId, OnboardingWorkspaceData data)
     {
         var rootIds = data.ProductRoots
             .Where(root => root.ProjectSourceId == projectId)
             .Select(root => root.Id)
             .ToHashSet();
 
-        return data.Teams.Count(team => team.ProjectSourceId == projectId)
-               + data.Pipelines.Count(pipeline => pipeline.ProjectSourceId == projectId)
-               + data.ProductRoots.Count(root => root.ProjectSourceId == projectId)
-               + data.Bindings.Count(binding => rootIds.Contains(binding.ProductRootId));
+        return new ImpactDescriptor(
+            0,
+            data.Teams.Count(team => team.ProjectSourceId == projectId),
+            data.Pipelines.Count(pipeline => pipeline.ProjectSourceId == projectId),
+            data.ProductRoots.Count(root => root.ProjectSourceId == projectId),
+            data.Bindings.Count(binding => rootIds.Contains(binding.ProductRootId)));
     }
 
-    private static int CountRootImpact(int rootId, OnboardingWorkspaceData data)
-        => data.Bindings.Count(binding => binding.ProductRootId == rootId);
+    private static ImpactDescriptor BuildRootImpactDescriptor(int rootId, OnboardingWorkspaceData data)
+        => new(0, 0, 0, 0, data.Bindings.Count(binding => binding.ProductRootId == rootId));
+
+    private static ImpactDescriptor BuildDirectImpactDescriptor()
+        => new(0, 0, 0, 0, 0);
+
+    private static string BuildExpectedImpact(OnboardingGraphSection section, ImpactDescriptor impact)
+        => section switch
+        {
+            OnboardingGraphSection.Connections when impact.Total > 0
+                => $"Affects {FormatImpactCounts(impact)} across the visible onboarding graph.",
+            OnboardingGraphSection.Connections
+                => "Affects the visible onboarding workspace.",
+            OnboardingGraphSection.Projects when impact.Total > 0
+                => $"Affects {FormatImpactCounts(impact)} in this project.",
+            OnboardingGraphSection.Projects
+                => "Affects this project only.",
+            OnboardingGraphSection.Teams
+                => "Affects this team source only.",
+            OnboardingGraphSection.Pipelines
+                => "Affects this pipeline source only.",
+            OnboardingGraphSection.ProductRoots when impact.Bindings > 0
+                => $"Blocks {impact.Bindings} binding(s) for this root.",
+            OnboardingGraphSection.ProductRoots
+                => "Prevents this root from being usable.",
+            OnboardingGraphSection.Bindings
+                => "Prevents this binding from being usable.",
+            _ when impact.Total > 0
+                => $"Affects {FormatImpactCounts(impact)}.",
+            _ => "Affects the current onboarding scope."
+        };
+
+    private static string FormatImpactCounts(ImpactDescriptor impact)
+    {
+        var parts = new List<string>();
+
+        if (impact.Projects > 0)
+        {
+            parts.Add($"{impact.Projects} project(s)");
+        }
+
+        if (impact.Teams > 0)
+        {
+            parts.Add($"{impact.Teams} team source(s)");
+        }
+
+        if (impact.Pipelines > 0)
+        {
+            parts.Add($"{impact.Pipelines} pipeline source(s)");
+        }
+
+        if (impact.Roots > 0)
+        {
+            parts.Add($"{impact.Roots} root(s)");
+        }
+
+        if (impact.Bindings > 0)
+        {
+            parts.Add($"{impact.Bindings} binding(s)");
+        }
+
+        return parts.Count switch
+        {
+            0 => "the current onboarding scope",
+            1 => parts[0],
+            2 => $"{parts[0]} and {parts[1]}",
+            _ => $"{string.Join(", ", parts.Take(parts.Count - 1))}, and {parts[^1]}"
+        };
+    }
 
     private static IReadOnlyList<OnboardingProjectGroupViewModel<OnboardingTeamSourceDto>> GroupTeams(
         IReadOnlyList<OnboardingProjectSourceDto> projects,
@@ -657,5 +908,15 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 group.ToList()))
             .OrderBy(group => group.Project.ProjectName, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private sealed record ImpactDescriptor(
+        int Projects,
+        int Teams,
+        int Pipelines,
+        int Roots,
+        int Bindings)
+    {
+        public int Total => Projects + Teams + Pipelines + Roots + Bindings;
     }
 }

@@ -4,35 +4,27 @@
     <MudStack Spacing="1">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
             <MudStack Spacing="1">
-                <MudText Typo="Typo.subtitle1">@Problem.Title</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">@Problem.AffectedEntity</MudText>
+                <MudText Typo="Typo.subtitle1">@RootCause.Title</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@RootCause.RootCauseEntity</MudText>
             </MudStack>
 
             <MudStack Row="true" Spacing="1">
-                @if (Problem.FixFirst)
+                @if (RootCause.FixFirst)
                 {
                     <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Error">Fix first</MudChip>
                 }
-                <MudChip T="string" Label="true" Size="Size.Small" Color="@ResolveColor()">@Problem.Severity</MudChip>
+                <MudChip T="string" Label="true" Size="Size.Small" Color="@ResolveColor()">@RootCause.Severity</MudChip>
             </MudStack>
         </MudStack>
 
-        <MudText Typo="Typo.caption" Color="Color.Info">Where: @Problem.Location</MudText>
-        <MudText Typo="Typo.body2">Why: @Problem.Reason</MudText>
-        <MudText Typo="Typo.body2">Next: @Problem.SuggestedAction</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary">Impact: @Problem.ExpectedImpact</MudText>
+        <MudText Typo="Typo.body2">Why: @RootCause.PrimaryProblem.Reason</MudText>
+        <MudText Typo="Typo.body2">Next: @RootCause.SuggestedAction</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Impact: @RootCause.ExpectedImpact</MudText>
 
-        @if (Problem.ImpactedChildrenCount > 0)
-        {
-            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                Impact: @Problem.ImpactedChildrenCount related child item(s)
-            </MudText>
-        }
-
-        @if (Problem.RootCauseTargetElementId != Problem.TargetElementId)
+        @if (RootCause.DerivedIssueCount > 0)
         {
             <MudText Typo="Typo.caption" Color="Color.Info">
-                Part of root cause: @Problem.RootCauseEntity
+                Groups @RootCause.VisibleIssueCount visible issue(s) under the same root cause.
             </MudText>
         }
 
@@ -43,7 +35,7 @@
 
             <CompactButton ButtonRole="ButtonRole.Utility"
                            Icon="@Icons.Material.Filled.CenterFocusStrong"
-                           OnClick="@(() => OnNavigate.InvokeAsync(Problem))">
+                           OnClick="@(() => OnNavigate.InvokeAsync(RootCause))">
                 Show in graph
             </CompactButton>
         </MudStack>
@@ -51,26 +43,26 @@
 </MudPaper>
 
 @code {
-    [Parameter, EditorRequired] public ActionableProblemViewModel Problem { get; set; } = default!;
-    [Parameter] public EventCallback<ActionableProblemViewModel> OnNavigate { get; set; }
+    [Parameter, EditorRequired] public OnboardingRootCauseGroupViewModel RootCause { get; set; } = default!;
+    [Parameter] public EventCallback<OnboardingRootCauseGroupViewModel> OnNavigate { get; set; }
 
-    private string ScopeLabel => Problem.Scope switch
+    private string ScopeLabel => RootCause.Scope switch
     {
         OnboardingProblemScope.Global => "Global / connection",
         OnboardingProblemScope.Project => "Project",
         OnboardingProblemScope.Root => "Product root",
         OnboardingProblemScope.Binding => "Binding",
-        _ => Problem.Scope.ToString()
+        _ => RootCause.Scope.ToString()
     };
 
-    private string ResolvedStyle => Problem.Severity switch
+    private string ResolvedStyle => RootCause.Severity switch
     {
         OnboardingProblemSeverity.Blocking => "border-left: 4px solid var(--mud-palette-error);",
         _ => "border-left: 4px solid var(--mud-palette-warning);"
     };
 
     private Color ResolveColor()
-        => Problem.Severity == OnboardingProblemSeverity.Blocking
+        => RootCause.Severity == OnboardingProblemSeverity.Blocking
             ? Color.Error
             : Color.Warning;
 }

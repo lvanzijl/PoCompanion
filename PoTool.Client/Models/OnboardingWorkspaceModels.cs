@@ -85,7 +85,7 @@ public enum OnboardingGraphSection
     Bindings
 }
 
-public sealed record OnboardingProblemItemViewModel(
+public sealed record ActionableProblemViewModel(
     string ProblemKey,
     string Title,
     string AffectedEntity,
@@ -96,19 +96,45 @@ public sealed record OnboardingProblemItemViewModel(
     int ImpactedChildrenCount,
     bool FixFirst,
     OnboardingGraphSection GraphSection,
-    string TargetElementId);
+    string TargetElementId,
+    string SuggestedAction,
+    string ExpectedImpact,
+    string RootCauseGroupingKey,
+    string RootCauseEntity,
+    OnboardingGraphSection RootCauseGraphSection,
+    string RootCauseTargetElementId,
+    string RootCauseLabel);
 
 public sealed record OnboardingProblemGroupViewModel(
     OnboardingProblemScope Scope,
     string Title,
-    IReadOnlyList<OnboardingProblemItemViewModel> Items);
+    IReadOnlyList<ActionableProblemViewModel> Items);
+
+public sealed record OnboardingRootCauseGroupViewModel(
+    string RootCauseGroupingKey,
+    string Title,
+    string RootCauseEntity,
+    string RootCauseLabel,
+    OnboardingProblemSeverity Severity,
+    OnboardingProblemScope Scope,
+    string SuggestedAction,
+    string ExpectedImpact,
+    int VisibleIssueCount,
+    int DerivedIssueCount,
+    bool FixFirst,
+    OnboardingGraphSection GraphSection,
+    string TargetElementId,
+    ActionableProblemViewModel PrimaryProblem,
+    IReadOnlyList<ActionableProblemViewModel> Items);
 
 public sealed record OnboardingProblemSummaryViewModel(
-    IReadOnlyList<OnboardingProblemItemViewModel> TopBlockers,
-    IReadOnlyList<OnboardingProblemItemViewModel> OtherBlockers,
-    IReadOnlyList<OnboardingProblemItemViewModel> Warnings,
+    IReadOnlyList<OnboardingRootCauseGroupViewModel> TopBlockers,
+    IReadOnlyList<OnboardingRootCauseGroupViewModel> OtherBlockers,
+    IReadOnlyList<OnboardingRootCauseGroupViewModel> Warnings,
     int BlockingCount,
     int WarningCount,
+    int BlockingRootCauseCount,
+    int WarningRootCauseCount,
     bool HasProblems);
 
 public sealed record OnboardingGraphSectionStateViewModel(
@@ -153,6 +179,7 @@ public sealed record OnboardingWorkspaceViewModel(
     IReadOnlyList<OnboardingProjectGroupViewModel<OnboardingProductRootDto>> ProductRootGroups,
     IReadOnlyList<OnboardingBindingGroupViewModel> BindingGroups,
     OnboardingProblemSummaryViewModel? ProblemSummary,
+    IReadOnlyList<OnboardingRootCauseGroupViewModel> RootCauseGroups,
     IReadOnlyList<OnboardingProblemGroupViewModel> ProblemGroups,
     IReadOnlyList<OnboardingGraphSectionStateViewModel> GraphSections,
     string? ErrorMessage);

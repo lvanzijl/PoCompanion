@@ -22,6 +22,16 @@
             <MudText Typo="Typo.caption" Color="@ResolveProblemColor()">@ProblemSummary</MudText>
         }
 
+        @if (!string.IsNullOrWhiteSpace(SuggestedAction))
+        {
+            <MudText Typo="Typo.caption" Color="Color.Info">Next: @SuggestedAction</MudText>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(RootCauseHint))
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@RootCauseHint</MudText>
+        }
+
         @if (!string.IsNullOrWhiteSpace(Subtitle))
         {
             <MudText Typo="Typo.body2" Color="Color.Secondary">@Subtitle</MudText>
@@ -74,6 +84,8 @@
     [Parameter] public OnboardingEntityStatusDto? EntityStatus { get; set; }
     [Parameter] public OnboardingProblemSeverity? ProblemSeverity { get; set; }
     [Parameter] public string? ProblemSummary { get; set; }
+    [Parameter] public string? SuggestedAction { get; set; }
+    [Parameter] public string? RootCauseHint { get; set; }
 
     private string ResolvedClass => "pa-3";
 

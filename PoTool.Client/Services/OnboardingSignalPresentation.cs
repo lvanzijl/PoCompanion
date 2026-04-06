@@ -41,6 +41,16 @@ internal static class OnboardingSignalPresentation
             : $"{statusReason} {validationState.ErrorMessageSanitized}".Trim();
     }
 
+    internal static string BuildValidationTitle(string affectedEntity, OnboardingValidationStatus status)
+        => status switch
+        {
+            OnboardingValidationStatus.PermissionDenied => $"{affectedEntity} is blocked by missing permissions",
+            OnboardingValidationStatus.CapabilityDenied => $"{affectedEntity} is blocked by missing capabilities",
+            OnboardingValidationStatus.Unavailable => $"{affectedEntity} depends on an unavailable source",
+            OnboardingValidationStatus.Invalid => $"{affectedEntity} has a validation issue",
+            _ => $"{affectedEntity} requires attention"
+        };
+
     internal static OnboardingProblemSeverity? ResolveEntityProblemSeverity(
         OnboardingEntityStatusDto status,
         params OnboardingValidationStateDto?[] validationStates)

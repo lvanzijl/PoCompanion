@@ -73,6 +73,8 @@ public class OnboardingWorkspaceViewModelFactoryTests
         Assert.IsNotNull(result.ProblemSummary);
         Assert.AreEqual(1, result.ProblemSummary.BlockingCount);
         Assert.AreEqual(1, result.ProblemSummary.WarningCount);
+        Assert.AreEqual(1, result.ProblemSummary.BlockingRootCauseCount);
+        Assert.AreEqual(1, result.ProblemSummary.WarningRootCauseCount);
     }
 
     [TestMethod]
@@ -109,7 +111,7 @@ public class OnboardingWorkspaceViewModelFactoryTests
     }
 
     [TestMethod]
-    public void Create_OrdersTopBlockersAndWarnings_ByExistingSignalsOnly()
+    public void Create_ProblemSummary_IsRootCauseAware()
     {
         var connection = CreateConnection(
             status: new OnboardingEntityStatusDto(
@@ -151,18 +153,19 @@ public class OnboardingWorkspaceViewModelFactoryTests
         Assert.IsNotNull(result.ProblemSummary);
         Assert.AreEqual(4, result.ProblemSummary.BlockingCount);
         Assert.AreEqual(2, result.ProblemSummary.WarningCount);
-        Assert.AreEqual("Global blocker", result.ProblemSummary.TopBlockers[0].Title);
+        Assert.AreEqual(4, result.ProblemSummary.BlockingRootCauseCount);
+        Assert.AreEqual(2, result.ProblemSummary.WarningRootCauseCount);
         Assert.IsTrue(result.ProblemSummary.TopBlockers.All(problem => problem.FixFirst));
-        Assert.AreEqual(OnboardingProblemScope.Global, result.ProblemSummary.TopBlockers[0].Scope);
-        Assert.AreEqual(OnboardingGraphSection.Connections, result.ProblemSummary.TopBlockers[0].GraphSection);
-        Assert.AreEqual("binding-14", result.ProblemSummary.TopBlockers[3].TargetElementId);
+        Assert.IsTrue(result.ProblemSummary.TopBlockers.All(problem => problem.Severity == OnboardingProblemSeverity.Blocking));
+        CollectionAssert.Contains(result.ProblemSummary.TopBlockers.Select(group => group.Title).ToArray(), "Global blocker");
+        CollectionAssert.Contains(result.ProblemSummary.TopBlockers.Select(group => group.Title).ToArray(), "Connection access is blocking onboarding");
         CollectionAssert.AreEquivalent(
             new[] { "Global warning", "Root metadata needs review" },
-            result.ProblemSummary.Warnings.Select(problem => problem.Title).ToArray());
+            result.ProblemSummary.Warnings.Select(group => group.Title).ToArray());
     }
 
     [TestMethod]
-    public void Create_ProblemItemsExposeScopeReasonAndNavigationTarget()
+    public void Create_ActionableProblemsExposeScopeReasonActionAndNavigationTarget()
     {
         var project = CreateProject(
             status: new OnboardingEntityStatusDto(
@@ -198,6 +201,8 @@ public class OnboardingWorkspaceViewModelFactoryTests
         Assert.AreEqual($"Project {project.Snapshot.Name} ({project.ProjectExternalId})", projectProblem.Location);
         Assert.AreEqual(OnboardingGraphSection.Projects, projectProblem.GraphSection);
         Assert.AreEqual("project-10", projectProblem.TargetElementId);
+        Assert.AreEqual("Link project to connection", projectProblem.SuggestedAction);
+        StringAssert.Contains(projectProblem.ExpectedImpact, "project");
 
         var teamProblem = result.ProblemGroups
             .Single(group => group.Scope == OnboardingProblemScope.Project)
@@ -206,6 +211,94 @@ public class OnboardingWorkspaceViewModelFactoryTests
 
         Assert.AreEqual(OnboardingProblemSeverity.Warning, teamProblem.Severity);
         StringAssert.Contains(teamProblem.Reason, "external source is currently unavailable");
+        Assert.AreEqual("Project Project One", teamProblem.RootCauseEntity);
+        Assert.AreEqual("project-10", teamProblem.RootCauseTargetElementId);
+        Assert.AreEqual("Resolve validation issue", teamProblem.SuggestedAction);
+    }
+
+    [TestMethod]
+    public void Create_RootCauseGroups_MergeProblemsByReasonAndUpstreamEntity()
+    {
+        var project = CreateProject();
+        var root = CreateRoot(project.Id);
+        var bindingOne = CreateBinding(
+            root.Id,
+            project.Id,
+            status: new OnboardingEntityStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [new OnboardingStatusIssueDto("BINDING", "Project not linked", null, null)],
+                []));
+        var bindingTwo = CreateBinding(
+            root.Id,
+            project.Id,
+            status: new OnboardingEntityStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [new OnboardingStatusIssueDto("BINDING-2", "Project not linked", null, null)],
+                [])) with { Id = 15 };
+
+        var result = _factory.Create(CreateWorkspaceData(
+            new OnboardingStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.Complete,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [],
+                [],
+                new OnboardingStatusCountsDto(0, 0, 1, 0, 0, 0, 1, 0, 1, 2)),
+            [],
+            [project],
+            [],
+            [],
+            [root],
+            [bindingOne, bindingTwo]));
+
+        Assert.AreEqual(2, result.ProblemSummary?.BlockingCount);
+        Assert.AreEqual(1, result.ProblemSummary?.BlockingRootCauseCount);
+        Assert.HasCount(1, result.RootCauseGroups);
+        Assert.AreEqual(2, result.RootCauseGroups[0].VisibleIssueCount);
+        Assert.AreEqual(1, result.RootCauseGroups[0].DerivedIssueCount);
+        Assert.AreEqual("root-13", result.RootCauseGroups[0].TargetElementId);
+        Assert.AreEqual("Link project to connection", result.RootCauseGroups[0].SuggestedAction);
+    }
+
+    [TestMethod]
+    public void Create_ImpactStatements_AreDerivedFromVisibleGraphOnly()
+    {
+        var project = CreateProject(
+            status: new OnboardingEntityStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [new OnboardingStatusIssueDto("PROJECT", "Project mapping is incomplete", null, null)],
+                []));
+        var root = CreateRoot(project.Id);
+        var team = CreateTeam(project.Id);
+        var pipeline = CreatePipeline(project.Id);
+        var binding = CreateBinding(root.Id, project.Id);
+
+        var result = _factory.Create(CreateWorkspaceData(
+            new OnboardingStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.Complete,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [],
+                [],
+                new OnboardingStatusCountsDto(0, 1, 1, 1, 1, 0, 1, 1, 1, 1)),
+            [],
+            [project],
+            [team],
+            [pipeline],
+            [root],
+            [binding]));
+
+        var problem = result.ProblemGroups
+            .Single(group => group.Scope == OnboardingProblemScope.Project)
+            .Items
+            .Single(item => item.TargetElementId == "project-10");
+
+        StringAssert.Contains(problem.ExpectedImpact, "1 team source(s)");
+        StringAssert.Contains(problem.ExpectedImpact, "1 pipeline source(s)");
+        StringAssert.Contains(problem.ExpectedImpact, "1 root(s)");
+        StringAssert.Contains(problem.ExpectedImpact, "1 binding(s)");
     }
 
     [TestMethod]
@@ -238,9 +331,11 @@ public class OnboardingWorkspaceViewModelFactoryTests
 
         Assert.AreEqual(OnboardingWorkspaceLoadState.Ready, result.LoadState);
         Assert.AreEqual(1, result.ProblemSummary?.BlockingCount);
+        Assert.AreEqual(1, result.ProblemSummary?.BlockingRootCauseCount);
         Assert.AreEqual(0, result.GraphSections.Single(section => section.Section == OnboardingGraphSection.Connections).BlockingCount);
         Assert.IsTrue(result.GraphSections.Single(section => section.Section == OnboardingGraphSection.Bindings).DefaultExpanded);
-        Assert.AreEqual("binding-14", result.ProblemSummary?.TopBlockers[0].TargetElementId);
+        Assert.AreEqual("root-13", result.ProblemSummary?.TopBlockers[0].TargetElementId);
+        Assert.AreEqual("binding-14", result.ProblemGroups.Single().Items[0].TargetElementId);
     }
 
     private static OnboardingWorkspaceData CreateWorkspaceData(

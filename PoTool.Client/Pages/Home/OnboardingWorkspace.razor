@@ -202,11 +202,11 @@
                                 <MudGrid Spacing="2">
                                     @foreach (var problem in _viewModel.ProblemSummary.TopBlockers)
                                     {
-                                        <MudItem xs="12" md="6">
-                                            <OnboardingProblemCard Problem="@problem" OnNavigate="NavigateToProblemAsync" />
-                                        </MudItem>
-                                    }
-                                </MudGrid>
+                                     <MudItem xs="12" md="6">
+                                            <OnboardingRootCauseCard RootCause="@problem" OnNavigate="NavigateToRootCauseAsync" />
+                                     </MudItem>
+                                 }
+                             </MudGrid>
                             }
                         </MudStack>
                     </MudPaper>
@@ -321,11 +321,19 @@
         await LoadAsync();
     }
 
-    private async Task NavigateToProblemAsync(OnboardingProblemItemViewModel problem)
+    private async Task NavigateToProblemAsync(ActionableProblemViewModel problem)
     {
         _viewMode = OnboardingWorkspaceViewMode.Graph;
         ExpandSection(problem.GraphSection);
         _pendingScrollTarget = problem.TargetElementId;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task NavigateToRootCauseAsync(OnboardingRootCauseGroupViewModel rootCause)
+    {
+        _viewMode = OnboardingWorkspaceViewMode.Graph;
+        ExpandSection(rootCause.GraphSection);
+        _pendingScrollTarget = rootCause.TargetElementId;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -405,12 +413,47 @@
                 stackBuilder.OpenComponent<MudText>(nested++);
                 stackBuilder.AddAttribute(nested++, "Typo", Typo.body2);
                 stackBuilder.AddAttribute(nested++, "Color", Color.Secondary);
-                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Blocking issues appear before warnings and remain grouped by impact scope so users can quickly answer what is broken, where it is broken, why it is broken, and what should be fixed first.")));
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Root-cause-aware blockers appear before warnings and now include the suggested next step, grouped impact, and the visible issues they unblock.")));
                 stackBuilder.CloseComponent();
 
-                RenderProblemCategory(stackBuilder, ref nested, "Top blockers", _viewModel.ProblemSummary?.TopBlockers ?? [], Severity.Error);
-                RenderProblemCategory(stackBuilder, ref nested, "Other blockers", _viewModel.ProblemSummary?.OtherBlockers ?? [], Severity.Error);
-                RenderProblemCategory(stackBuilder, ref nested, "Warnings", _viewModel.ProblemSummary?.Warnings ?? [], Severity.Warning);
+                RenderRootCauseCategory(stackBuilder, ref nested, "Top blockers", _viewModel.ProblemSummary?.TopBlockers ?? [], Severity.Error);
+                RenderRootCauseCategory(stackBuilder, ref nested, "Other blockers", _viewModel.ProblemSummary?.OtherBlockers ?? [], Severity.Error);
+                RenderRootCauseCategory(stackBuilder, ref nested, "Warnings", _viewModel.ProblemSummary?.Warnings ?? [], Severity.Warning);
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.h6);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Root causes")));
+                stackBuilder.CloseComponent();
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.body2);
+                stackBuilder.AddAttribute(nested++, "Color", Color.Secondary);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Multiple visible symptoms with the same reason and upstream entity are grouped under one root cause so repeated issues do not dominate the workspace.")));
+                stackBuilder.CloseComponent();
+
+                if (_viewModel.RootCauseGroups.Count == 0)
+                {
+                    stackBuilder.OpenComponent<MudAlert>(nested++);
+                    stackBuilder.AddAttribute(nested++, "Severity", Severity.Success);
+                    stackBuilder.AddAttribute(nested++, "Variant", Variant.Outlined);
+                    stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "No root causes are visible in the current filter scope.")));
+                    stackBuilder.CloseComponent();
+                }
+                else
+                {
+                    stackBuilder.AddContent(nested++, RenderRootCauseGroups());
+                }
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.h6);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Derived issues")));
+                stackBuilder.CloseComponent();
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.body2);
+                stackBuilder.AddAttribute(nested++, "Color", Color.Secondary);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Underlying visible issues remain available by scope so grouped symptoms are never hidden completely.")));
+                stackBuilder.CloseComponent();
 
                 foreach (var group in _viewModel.ProblemGroups)
                 {
@@ -439,7 +482,7 @@
                                 {
                                     itemBuilder.OpenComponent<OnboardingProblemCard>(problemIndex++);
                                     itemBuilder.AddAttribute(problemIndex++, "Problem", problem);
-                                    itemBuilder.AddAttribute(problemIndex++, "OnNavigate", EventCallback.Factory.Create<OnboardingProblemItemViewModel>(this, NavigateToProblemAsync));
+                                    itemBuilder.AddAttribute(problemIndex++, "OnNavigate", EventCallback.Factory.Create<ActionableProblemViewModel>(this, NavigateToProblemAsync));
                                     itemBuilder.CloseComponent();
                                 }));
                                 gridBuilder.CloseComponent();
@@ -455,7 +498,7 @@
         builder.CloseComponent();
     };
 
-    private void RenderProblemCategory(RenderTreeBuilder builder, ref int index, string title, IReadOnlyList<OnboardingProblemItemViewModel> items, Severity severity)
+    private void RenderRootCauseCategory(RenderTreeBuilder builder, ref int index, string title, IReadOnlyList<OnboardingRootCauseGroupViewModel> items, Severity severity)
     {
         builder.OpenComponent<MudAlert>(index++);
         builder.AddAttribute(index++, "Severity", severity);
@@ -477,23 +520,90 @@
                 return;
             }
 
-            contentBuilder.OpenElement(nested++, "ul");
-            contentBuilder.AddAttribute(nested++, "class", "mud-list mud-list-dense");
-            contentBuilder.AddAttribute(nested++, "style", "margin: 0; padding-left: 1rem;");
-            contentBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(listBuilder =>
+            contentBuilder.OpenComponent<MudGrid>(nested++);
+            contentBuilder.AddAttribute(nested++, "Spacing", 2);
+            contentBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(gridBuilder =>
             {
-                var listIndex = 0;
+                var gridIndex = 0;
                 foreach (var item in items)
                 {
-                    listBuilder.OpenElement(listIndex++, "li");
-                    listBuilder.AddContent(listIndex++, $"{item.Title} — {item.Location}");
-                    listBuilder.CloseElement();
+                    gridBuilder.OpenComponent<MudItem>(gridIndex++);
+                    gridBuilder.AddAttribute(gridIndex++, "xs", 12);
+                    gridBuilder.AddAttribute(gridIndex++, "md", 6);
+                    gridBuilder.AddAttribute(gridIndex++, "ChildContent", (RenderFragment)(itemBuilder =>
+                    {
+                        itemBuilder.OpenComponent<OnboardingRootCauseCard>(gridIndex++);
+                        itemBuilder.AddAttribute(gridIndex++, "RootCause", item);
+                        itemBuilder.AddAttribute(gridIndex++, "OnNavigate", EventCallback.Factory.Create<OnboardingRootCauseGroupViewModel>(this, NavigateToRootCauseAsync));
+                        itemBuilder.CloseComponent();
+                    }));
+                    gridBuilder.CloseComponent();
                 }
             }));
-            contentBuilder.CloseElement();
+            contentBuilder.CloseComponent();
         }));
         builder.CloseComponent();
     }
+
+    private RenderFragment RenderRootCauseGroups() => builder =>
+    {
+        builder.OpenComponent<MudExpansionPanels>(0);
+        builder.AddAttribute(1, "MultiExpansion", true);
+        builder.AddAttribute(2, "ChildContent", (RenderFragment)(contentBuilder =>
+        {
+            var index = 0;
+            foreach (var rootCause in _viewModel.RootCauseGroups)
+            {
+                contentBuilder.OpenComponent<MudExpansionPanel>(index++);
+                contentBuilder.AddAttribute(index++, "Text", $"{rootCause.Title} — {rootCause.VisibleIssueCount} visible issue(s)");
+                contentBuilder.AddAttribute(index++, "Expanded", rootCause.FixFirst);
+                contentBuilder.AddAttribute(index++, "ChildContent", (RenderFragment)(panelBuilder =>
+                {
+                    var nested = 0;
+                    panelBuilder.OpenComponent<MudStack>(nested++);
+                    panelBuilder.AddAttribute(nested++, "Spacing", 2);
+                    panelBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(stackBuilder =>
+                    {
+                        var stackIndex = 0;
+                        stackBuilder.OpenComponent<OnboardingRootCauseCard>(stackIndex++);
+                        stackBuilder.AddAttribute(stackIndex++, "RootCause", rootCause);
+                        stackBuilder.AddAttribute(stackIndex++, "OnNavigate", EventCallback.Factory.Create<OnboardingRootCauseGroupViewModel>(this, NavigateToRootCauseAsync));
+                        stackBuilder.CloseComponent();
+
+                        stackBuilder.OpenComponent<MudText>(stackIndex++);
+                        stackBuilder.AddAttribute(stackIndex++, "Typo", Typo.subtitle2);
+                        stackBuilder.AddAttribute(stackIndex++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Derived issues")));
+                        stackBuilder.CloseComponent();
+
+                        stackBuilder.OpenComponent<MudGrid>(stackIndex++);
+                        stackBuilder.AddAttribute(stackIndex++, "Spacing", 2);
+                        stackBuilder.AddAttribute(stackIndex++, "ChildContent", (RenderFragment)(gridBuilder =>
+                        {
+                            var gridIndex = 0;
+                            foreach (var item in rootCause.Items)
+                            {
+                                gridBuilder.OpenComponent<MudItem>(gridIndex++);
+                                gridBuilder.AddAttribute(gridIndex++, "xs", 12);
+                                gridBuilder.AddAttribute(gridIndex++, "md", 6);
+                                gridBuilder.AddAttribute(gridIndex++, "ChildContent", (RenderFragment)(itemBuilder =>
+                                {
+                                    itemBuilder.OpenComponent<OnboardingProblemCard>(gridIndex++);
+                                    itemBuilder.AddAttribute(gridIndex++, "Problem", item);
+                                    itemBuilder.AddAttribute(gridIndex++, "OnNavigate", EventCallback.Factory.Create<ActionableProblemViewModel>(this, NavigateToProblemAsync));
+                                    itemBuilder.CloseComponent();
+                                }));
+                                gridBuilder.CloseComponent();
+                            }
+                        }));
+                        stackBuilder.CloseComponent();
+                    }));
+                    panelBuilder.CloseComponent();
+                }));
+                contentBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+    };
 
     private void RenderSection(RenderTreeBuilder builder, ref int index, OnboardingGraphSection section)
     {
@@ -633,6 +743,8 @@
                         connection.Validation.AvailabilityValidationState,
                         connection.Validation.PermissionValidationState,
                         connection.Validation.CapabilityValidationState));
+                    itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"connection-{connection.Id}"));
+                    itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"connection-{connection.Id}"));
                     itemBuilder.CloseComponent();
                 }));
                 gridBuilder.CloseComponent();
@@ -675,6 +787,8 @@
                     itemBuilder.AddAttribute(index++, "ValidationState", project.ValidationState);
                     itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(project.Status, project.ValidationState));
                     itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(project.Status, project.ValidationState));
+                    itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"project-{project.Id}"));
+                    itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"project-{project.Id}"));
                     itemBuilder.CloseComponent();
                 }));
                 gridBuilder.CloseComponent();
@@ -703,6 +817,8 @@
             itemBuilder.AddAttribute(index++, "ValidationState", team.ValidationState);
             itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(team.Status, team.ValidationState));
             itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(team.Status, team.ValidationState));
+            itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"team-{team.Id}"));
+            itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"team-{team.Id}"));
             itemBuilder.CloseComponent();
             return index;
         });
@@ -728,6 +844,8 @@
             itemBuilder.AddAttribute(index++, "ValidationState", pipeline.ValidationState);
             itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(pipeline.Status, pipeline.ValidationState));
             itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(pipeline.Status, pipeline.ValidationState));
+            itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"pipeline-{pipeline.Id}"));
+            itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"pipeline-{pipeline.Id}"));
             itemBuilder.CloseComponent();
             return index;
         });
@@ -753,6 +871,8 @@
             itemBuilder.AddAttribute(index++, "ValidationState", root.ValidationState);
             itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(root.Status, root.ValidationState));
             itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(root.Status, root.ValidationState));
+            itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"root-{root.Id}"));
+            itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"root-{root.Id}"));
             itemBuilder.CloseComponent();
             return index;
         });
@@ -812,6 +932,8 @@
                             itemBuilder.AddAttribute(cardIndex++, "ValidationState", binding.ValidationState);
                             itemBuilder.AddAttribute(cardIndex++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(binding.Status, binding.ValidationState));
                             itemBuilder.AddAttribute(cardIndex++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(binding.Status, binding.ValidationState));
+                            itemBuilder.AddAttribute(cardIndex++, "SuggestedAction", GetSuggestedAction($"binding-{binding.Id}"));
+                            itemBuilder.AddAttribute(cardIndex++, "RootCauseHint", GetRootCauseHint($"binding-{binding.Id}"));
                             itemBuilder.CloseComponent();
                         }));
                         gridBuilder.CloseComponent();
@@ -880,6 +1002,26 @@
         builder.AddAttribute(3, "ChildContent", (RenderFragment)(contentBuilder => contentBuilder.AddContent(4, message)));
         builder.CloseComponent();
     }
+
+    private string? GetSuggestedAction(string targetElementId)
+        => GetPrimaryProblemForTarget(targetElementId)?.SuggestedAction;
+
+    private string? GetRootCauseHint(string targetElementId)
+    {
+        var problem = GetPrimaryProblemForTarget(targetElementId);
+        return problem is null || problem.RootCauseTargetElementId == targetElementId
+            ? null
+            : $"Part of root cause: {problem.RootCauseEntity}";
+    }
+
+    private ActionableProblemViewModel? GetPrimaryProblemForTarget(string targetElementId)
+        => _viewModel.ProblemGroups
+            .SelectMany(group => group.Items)
+            .Where(problem => problem.TargetElementId == targetElementId)
+            .OrderBy(problem => problem.Severity)
+            .ThenByDescending(problem => problem.ImpactedChildrenCount)
+            .ThenBy(problem => problem.Title, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
 
     private string GetSectionDisplayTitle(OnboardingGraphSection section)
     {
