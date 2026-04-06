@@ -177,6 +177,103 @@ public class OnboardingExecutionServiceTests
     }
 
     [TestMethod]
+    public async Task ReplaceBindingSourceAsync_SuccessfullyRefreshesWorkspaceWithSelectedTeamSource()
+    {
+        var filter = new OnboardingWorkspaceFilter(1, 2, 3, null);
+        var intent = CreateIntent("create-binding", OnboardingGraphSection.Bindings, OnboardingExecutionConfidenceLevel.High, connectionId: 1, projectId: 2, rootId: 3, bindingId: 4) with
+        {
+            SelectedReplacementSourceId = 9,
+            SelectedReplacementSourceType = OnboardingProductSourceTypeDto.Team
+        };
+
+        _crudClient
+            .Setup(client => client.UpdateBindingAsync(
+                4,
+                It.Is<UpdateProductSourceBindingRequest>(request =>
+                    request.Enabled == true
+                    && request.TeamSourceId == 9
+                    && request.PipelineSourceId == null),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OnboardingSuccessEnvelopeOfOnboardingProductSourceBindingDto
+            {
+                Data = CreateBinding(4, 3, 2, OnboardingProductSourceTypeDto.Team, "team-9", teamSourceId: 9)
+            });
+
+        _workspaceService
+            .Setup(service => service.GetWorkspaceDataAsync(
+                It.Is<OnboardingWorkspaceFilter>(item => item.ProductRootId == 3),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateWorkspaceData(filter));
+
+        var result = await _service.ReplaceBindingSourceAsync(intent, true, filter);
+
+        Assert.IsTrue(result.MutationApplied);
+        Assert.IsNotNull(result.RefreshedData);
+        Assert.AreEqual(OnboardingExecutionFeedbackKind.Success, result.Feedback.Kind);
+        StringAssert.Contains(result.Feedback.Message, "team-9");
+    }
+
+    [TestMethod]
+    public async Task ReplaceBindingSourceAsync_SurfacesPermissionDeniedFailure()
+    {
+        var intent = CreateIntent("create-binding", OnboardingGraphSection.Bindings, OnboardingExecutionConfidenceLevel.High, connectionId: 1, projectId: 2, rootId: 3, bindingId: 4) with
+        {
+            SelectedReplacementSourceId = 9,
+            SelectedReplacementSourceType = OnboardingProductSourceTypeDto.Pipeline
+        };
+        var apiError = new OnboardingErrorDto(OnboardingErrorCode.PermissionDenied, "Permission was denied for the requested onboarding mutation.", null, false);
+
+        _crudClient
+            .Setup(client => client.UpdateBindingAsync(4, It.IsAny<UpdateProductSourceBindingRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ApiException(
+                "forbidden",
+                (int)HttpStatusCode.Forbidden,
+                JsonSerializer.Serialize(apiError),
+                new Dictionary<string, IEnumerable<string>>(),
+                null));
+
+        var result = await _service.ReplaceBindingSourceAsync(intent, true, new OnboardingWorkspaceFilter(1, 2, 3, null));
+
+        Assert.IsFalse(result.MutationApplied);
+        Assert.AreEqual(OnboardingErrorCode.PermissionDenied, result.ErrorCode);
+        Assert.AreEqual("Permission was denied for the requested onboarding mutation.", result.Feedback.Message);
+        _workspaceService.VerifyNoOtherCalls();
+    }
+
+    [TestMethod]
+    public async Task ReplaceBindingSourceAsync_WhenBindingIsStale_RefreshesWorkspace()
+    {
+        var filter = new OnboardingWorkspaceFilter(1, 2, 3, null);
+        var intent = CreateIntent("create-binding", OnboardingGraphSection.Bindings, OnboardingExecutionConfidenceLevel.High, connectionId: 1, projectId: 2, rootId: 3, bindingId: 4) with
+        {
+            SelectedReplacementSourceId = 9,
+            SelectedReplacementSourceType = OnboardingProductSourceTypeDto.Team
+        };
+        var apiError = new OnboardingErrorDto(OnboardingErrorCode.NotFound, "Onboarding product source binding was not found.", "bindingId=4", false);
+
+        _crudClient
+            .Setup(client => client.UpdateBindingAsync(4, It.IsAny<UpdateProductSourceBindingRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ApiException(
+                "not found",
+                (int)HttpStatusCode.NotFound,
+                JsonSerializer.Serialize(apiError),
+                new Dictionary<string, IEnumerable<string>>(),
+                null));
+
+        _workspaceService
+            .Setup(service => service.GetWorkspaceDataAsync(
+                It.Is<OnboardingWorkspaceFilter>(item => item.ProductRootId == 3),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateWorkspaceData(filter));
+
+        var result = await _service.ReplaceBindingSourceAsync(intent, true, filter);
+
+        Assert.IsFalse(result.MutationApplied);
+        Assert.AreEqual(OnboardingErrorCode.NotFound, result.ErrorCode);
+        Assert.IsNotNull(result.RefreshedData);
+    }
+
+    [TestMethod]
     public async Task UpdateProjectAsync_WhenBackendReportsNotFound_RefreshesWorkspaceToAvoidStaleState()
     {
         var filter = new OnboardingWorkspaceFilter(1, 2, null, null);
@@ -297,6 +394,27 @@ public class OnboardingExecutionServiceTests
             teamExternalId,
             true,
             new TeamSnapshotDto(teamExternalId, "project-1", name, "Area", null, new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)),
+            CreateValidationState(OnboardingValidationStatus.Valid),
+            new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
+            new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
+
+    private static OnboardingProductSourceBindingDto CreateBinding(
+        int id,
+        int rootId,
+        int projectId,
+        OnboardingProductSourceTypeDto sourceType,
+        string sourceExternalId,
+        int? teamSourceId = null,
+        int? pipelineSourceId = null)
+        => new(
+            id,
+            rootId,
+            projectId,
+            teamSourceId,
+            pipelineSourceId,
+            sourceType,
+            sourceExternalId,
+            true,
             CreateValidationState(OnboardingValidationStatus.Valid),
             new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
             new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));

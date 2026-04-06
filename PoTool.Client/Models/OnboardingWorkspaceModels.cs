@@ -119,7 +119,9 @@ public sealed record ExecutionIntentViewModel(
     int? BindingId,
     string SuggestedActionLabel,
     OnboardingExecutionConfidenceLevel ConfidenceLevel,
-    ExecutionIntentNavigationTargetViewModel NavigationTarget);
+    ExecutionIntentNavigationTargetViewModel NavigationTarget,
+    int? SelectedReplacementSourceId = null,
+    OnboardingProductSourceTypeDto? SelectedReplacementSourceType = null);
 
 public enum OnboardingExecutionFeedbackKind
 {

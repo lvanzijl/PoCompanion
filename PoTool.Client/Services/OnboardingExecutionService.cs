@@ -419,6 +419,49 @@ public sealed class OnboardingExecutionService
             cancellationToken);
     }
 
+    public Task<OnboardingExecutionResult> ReplaceBindingSourceAsync(
+        ExecutionIntentViewModel intent,
+        bool enabled,
+        OnboardingWorkspaceFilter currentFilter,
+        CancellationToken cancellationToken = default)
+    {
+        var validationError = ValidateBindingSourceReplacement(intent);
+        if (validationError is not null)
+        {
+            return Task.FromResult(validationError);
+        }
+
+        var request = intent.SelectedReplacementSourceType switch
+        {
+            OnboardingProductSourceTypeDto.Team => new UpdateProductSourceBindingRequest(
+                enabled,
+                null,
+                null,
+                intent.SelectedReplacementSourceId,
+                null,
+                null,
+                null),
+            OnboardingProductSourceTypeDto.Pipeline => new UpdateProductSourceBindingRequest(
+                enabled,
+                null,
+                null,
+                null,
+                intent.SelectedReplacementSourceId,
+                null,
+                null),
+            _ => throw new InvalidOperationException("Binding replacement requires a team or pipeline source selection.")
+        };
+
+        return ExecuteAsync(
+            intent,
+            currentFilter,
+            token => _crudClient.UpdateBindingAsync(intent.BindingId!.Value, request, token),
+            envelope => currentFilter with { ProductRootId = envelope.Data?.ProductRootId ?? currentFilter.ProductRootId },
+            "Binding source replaced",
+            envelope => $"Binding now points to {envelope.Data?.SourceType.ToString() ?? intent.SelectedReplacementSourceType?.ToString() ?? "replacement"} → {envelope.Data?.SourceExternalId ?? "source"}.",
+            cancellationToken);
+    }
+
     public Task<OnboardingExecutionResult> DeleteBindingAsync(
         ExecutionIntentViewModel intent,
         int bindingId,
@@ -794,6 +837,31 @@ public sealed class OnboardingExecutionService
         return bindingId <= 0
             ? BuildLocalValidationFailure(intent, "Binding context is missing.", "bindingId")
             : null;
+    }
+
+    private static OnboardingExecutionResult? ValidateBindingSourceReplacement(ExecutionIntentViewModel intent)
+    {
+        var intentError = ValidateBindingUpdate(intent, intent.BindingId.GetValueOrDefault());
+        if (intentError is not null)
+        {
+            return intentError;
+        }
+
+        if (!intent.SelectedReplacementSourceType.HasValue)
+        {
+            return BuildLocalValidationFailure(intent, "A replacement source type is required before correcting the binding.", nameof(intent.SelectedReplacementSourceType));
+        }
+
+        if (!intent.SelectedReplacementSourceId.HasValue || intent.SelectedReplacementSourceId.Value <= 0)
+        {
+            return BuildLocalValidationFailure(intent, "Select a replacement source before correcting the binding.", nameof(intent.SelectedReplacementSourceId));
+        }
+
+        return intent.SelectedReplacementSourceType.Value switch
+        {
+            OnboardingProductSourceTypeDto.Team or OnboardingProductSourceTypeDto.Pipeline => null,
+            _ => BuildLocalValidationFailure(intent, "Only team and pipeline bindings support replacement correction.", nameof(intent.SelectedReplacementSourceType))
+        };
     }
 
     private static OnboardingExecutionResult? ValidateDelete(

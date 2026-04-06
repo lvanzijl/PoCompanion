@@ -2,6 +2,14 @@
   {
     "date": "2026-04-06",
     "type": "Fixed",
+    "title": "Onboarding assignment blockers can now replace invalid team and pipeline bindings in place",
+    "impact": "When the OnboardingWorkspace feature flag is enabled, team-assignment and pipeline-assignment blockers now load authoritative replacement candidates inside the binding action zone, route the selected replacement through the existing execution-intent mutation flow, update the binding through the onboarding execution service, and refresh graph plus problem counts so resolved blockers disappear without leaving the current onboarding workspace.",
+    "area": "Home / Onboarding",
+    "link": "/home/onboarding"
+  },
+  {
+    "date": "2026-04-06",
+    "type": "Fixed",
     "title": "Onboarding fix links now open the correct binding editor and no longer present a contradictory read-only banner",
     "impact": "When the OnboardingWorkspace feature flag is enabled, binding-focused fix links now route team, pipeline, and product-root binding work into the binding action zone instead of the wrong mutation surface, and the workspace banner now clarifies that the graph remains read-only until a matching execution intent activates a write-capable action zone.",
     "area": "Home / Onboarding",
