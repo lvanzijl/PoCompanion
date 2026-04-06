@@ -19,7 +19,7 @@ public sealed class OnboardingExecutionIntentService
         int visibleTeamCount,
         int visiblePipelineCount)
     {
-        var intentType = ResolveIntentType(suggestedAction);
+        var intentType = ResolveIntentType(suggestedAction, bindingId);
         var confidenceLevel = ResolveConfidenceLevel(
             intentType,
             visibleProjectCount,
@@ -57,7 +57,7 @@ public sealed class OnboardingExecutionIntentService
                 expandedSections));
     }
 
-    private static string ResolveIntentType(string suggestedAction)
+    private static string ResolveIntentType(string suggestedAction, int? bindingId)
         => suggestedAction switch
         {
             "Create or select a connection" => "configure-connection",
@@ -65,7 +65,9 @@ public sealed class OnboardingExecutionIntentService
             "Resolve the missing read permissions" => "configure-connection",
             "Enable the required connection capabilities" => "configure-connection",
             "Link project to connection" => "link-project",
+            "Assign pipeline to project" when bindingId.HasValue => "create-binding",
             "Assign pipeline to project" => "assign-pipeline",
+            "Assign team to project" when bindingId.HasValue => "create-binding",
             "Assign team to project" => "assign-team",
             "Create binding for product root" => "create-binding",
             "Resolve product root validation issue" => "resolve-root-validation",
@@ -124,8 +126,6 @@ public sealed class OnboardingExecutionIntentService
         {
             "configure-connection" => OnboardingGraphSection.Connections,
             "link-project" => OnboardingGraphSection.Projects,
-            "assign-team" => OnboardingGraphSection.Teams,
-            "assign-pipeline" => OnboardingGraphSection.Pipelines,
             "create-binding" => OnboardingGraphSection.Bindings,
             "resolve-root-validation" => OnboardingGraphSection.ProductRoots,
             _ => fallbackSection

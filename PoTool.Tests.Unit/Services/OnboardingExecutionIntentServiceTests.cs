@@ -57,14 +57,13 @@ public class OnboardingExecutionIntentServiceTests
 
         Assert.AreEqual("assign-pipeline", result.IntentType);
         Assert.AreEqual(OnboardingExecutionConfidenceLevel.Medium, result.ConfidenceLevel);
-        Assert.AreEqual(OnboardingGraphSection.Pipelines, result.NavigationTarget.Section);
         CollectionAssert.AreEquivalent(
             new[] { OnboardingGraphSection.Projects, OnboardingGraphSection.Pipelines },
             result.NavigationTarget.ExpandedSections.ToArray());
     }
 
     [TestMethod]
-    public void CreateIntent_AssignTeam_RoutesToTeamsSection()
+    public void CreateIntent_AssignTeam_WithBindingContext_UsesBindingMutationRoute()
     {
         var result = _service.CreateIntent(
             "Assign team to project",
@@ -72,19 +71,19 @@ public class OnboardingExecutionIntentServiceTests
             connectionId: 1,
             projectId: 10,
             rootId: null,
-            bindingId: null,
-            section: OnboardingGraphSection.Projects,
-            anchorId: "section-projects",
-            targetElementId: "project-10",
+            bindingId: 20,
+            section: OnboardingGraphSection.Bindings,
+            anchorId: "section-bindings",
+            targetElementId: "binding-20",
             visibleProjectCount: 1,
             visibleTeamCount: 3,
             visiblePipelineCount: 1);
 
-        Assert.AreEqual("assign-team", result.IntentType);
-        Assert.AreEqual(OnboardingExecutionConfidenceLevel.Medium, result.ConfidenceLevel);
-        Assert.AreEqual(OnboardingGraphSection.Teams, result.NavigationTarget.Section);
+        Assert.AreEqual("create-binding", result.IntentType);
+        Assert.AreEqual(OnboardingExecutionConfidenceLevel.High, result.ConfidenceLevel);
+        Assert.AreEqual(OnboardingGraphSection.Bindings, result.NavigationTarget.Section);
         CollectionAssert.AreEquivalent(
-            new[] { OnboardingGraphSection.Projects, OnboardingGraphSection.Teams },
+            new[] { OnboardingGraphSection.Bindings, OnboardingGraphSection.ProductRoots },
             result.NavigationTarget.ExpandedSections.ToArray());
     }
 

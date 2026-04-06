@@ -78,7 +78,7 @@ public sealed class OnboardingWorkspaceViewModelFactory
 
         var message = loadState == OnboardingWorkspaceLoadState.Empty
             ? "No onboarding data is currently visible. Configure the backend onboarding graph before using this read-only workspace."
-            : "Read-only onboarding status and graph view. No changes can be made from this workspace.";
+            : "Onboarding status and graph stay read-only until a matching execution intent activates a mutation action zone.";
 
         var orderedProblems = OrderProblems(CreateProblems(data));
         var rootCauseGroups = CreateRootCauseGroups(orderedProblems);
