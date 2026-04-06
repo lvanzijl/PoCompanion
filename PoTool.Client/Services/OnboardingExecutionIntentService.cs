@@ -25,8 +25,9 @@ public sealed class OnboardingExecutionIntentService
             visibleProjectCount,
             visibleTeamCount,
             visiblePipelineCount);
+        var navigationSection = ResolveNavigationSection(intentType, section);
 
-        var expandedSections = ResolveExpandedSections(intentType, section);
+        var expandedSections = ResolveExpandedSections(intentType, navigationSection);
         var route = WorkspaceQueryContextHelper.BuildRoute(
             WorkspaceRoutes.OnboardingWorkspace,
             new WorkspaceQueryContext(),
@@ -36,7 +37,7 @@ public sealed class OnboardingExecutionIntentService
                 projectId,
                 rootId,
                 bindingId,
-                section,
+                navigationSection,
                 targetElementId));
 
         return new ExecutionIntentViewModel(
@@ -51,7 +52,7 @@ public sealed class OnboardingExecutionIntentService
             new ExecutionIntentNavigationTargetViewModel(
                 route,
                 anchorId,
-                section,
+                navigationSection,
                 targetElementId,
                 expandedSections));
     }
@@ -117,6 +118,18 @@ public sealed class OnboardingExecutionIntentService
 
         return sections.ToList();
     }
+
+    private static OnboardingGraphSection ResolveNavigationSection(string intentType, OnboardingGraphSection fallbackSection)
+        => intentType switch
+        {
+            "configure-connection" => OnboardingGraphSection.Connections,
+            "link-project" => OnboardingGraphSection.Projects,
+            "assign-team" => OnboardingGraphSection.Teams,
+            "assign-pipeline" => OnboardingGraphSection.Pipelines,
+            "create-binding" => OnboardingGraphSection.Bindings,
+            "resolve-root-validation" => OnboardingGraphSection.ProductRoots,
+            _ => fallbackSection
+        };
 
     private static string BuildAdditionalParameters(
         string intentType,

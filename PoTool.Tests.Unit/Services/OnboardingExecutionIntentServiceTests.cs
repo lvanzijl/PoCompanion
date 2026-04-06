@@ -9,7 +9,7 @@ public class OnboardingExecutionIntentServiceTests
     private readonly OnboardingExecutionIntentService _service = new();
 
     [TestMethod]
-    public void CreateIntent_CreateBinding_ReturnsHighConfidenceWithRootContext()
+    public void CreateIntent_CreateBinding_RoutesToBindingsSectionWithRootContext()
     {
         var result = _service.CreateIntent(
             "Create binding for product root",
@@ -31,7 +31,8 @@ public class OnboardingExecutionIntentServiceTests
         Assert.AreEqual(10, result.ProjectId);
         Assert.AreEqual(13, result.RootId);
         Assert.IsNull(result.BindingId);
-        Assert.AreEqual("/home/onboarding?onboardingIntentType=create-binding&onboardingSection=ProductRoots&onboardingTarget=root-13&onboardingConnectionId=1&onboardingProjectId=10&onboardingRootId=13", result.NavigationTarget.Route);
+        Assert.AreEqual(OnboardingGraphSection.Bindings, result.NavigationTarget.Section);
+        Assert.AreEqual("/home/onboarding?onboardingIntentType=create-binding&onboardingSection=Bindings&onboardingTarget=root-13&onboardingConnectionId=1&onboardingProjectId=10&onboardingRootId=13", result.NavigationTarget.Route);
         CollectionAssert.AreEquivalent(
             new[] { OnboardingGraphSection.ProductRoots, OnboardingGraphSection.Bindings },
             result.NavigationTarget.ExpandedSections.ToArray());
@@ -56,8 +57,34 @@ public class OnboardingExecutionIntentServiceTests
 
         Assert.AreEqual("assign-pipeline", result.IntentType);
         Assert.AreEqual(OnboardingExecutionConfidenceLevel.Medium, result.ConfidenceLevel);
+        Assert.AreEqual(OnboardingGraphSection.Pipelines, result.NavigationTarget.Section);
         CollectionAssert.AreEquivalent(
             new[] { OnboardingGraphSection.Projects, OnboardingGraphSection.Pipelines },
+            result.NavigationTarget.ExpandedSections.ToArray());
+    }
+
+    [TestMethod]
+    public void CreateIntent_AssignTeam_RoutesToTeamsSection()
+    {
+        var result = _service.CreateIntent(
+            "Assign team to project",
+            OnboardingProblemScope.Project,
+            connectionId: 1,
+            projectId: 10,
+            rootId: null,
+            bindingId: null,
+            section: OnboardingGraphSection.Projects,
+            anchorId: "section-projects",
+            targetElementId: "project-10",
+            visibleProjectCount: 1,
+            visibleTeamCount: 3,
+            visiblePipelineCount: 1);
+
+        Assert.AreEqual("assign-team", result.IntentType);
+        Assert.AreEqual(OnboardingExecutionConfidenceLevel.Medium, result.ConfidenceLevel);
+        Assert.AreEqual(OnboardingGraphSection.Teams, result.NavigationTarget.Section);
+        CollectionAssert.AreEquivalent(
+            new[] { OnboardingGraphSection.Projects, OnboardingGraphSection.Teams },
             result.NavigationTarget.ExpandedSections.ToArray());
     }
 
