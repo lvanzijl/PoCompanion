@@ -186,7 +186,10 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IOnboardingLookupHandler, OnboardingLookupHandler>();
         services.AddScoped<IOnboardingStatusService, OnboardingStatusService>();
         services.AddScoped<IOnboardingStatusHandler, OnboardingStatusHandler>();
+        services.AddScoped<IOnboardingLegacyMigrationReader, OnboardingLegacyMigrationReader>();
         services.AddScoped<IOnboardingMigrationLedgerService, OnboardingMigrationLedgerService>();
+        services.AddScoped<IOnboardingMigrationMapper, OnboardingMigrationMapper>();
+        services.AddScoped<IOnboardingMigrationExecutionService, OnboardingMigrationExecutionService>();
         services.AddScoped<IOnboardingMigrationJobHandler, OnboardingMigrationJobHandler>();
         services.AddScoped<DeliveryFilterResolutionService>();
         services.AddScoped<PipelineFilterResolutionService>();
