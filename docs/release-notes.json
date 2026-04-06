@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-06",
+    "type": "Added",
+    "title": "A new read-only onboarding workspace can surface onboarding graph status behind a feature flag",
+    "impact": "When the OnboardingWorkspace feature flag is enabled, the client exposes a read-only onboarding workspace that shows onboarding status, blockers, warnings, connections, projects, teams, pipelines, product roots, bindings, and backend-filtered graph context without any write, import, or migration actions.",
+    "area": "Home / Onboarding",
+    "link": "/home/onboarding"
+  },
+  {
     "date": "2026-04-05",
     "type": "Changed",
     "title": "Global product selection now stays authoritative across planning, roadmap, backlog, bug, and work-item pages",

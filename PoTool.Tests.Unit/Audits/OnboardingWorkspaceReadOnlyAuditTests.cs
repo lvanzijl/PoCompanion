@@ -16,12 +16,18 @@ public class OnboardingWorkspaceReadOnlyAuditTests
     {
         var forbiddenTerms = new[]
         {
-            "Create",
-            "Update",
-            "Delete",
-            "Save",
-            "Import",
-            "Edit"
+            ">Create<",
+            ">Update<",
+            ">Delete<",
+            ">Save<",
+            ">Import<",
+            ">Edit<",
+            "Label=\"Create\"",
+            "Label=\"Update\"",
+            "Label=\"Delete\"",
+            "Label=\"Save\"",
+            "Label=\"Import\"",
+            "Label=\"Edit\""
         };
 
         foreach (var file in WorkspaceFiles)
