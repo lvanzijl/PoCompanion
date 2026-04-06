@@ -10,6 +10,7 @@ public interface IOnboardingBindingReplacementLookupService
 {
     Task<OnboardingBindingReplacementLookupResult> GetCandidatesAsync(
         OnboardingProjectContextViewModel? projectContext,
+        OnboardingProductSourceBindingDto? binding,
         OnboardingProductSourceTypeDto sourceType,
         IReadOnlyList<OnboardingTeamSourceDto> availableTeams,
         IReadOnlyList<OnboardingPipelineSourceDto> availablePipelines,
@@ -51,6 +52,7 @@ public sealed class OnboardingBindingReplacementLookupService : IOnboardingBindi
 
     public async Task<OnboardingBindingReplacementLookupResult> GetCandidatesAsync(
         OnboardingProjectContextViewModel? projectContext,
+        OnboardingProductSourceBindingDto? binding,
         OnboardingProductSourceTypeDto sourceType,
         IReadOnlyList<OnboardingTeamSourceDto> availableTeams,
         IReadOnlyList<OnboardingPipelineSourceDto> availablePipelines,
@@ -65,8 +67,8 @@ public sealed class OnboardingBindingReplacementLookupService : IOnboardingBindi
         {
             return sourceType switch
             {
-                OnboardingProductSourceTypeDto.Team => await LoadTeamCandidatesAsync(projectContext, availableTeams, cancellationToken),
-                OnboardingProductSourceTypeDto.Pipeline => await LoadPipelineCandidatesAsync(projectContext, availablePipelines, cancellationToken),
+                OnboardingProductSourceTypeDto.Team => await LoadTeamCandidatesAsync(projectContext, binding, availableTeams, cancellationToken),
+                OnboardingProductSourceTypeDto.Pipeline => await LoadPipelineCandidatesAsync(projectContext, binding, availablePipelines, cancellationToken),
                 _ => OnboardingBindingReplacementLookupResult.Failure("Only team and pipeline bindings support replacement selection.")
             };
         }
@@ -78,6 +80,7 @@ public sealed class OnboardingBindingReplacementLookupService : IOnboardingBindi
 
     private async Task<OnboardingBindingReplacementLookupResult> LoadTeamCandidatesAsync(
         OnboardingProjectContextViewModel projectContext,
+        OnboardingProductSourceBindingDto? binding,
         IReadOnlyList<OnboardingTeamSourceDto> availableTeams,
         CancellationToken cancellationToken)
     {
@@ -94,6 +97,9 @@ public sealed class OnboardingBindingReplacementLookupService : IOnboardingBindi
 
         var candidates = availableTeams
             .Where(item => lookupIds.Contains(item.TeamExternalId))
+            .Where(item => item.Enabled)
+            .Where(item => item.ValidationState.Status == OnboardingValidationStatus.Valid)
+            .Where(item => !string.Equals(item.TeamExternalId, binding?.SourceExternalId, StringComparison.OrdinalIgnoreCase))
             .OrderBy(item => item.Snapshot.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.TeamExternalId, StringComparer.OrdinalIgnoreCase)
             .Select(item => new OnboardingBindingReplacementCandidateViewModel(
@@ -110,6 +116,7 @@ public sealed class OnboardingBindingReplacementLookupService : IOnboardingBindi
 
     private async Task<OnboardingBindingReplacementLookupResult> LoadPipelineCandidatesAsync(
         OnboardingProjectContextViewModel projectContext,
+        OnboardingProductSourceBindingDto? binding,
         IReadOnlyList<OnboardingPipelineSourceDto> availablePipelines,
         CancellationToken cancellationToken)
     {
@@ -126,6 +133,9 @@ public sealed class OnboardingBindingReplacementLookupService : IOnboardingBindi
 
         var candidates = availablePipelines
             .Where(item => lookupIds.Contains(item.PipelineExternalId))
+            .Where(item => item.Enabled)
+            .Where(item => item.ValidationState.Status == OnboardingValidationStatus.Valid)
+            .Where(item => !string.Equals(item.PipelineExternalId, binding?.SourceExternalId, StringComparison.OrdinalIgnoreCase))
             .OrderBy(item => item.Snapshot.Name, StringComparer.OrdinalIgnoreCase)
             .ThenBy(item => item.PipelineExternalId, StringComparer.OrdinalIgnoreCase)
             .Select(item => new OnboardingBindingReplacementCandidateViewModel(

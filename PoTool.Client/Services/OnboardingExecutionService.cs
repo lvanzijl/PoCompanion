@@ -828,7 +828,7 @@ public sealed class OnboardingExecutionService
 
     private static OnboardingExecutionResult? ValidateBindingUpdate(ExecutionIntentViewModel intent, int bindingId)
     {
-        var intentError = ValidateIntent(intent, OnboardingGraphSection.Bindings, "create-binding", "resolve-validation");
+        var intentError = ValidateIntent(intent, OnboardingGraphSection.Bindings, "create-binding", "replace-binding-source", "resolve-validation");
         if (intentError is not null)
         {
             return intentError;
@@ -841,6 +841,11 @@ public sealed class OnboardingExecutionService
 
     private static OnboardingExecutionResult? ValidateBindingSourceReplacement(ExecutionIntentViewModel intent)
     {
+        if (!string.Equals(intent.IntentType, "replace-binding-source", StringComparison.Ordinal))
+        {
+            return BuildLocalValidationFailure(intent, "Binding source replacement requires an explicit replacement execution intent.", nameof(intent.IntentType));
+        }
+
         var intentError = ValidateBindingUpdate(intent, intent.BindingId.GetValueOrDefault());
         if (intentError is not null)
         {

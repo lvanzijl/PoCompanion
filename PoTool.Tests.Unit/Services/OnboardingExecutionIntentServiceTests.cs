@@ -63,7 +63,7 @@ public class OnboardingExecutionIntentServiceTests
     }
 
     [TestMethod]
-    public void CreateIntent_AssignTeam_WithBindingContext_UsesBindingMutationRoute()
+    public void CreateIntent_AssignTeam_WithBindingContext_UsesReplacementMutationRoute()
     {
         var result = _service.CreateIntent(
             "Assign team to project",
@@ -79,12 +79,36 @@ public class OnboardingExecutionIntentServiceTests
             visibleTeamCount: 3,
             visiblePipelineCount: 1);
 
-        Assert.AreEqual("create-binding", result.IntentType);
-        Assert.AreEqual(OnboardingExecutionConfidenceLevel.High, result.ConfidenceLevel);
+        Assert.AreEqual("replace-binding-source", result.IntentType);
         Assert.AreEqual(OnboardingGraphSection.Bindings, result.NavigationTarget.Section);
+        Assert.AreEqual("binding-20", result.NavigationTarget.TargetElementId);
+        StringAssert.Contains(result.NavigationTarget.Route, "onboardingTarget=binding-20");
         CollectionAssert.AreEquivalent(
             new[] { OnboardingGraphSection.Bindings, OnboardingGraphSection.ProductRoots },
             result.NavigationTarget.ExpandedSections.ToArray());
+    }
+
+    [TestMethod]
+    public void CreateIntent_AssignPipeline_WithBindingContext_UsesReplacementMutationRoute()
+    {
+        var result = _service.CreateIntent(
+            "Assign pipeline to project",
+            OnboardingProblemScope.Binding,
+            connectionId: 1,
+            projectId: 10,
+            rootId: 13,
+            bindingId: 22,
+            section: OnboardingGraphSection.ProductRoots,
+            anchorId: "section-product-roots",
+            targetElementId: "root-13",
+            visibleProjectCount: 1,
+            visibleTeamCount: 1,
+            visiblePipelineCount: 2);
+
+        Assert.AreEqual("replace-binding-source", result.IntentType);
+        Assert.AreEqual(OnboardingGraphSection.Bindings, result.NavigationTarget.Section);
+        Assert.AreEqual("binding-22", result.NavigationTarget.TargetElementId);
+        StringAssert.Contains(result.NavigationTarget.Route, "onboardingTarget=binding-22");
     }
 
     [TestMethod]

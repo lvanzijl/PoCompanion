@@ -37,8 +37,10 @@ public sealed class OnboardingBindingReplacementLookupServiceTests
 
         var result = await _service.GetCandidatesAsync(
             new OnboardingProjectContextViewModel(1, "project-1", "Project One"),
+            CreateBinding(OnboardingProductSourceTypeDto.Team, "team-1"),
             OnboardingProductSourceTypeDto.Team,
             [
+                CreateTeam(6, 1, "team-1", "Team One", OnboardingValidationStatus.Invalid),
                 CreateTeam(7, 1, "team-2", "Team Two"),
                 CreateTeam(8, 1, "team-3", "Team Three")
             ],
@@ -64,6 +66,7 @@ public sealed class OnboardingBindingReplacementLookupServiceTests
 
         var result = await _service.GetCandidatesAsync(
             new OnboardingProjectContextViewModel(1, "project-1", "Project One"),
+            CreateBinding(OnboardingProductSourceTypeDto.Pipeline, "pipeline-1"),
             OnboardingProductSourceTypeDto.Pipeline,
             [],
             [CreatePipeline(9, 1, "pipeline-1", "Pipeline One")]);
@@ -88,6 +91,7 @@ public sealed class OnboardingBindingReplacementLookupServiceTests
 
         var result = await _service.GetCandidatesAsync(
             new OnboardingProjectContextViewModel(1, "project-1", "Project One"),
+            CreateBinding(OnboardingProductSourceTypeDto.Team, "team-1"),
             OnboardingProductSourceTypeDto.Team,
             [CreateTeam(7, 1, "team-2", "Team Two")],
             []);
@@ -97,14 +101,14 @@ public sealed class OnboardingBindingReplacementLookupServiceTests
         Assert.IsEmpty(result.Candidates);
     }
 
-    private static OnboardingTeamSourceDto CreateTeam(int id, int projectId, string teamExternalId, string name)
+    private static OnboardingTeamSourceDto CreateTeam(int id, int projectId, string teamExternalId, string name, OnboardingValidationStatus validationStatus = OnboardingValidationStatus.Valid)
         => new(
             id,
             projectId,
             teamExternalId,
             true,
             new TeamSnapshotDto(teamExternalId, "project-1", name, "Area", null, new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)),
-            CreateValidationState(),
+            CreateValidationState(validationStatus),
             new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
             new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
 
@@ -115,10 +119,24 @@ public sealed class OnboardingBindingReplacementLookupServiceTests
             pipelineExternalId,
             true,
             new PipelineSnapshotDto(pipelineExternalId, "project-1", name, null, null, null, null, new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)),
-            CreateValidationState(),
+            CreateValidationState(OnboardingValidationStatus.Valid),
             new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
             new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
 
-    private static OnboardingValidationStateDto CreateValidationState()
-        => new(OnboardingValidationStatus.Valid, DateTime.UtcNow, OnboardingValidationSource.Live, null, null, [], null, null, null);
+    private static OnboardingProductSourceBindingDto CreateBinding(OnboardingProductSourceTypeDto sourceType, string sourceExternalId)
+        => new(
+            4,
+            3,
+            1,
+            sourceType == OnboardingProductSourceTypeDto.Team ? 6 : null,
+            sourceType == OnboardingProductSourceTypeDto.Pipeline ? 9 : null,
+            sourceType,
+            sourceExternalId,
+            true,
+            CreateValidationState(OnboardingValidationStatus.Valid),
+            new OnboardingEntityStatusDto(OnboardingConfigurationStatus.PartiallyConfigured, [], []),
+            new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
+
+    private static OnboardingValidationStateDto CreateValidationState(OnboardingValidationStatus status)
+        => new(status, DateTime.UtcNow, OnboardingValidationSource.Live, null, null, [], null, null, null);
 }

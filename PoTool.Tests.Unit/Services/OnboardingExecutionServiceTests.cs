@@ -180,7 +180,7 @@ public class OnboardingExecutionServiceTests
     public async Task ReplaceBindingSourceAsync_SuccessfullyRefreshesWorkspaceWithSelectedTeamSource()
     {
         var filter = new OnboardingWorkspaceFilter(1, 2, 3, null);
-        var intent = CreateIntent("create-binding", OnboardingGraphSection.Bindings, OnboardingExecutionConfidenceLevel.High, connectionId: 1, projectId: 2, rootId: 3, bindingId: 4) with
+        var intent = CreateIntent("replace-binding-source", OnboardingGraphSection.Bindings, OnboardingExecutionConfidenceLevel.High, connectionId: 1, projectId: 2, rootId: 3, bindingId: 4) with
         {
             SelectedReplacementSourceId = 9,
             SelectedReplacementSourceType = OnboardingProductSourceTypeDto.Team
@@ -216,7 +216,7 @@ public class OnboardingExecutionServiceTests
     [TestMethod]
     public async Task ReplaceBindingSourceAsync_SurfacesPermissionDeniedFailure()
     {
-        var intent = CreateIntent("create-binding", OnboardingGraphSection.Bindings, OnboardingExecutionConfidenceLevel.High, connectionId: 1, projectId: 2, rootId: 3, bindingId: 4) with
+        var intent = CreateIntent("replace-binding-source", OnboardingGraphSection.Bindings, OnboardingExecutionConfidenceLevel.High, connectionId: 1, projectId: 2, rootId: 3, bindingId: 4) with
         {
             SelectedReplacementSourceId = 9,
             SelectedReplacementSourceType = OnboardingProductSourceTypeDto.Pipeline
@@ -244,7 +244,7 @@ public class OnboardingExecutionServiceTests
     public async Task ReplaceBindingSourceAsync_WhenBindingIsStale_RefreshesWorkspace()
     {
         var filter = new OnboardingWorkspaceFilter(1, 2, 3, null);
-        var intent = CreateIntent("create-binding", OnboardingGraphSection.Bindings, OnboardingExecutionConfidenceLevel.High, connectionId: 1, projectId: 2, rootId: 3, bindingId: 4) with
+        var intent = CreateIntent("replace-binding-source", OnboardingGraphSection.Bindings, OnboardingExecutionConfidenceLevel.High, connectionId: 1, projectId: 2, rootId: 3, bindingId: 4) with
         {
             SelectedReplacementSourceId = 9,
             SelectedReplacementSourceType = OnboardingProductSourceTypeDto.Team

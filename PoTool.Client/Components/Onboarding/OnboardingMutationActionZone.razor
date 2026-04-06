@@ -106,6 +106,7 @@
     private string? _bindingReplacementMessage;
     private bool _bindingReplacementLookupFailed;
     private bool _bindingReplacementLoading;
+    private CancellationTokenSource? _bindingReplacementLookupCancellationTokenSource;
     private string _deleteReason = string.Empty;
     private bool _isBusy;
 
@@ -125,6 +126,9 @@
 
     private bool IsIntentEnabled => ActiveIntent is not null;
 
+    private OnboardingBindingActionMode BindingActionMode
+        => OnboardingBindingActionModeResolver.Resolve(ActiveIntent, Binding);
+
     private bool IsContextMatched
     {
         get
@@ -143,9 +147,12 @@
                 OnboardingGraphSection.Teams or OnboardingGraphSection.Pipelines or OnboardingGraphSection.ProductRoots
                     => ProjectContext?.ProjectId is null || ActiveIntent.ProjectId == ProjectContext.ProjectId,
                 OnboardingGraphSection.Bindings
-                    => Root is null
-                        || ActiveIntent.RootId == Root.Id
-                        || (Binding is not null && ActiveIntent.BindingId == Binding.Id),
+                    => (BindingActionMode != OnboardingBindingActionMode.Replace
+                        || Binding is null
+                        || ActiveIntent.BindingId == Binding.Id)
+                        && (Root is null
+                            || ActiveIntent.RootId == Root.Id
+                            || (Binding is not null && ActiveIntent.BindingId == Binding.Id)),
                 _ => false
             };
         }
@@ -250,37 +257,51 @@
 
         if (ShouldLoadBindingReplacementCandidates())
         {
+            _bindingReplacementLookupCancellationTokenSource?.Cancel();
+            _bindingReplacementLookupCancellationTokenSource?.Dispose();
+            _bindingReplacementLookupCancellationTokenSource = new CancellationTokenSource();
             _bindingReplacementLoading = true;
-            var lookupResult = await BindingReplacementLookupService.GetCandidatesAsync(
-                ProjectContext,
-                _bindingSourceType,
-                AvailableTeams,
-                AvailablePipelines);
-
-            _bindingReplacementLoading = false;
-            _bindingReplacementCandidates = lookupResult.Candidates;
-            _bindingReplacementMessage = lookupResult.Message;
-            _bindingReplacementLookupFailed = lookupResult.LookupFailed;
-
-            if (_bindingSourceType == OnboardingProductSourceTypeDto.Team)
+            try
             {
-                _bindingTeamSourceId = ResolveSelectedReplacementSourceId(_bindingTeamSourceId);
+                var lookupResult = await BindingReplacementLookupService.GetCandidatesAsync(
+                    ProjectContext,
+                    Binding,
+                    _bindingSourceType,
+                    AvailableTeams,
+                    AvailablePipelines,
+                    _bindingReplacementLookupCancellationTokenSource.Token);
+
+                _bindingReplacementCandidates = lookupResult.Candidates;
+                _bindingReplacementMessage = lookupResult.Message;
+                _bindingReplacementLookupFailed = lookupResult.LookupFailed;
+
+                if (_bindingSourceType == OnboardingProductSourceTypeDto.Team)
+                {
+                    _bindingTeamSourceId = ResolveSelectedReplacementSourceId(_bindingTeamSourceId);
+                }
+                else if (_bindingSourceType == OnboardingProductSourceTypeDto.Pipeline)
+                {
+                    _bindingPipelineSourceId = ResolveSelectedReplacementSourceId(_bindingPipelineSourceId);
+                }
             }
-            else if (_bindingSourceType == OnboardingProductSourceTypeDto.Pipeline)
+            catch (OperationCanceledException)
             {
-                _bindingPipelineSourceId = ResolveSelectedReplacementSourceId(_bindingPipelineSourceId);
+            }
+            finally
+            {
+                _bindingReplacementLoading = false;
             }
         }
     }
 
     private bool IsBindingReplacementMode
-        => Binding is not null
-           && ShouldLoadBindingReplacementCandidates();
+        => BindingActionMode == OnboardingBindingActionMode.Replace;
 
     private bool ShouldLoadBindingReplacementCandidates()
         => Section == OnboardingGraphSection.Bindings
+           && IsBindingReplacementMode
            && Binding is not null
-           && Binding.SourceType is OnboardingProductSourceTypeDto.Team or OnboardingProductSourceTypeDto.Pipeline
+           && OnboardingBindingActionModeResolver.SupportsReplacement(Binding)
            && HasBindingAssignmentBlocker(Binding);
 
     private static bool HasBindingAssignmentBlocker(OnboardingProductSourceBindingDto binding)
@@ -580,15 +601,24 @@
         builder.AddAttribute(index++, "Disabled", _isBusy);
         builder.CloseComponent();
 
-        if (Binding is not null)
+        if (BindingActionMode == OnboardingBindingActionMode.Replace)
         {
-            builder.OpenComponent<MudText>(index++);
-            builder.AddAttribute(index++, "Typo", Typo.body2);
-            builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Current source: {Binding.SourceType} → {Binding.SourceExternalId}")));
-            builder.CloseComponent();
-
-            if (IsBindingReplacementMode)
+            if (Binding is null || !OnboardingBindingActionModeResolver.SupportsReplacement(Binding))
             {
+                builder.OpenComponent<MudAlert>(index++);
+                builder.AddAttribute(index++, "Severity", Severity.Error);
+                builder.AddAttribute(index++, "Variant", Variant.Outlined);
+                builder.AddAttribute(index++, "Dense", true);
+                builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, "A highlighted team or pipeline binding is required before replacement candidates can load.")));
+                builder.CloseComponent();
+            }
+            else
+            {
+                builder.OpenComponent<MudText>(index++);
+                builder.AddAttribute(index++, "Typo", Typo.body2);
+                builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Current source: {Binding.SourceType} → {Binding.SourceExternalId}")));
+                builder.CloseComponent();
+
                 builder.OpenComponent<MudText>(index++);
                 builder.AddAttribute(index++, "Typo", Typo.body2);
                 builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Select a replacement {Binding.SourceType.ToString().ToLowerInvariant()} from the current project context.")));
@@ -655,6 +685,13 @@
                 }
             }
         }
+        else if (Binding is not null)
+        {
+            builder.OpenComponent<MudText>(index++);
+            builder.AddAttribute(index++, "Typo", Typo.body2);
+            builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Current source: {Binding.SourceType} → {Binding.SourceExternalId}")));
+            builder.CloseComponent();
+        }
         else
         {
             builder.OpenComponent<CompactSelect<OnboardingProductSourceTypeDto>>(index++);
@@ -718,7 +755,7 @@
         }
 
         builder.AddContent(index++, RenderActionButtons(
-            Binding is null ? "Create binding" : IsBindingReplacementMode ? "Replace binding source" : "Save binding",
+            BindingActionMode == OnboardingBindingActionMode.Replace ? "Replace binding source" : Binding is null ? "Create binding" : "Save binding",
             ExecuteBindingAsync,
             Binding is not null ? "Delete binding" : null,
             Binding is not null ? ExecuteDeleteBindingAsync : null));
