@@ -54,6 +54,43 @@ public class OnboardingExecutionServiceTests
     }
 
     [TestMethod]
+    public async Task CreateConnectionAsync_TreatsCreatedResponseAsSuccessAndRefreshesWorkspace()
+    {
+        var filter = new OnboardingWorkspaceFilter(null, null, null, null);
+        var intent = CreateIntent("resolve-validation", OnboardingGraphSection.Connections, OnboardingExecutionConfidenceLevel.Fallback);
+        var request = new CreateTfsConnectionRequest("https://dev.azure.com/battleship", "Pat", 30, "7.1");
+        var createdEnvelope = new OnboardingSuccessEnvelopeOfOnboardingTfsConnectionDto
+        {
+            Data = CreateConnection(7, request.OrganizationUrl)
+        };
+
+        _crudClient
+            .Setup(client => client.CreateConnectionAsync(
+                It.Is<CreateTfsConnectionRequest>(item => item.OrganizationUrl == request.OrganizationUrl),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ApiException(
+                "created",
+                (int)HttpStatusCode.Created,
+                JsonSerializer.Serialize(createdEnvelope),
+                new Dictionary<string, IEnumerable<string>>(),
+                null));
+
+        _workspaceService
+            .Setup(service => service.GetWorkspaceDataAsync(
+                It.Is<OnboardingWorkspaceFilter>(item => item.ConnectionId == 7),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateWorkspaceData(filter with { ConnectionId = 7 }));
+
+        var result = await _service.CreateConnectionAsync(intent, request, filter);
+
+        Assert.IsTrue(result.MutationApplied);
+        Assert.IsNotNull(result.RefreshedData);
+        Assert.AreEqual(7, result.AppliedFilter.ConnectionId);
+        Assert.AreEqual(OnboardingExecutionFeedbackKind.Success, result.Feedback.Kind);
+        StringAssert.Contains(result.Feedback.Message, request.OrganizationUrl);
+    }
+
+    [TestMethod]
     public async Task CreateTeamAsync_SuccessfullyRefreshesWorkspaceAndKeepsProjectContext()
     {
         var filter = new OnboardingWorkspaceFilter(1, 2, null, null);

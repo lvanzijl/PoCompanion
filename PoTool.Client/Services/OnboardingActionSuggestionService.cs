@@ -30,7 +30,7 @@ public sealed class OnboardingActionSuggestionService
             return "Enable the required connection capabilities";
         }
 
-        if (ContainsAny(normalized, "project mapping", "project not linked", "project onboarding is blocked"))
+        if (ContainsAny(normalized, "project mapping", "project not linked", "project onboarding is blocked", "project source"))
         {
             return "Link project to connection";
         }

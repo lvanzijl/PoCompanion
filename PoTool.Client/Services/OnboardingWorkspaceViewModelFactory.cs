@@ -125,6 +125,8 @@ public sealed class OnboardingWorkspaceViewModelFactory
 
         foreach (var issue in data.Status.BlockingReasons)
         {
+            var issueSection = ResolveStatusIssueSection(issue.Code);
+            var issueContext = ResolveGlobalIssueContext(issueSection, data);
             problems.Add(CreateProblem(
                 $"status-blocking-{issue.Code}",
                 issue.Message,
@@ -133,16 +135,16 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 issue.Message,
                 OnboardingProblemSeverity.Blocking,
                 OnboardingProblemScope.Global,
-                OnboardingGraphSection.Connections,
-                GetSectionAnchorId(OnboardingGraphSection.Connections),
+                issueSection,
+                GetSectionAnchorId(issueSection),
                 globalImpact.Total,
-                BuildExpectedImpact(OnboardingGraphSection.Connections, globalImpact),
+                BuildExpectedImpact(issueSection, globalImpact),
                 "Global onboarding scope",
-                OnboardingGraphSection.Connections,
-                GetSectionAnchorId(OnboardingGraphSection.Connections),
-                null,
-                null,
-                null,
+                issueSection,
+                GetSectionAnchorId(issueSection),
+                issueContext.ConnectionId,
+                issueContext.ProjectId,
+                issueContext.RootId,
                 null,
                 globalImpact.Projects,
                 globalImpact.Teams,
@@ -151,6 +153,8 @@ public sealed class OnboardingWorkspaceViewModelFactory
 
         foreach (var issue in data.Status.Warnings)
         {
+            var issueSection = ResolveStatusIssueSection(issue.Code);
+            var issueContext = ResolveGlobalIssueContext(issueSection, data);
             problems.Add(CreateProblem(
                 $"status-warning-{issue.Code}",
                 issue.Message,
@@ -159,16 +163,16 @@ public sealed class OnboardingWorkspaceViewModelFactory
                 issue.Message,
                 OnboardingProblemSeverity.Warning,
                 OnboardingProblemScope.Global,
-                OnboardingGraphSection.Connections,
-                GetSectionAnchorId(OnboardingGraphSection.Connections),
+                issueSection,
+                GetSectionAnchorId(issueSection),
                 globalImpact.Total,
-                BuildExpectedImpact(OnboardingGraphSection.Connections, globalImpact),
+                BuildExpectedImpact(issueSection, globalImpact),
                 "Global onboarding scope",
-                OnboardingGraphSection.Connections,
-                GetSectionAnchorId(OnboardingGraphSection.Connections),
-                null,
-                null,
-                null,
+                issueSection,
+                GetSectionAnchorId(issueSection),
+                issueContext.ConnectionId,
+                issueContext.ProjectId,
+                issueContext.RootId,
                 null,
                 globalImpact.Projects,
                 globalImpact.Teams,
@@ -857,6 +861,36 @@ public sealed class OnboardingWorkspaceViewModelFactory
 
     private static string BuildRootCauseGroupingKey(string rootCauseTargetElementId, string reason, OnboardingProblemSeverity severity)
         => $"{severity}:{rootCauseTargetElementId}:{NormalizeRootCauseFragment(reason)}";
+
+    private static OnboardingGraphSection ResolveStatusIssueSection(string issueCode)
+        => issueCode switch
+        {
+            "PROJECT_SOURCE_REQUIRED" => OnboardingGraphSection.Projects,
+            "TEAM_SOURCE_REQUIRED" => OnboardingGraphSection.Teams,
+            "PIPELINE_SOURCE_REQUIRED" => OnboardingGraphSection.Pipelines,
+            "PRODUCT_ROOT_REQUIRED" => OnboardingGraphSection.ProductRoots,
+            "BINDING_REQUIRED" => OnboardingGraphSection.Bindings,
+            _ => OnboardingGraphSection.Connections
+        };
+
+    private static (int? ConnectionId, int? ProjectId, int? RootId) ResolveGlobalIssueContext(
+        OnboardingGraphSection section,
+        OnboardingWorkspaceData data)
+    {
+        int? connectionId = data.Connections.Count == 1 ? data.Connections[0].Id : null;
+        int? projectId = data.Projects.Count == 1 ? data.Projects[0].Id : null;
+        int? rootId = data.ProductRoots.Count == 1 ? data.ProductRoots[0].Id : null;
+
+        return section switch
+        {
+            OnboardingGraphSection.Projects => (connectionId, null, null),
+            OnboardingGraphSection.Teams => (connectionId, projectId, null),
+            OnboardingGraphSection.Pipelines => (connectionId, projectId, null),
+            OnboardingGraphSection.ProductRoots => (connectionId, projectId, null),
+            OnboardingGraphSection.Bindings => (connectionId, projectId, rootId),
+            _ => (connectionId, null, null)
+        };
+    }
 
     private static string NormalizeRootCauseFragment(string value)
         => value

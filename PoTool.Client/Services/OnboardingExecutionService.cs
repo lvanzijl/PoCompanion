@@ -13,6 +13,11 @@ public sealed class OnboardingExecutionService
         PropertyNameCaseInsensitive = true
     };
 
+    private static readonly JsonSerializerOptions SuccessSerializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
     private readonly IOnboardingCrudClient _crudClient;
     private readonly IOnboardingWorkspaceService _workspaceService;
 
@@ -449,41 +454,16 @@ public sealed class OnboardingExecutionService
         try
         {
             var operationResult = await operation(cancellationToken);
-            var nextFilter = resolveFilter(operationResult);
-            try
-            {
-                var refreshedData = await _workspaceService.GetWorkspaceDataAsync(nextFilter, cancellationToken);
-                return new OnboardingExecutionResult(
-                    true,
-                    intent,
-                    nextFilter,
-                    refreshedData,
-                    new OnboardingExecutionFeedbackViewModel(
-                        OnboardingExecutionFeedbackKind.Success,
-                        successTitle,
-                        successMessage(operationResult),
-                        null,
-                        false),
-                    null);
-            }
-            catch (HttpRequestException refreshException)
-            {
-                return new OnboardingExecutionResult(
-                    true,
-                    intent,
-                    nextFilter,
-                    null,
-                    new OnboardingExecutionFeedbackViewModel(
-                        OnboardingExecutionFeedbackKind.Warning,
-                        successTitle,
-                        $"{successMessage(operationResult)} The mutation was applied, but the workspace refresh failed.",
-                        refreshException.Message,
-                        true),
-                    null);
-            }
+            return await BuildSuccessResultAsync(intent, operationResult, resolveFilter, successTitle, successMessage, cancellationToken);
         }
         catch (ApiException exception)
         {
+            if (exception.StatusCode == (int)HttpStatusCode.Created &&
+                TryParseSuccessPayload(exception.Response, out TResult operationResult))
+            {
+                return await BuildSuccessResultAsync(intent, operationResult, resolveFilter, successTitle, successMessage, cancellationToken);
+            }
+
             var error = ParseError(exception);
             return await BuildFailureResultAsync(intent, currentFilter, error, cancellationToken);
         }
@@ -499,6 +479,48 @@ public sealed class OnboardingExecutionService
                     "Execution failed",
                     "The onboarding mutation could not be completed.",
                     exception.Message,
+                    true),
+                null);
+        }
+    }
+
+    private async Task<OnboardingExecutionResult> BuildSuccessResultAsync<TResult>(
+        ExecutionIntentViewModel intent,
+        TResult operationResult,
+        Func<TResult, OnboardingWorkspaceFilter> resolveFilter,
+        string successTitle,
+        Func<TResult, string> successMessage,
+        CancellationToken cancellationToken)
+    {
+        var nextFilter = resolveFilter(operationResult);
+        try
+        {
+            var refreshedData = await _workspaceService.GetWorkspaceDataAsync(nextFilter, cancellationToken);
+            return new OnboardingExecutionResult(
+                true,
+                intent,
+                nextFilter,
+                refreshedData,
+                new OnboardingExecutionFeedbackViewModel(
+                    OnboardingExecutionFeedbackKind.Success,
+                    successTitle,
+                    successMessage(operationResult),
+                    null,
+                    false),
+                null);
+        }
+        catch (HttpRequestException refreshException)
+        {
+            return new OnboardingExecutionResult(
+                true,
+                intent,
+                nextFilter,
+                null,
+                new OnboardingExecutionFeedbackViewModel(
+                    OnboardingExecutionFeedbackKind.Warning,
+                    successTitle,
+                    $"{successMessage(operationResult)} The mutation was applied, but the workspace refresh failed.",
+                    refreshException.Message,
                     true),
                 null);
         }
@@ -870,5 +892,31 @@ public sealed class OnboardingExecutionService
             HttpStatusCode.ServiceUnavailable => new OnboardingErrorDto(OnboardingErrorCode.TfsUnavailable, "The onboarding backend is temporarily unavailable.", exception.Message, true),
             _ => new OnboardingErrorDto(OnboardingErrorCode.ValidationFailed, "The onboarding mutation failed.", exception.Message, false)
         };
+    }
+
+    private static bool TryParseSuccessPayload<TResult>(string? response, out TResult result)
+    {
+        result = default!;
+
+        if (string.IsNullOrWhiteSpace(response))
+        {
+            return false;
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<TResult>(response, SuccessSerializerOptions);
+            if (parsed is null)
+            {
+                return false;
+            }
+
+            result = parsed;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 }

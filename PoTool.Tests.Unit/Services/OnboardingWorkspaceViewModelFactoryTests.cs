@@ -78,6 +78,47 @@ public class OnboardingWorkspaceViewModelFactoryTests
     }
 
     [TestMethod]
+    public void Create_GlobalStatusIssues_MapToDomainSpecificExecutionSections()
+    {
+        var result = _factory.Create(CreateWorkspaceData(
+            new OnboardingStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.Complete,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [
+                    new OnboardingStatusIssueDto("PROJECT_SOURCE_REQUIRED", "At least one enabled valid project source is required.", null, null),
+                    new OnboardingStatusIssueDto("PRODUCT_ROOT_REQUIRED", "At least one enabled valid product root is required.", null, null)
+                ],
+                [],
+                new OnboardingStatusCountsDto(0, 0, 0, 0, 0, 0, 0, 0, 0, 0)),
+            [CreateConnection()],
+            [],
+            [],
+            [],
+            [],
+            []));
+
+        var projectProblem = result.ProblemGroups
+            .Single(group => group.Scope == OnboardingProblemScope.Global)
+            .Items
+            .Single(problem => problem.Title.Contains("project source", StringComparison.OrdinalIgnoreCase));
+        Assert.AreEqual(OnboardingGraphSection.Projects, projectProblem.RootCauseGraphSection);
+        Assert.AreEqual("link-project", projectProblem.ExecutionIntent.IntentType);
+        Assert.AreEqual(1, projectProblem.ExecutionIntent.ConnectionId);
+        StringAssert.Contains(projectProblem.ExecutionIntent.NavigationTarget.Route, "onboardingSection=Projects");
+
+        var rootProblem = result.ProblemGroups
+            .Single(group => group.Scope == OnboardingProblemScope.Global)
+            .Items
+            .Single(problem => problem.Title.Contains("product root", StringComparison.OrdinalIgnoreCase));
+        Assert.AreEqual(OnboardingGraphSection.ProductRoots, rootProblem.RootCauseGraphSection);
+        Assert.AreEqual("resolve-root-validation", rootProblem.ExecutionIntent.IntentType);
+        Assert.AreEqual(1, rootProblem.ExecutionIntent.ConnectionId);
+        StringAssert.Contains(rootProblem.ExecutionIntent.NavigationTarget.Route, "onboardingSection=ProductRoots");
+    }
+
+    [TestMethod]
     public void Create_GroupsEntitiesAndBindingsWithRelationshipContext()
     {
         var project = CreateProject();
