@@ -91,7 +91,7 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
 
         if (hasMatchingFingerprint)
         {
-            await ExecuteNoOpAsync(units, state, cancellationToken);
+            await ExecuteFingerprintReplayAsync(units, state, cancellationToken);
         }
         else
         {
@@ -129,6 +129,510 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
         foreach (var unit in units.OrderBy(item => item.ExecutionOrder))
         {
             await _ledgerService.SkipUnitAsync(unit.UnitIdentifier, new OnboardingMigrationUnitOutcome(0, 0, 0, 0), cancellationToken);
+        }
+    }
+
+    private async Task ExecuteFingerprintReplayAsync(
+        IReadOnlyList<MigrationUnit> units,
+        ExecutionState state,
+        CancellationToken cancellationToken)
+    {
+        var replayResult = await VerifyReplayConsistencyAsync(state, cancellationToken);
+        if (!replayResult.HasIssues)
+        {
+            await ExecuteNoOpAsync(units, state, cancellationToken);
+            return;
+        }
+
+        foreach (var unit in units.OrderBy(item => item.ExecutionOrder))
+        {
+            if (!replayResult.OutcomesByUnitType.TryGetValue(unit.UnitType, out var outcome))
+            {
+                await _ledgerService.SkipUnitAsync(unit.UnitIdentifier, new OnboardingMigrationUnitOutcome(0, 0, 0, 0), cancellationToken);
+                continue;
+            }
+
+            if (outcome.ProcessedEntityCount == 0 && outcome.Issues.Count == 0)
+            {
+                await _ledgerService.SkipUnitAsync(unit.UnitIdentifier, new OnboardingMigrationUnitOutcome(0, 0, 0, 0), cancellationToken);
+                continue;
+            }
+
+            await _ledgerService.StartUnitAsync(unit.UnitIdentifier, cancellationToken);
+
+            foreach (var issue in outcome.Issues)
+            {
+                await RecordIssueAsync(
+                    state.RunIdentifier,
+                    unit.UnitIdentifier,
+                    issue.IssueType,
+                    issue.IssueCategory,
+                    issue.Severity,
+                    issue.SourceLegacyReference,
+                    issue.TargetEntityType,
+                    issue.TargetExternalIdentity,
+                    issue.SanitizedMessage,
+                    issue.SanitizedDetails,
+                    issue.IsBlocking,
+                    cancellationToken);
+            }
+
+            var unitOutcome = new OnboardingMigrationUnitOutcome(
+                outcome.ProcessedEntityCount,
+                outcome.SucceededEntityCount,
+                outcome.FailedEntityCount,
+                0);
+
+            if (outcome.HasBlockingIssue)
+            {
+                await _ledgerService.FailUnitAsync(unit.UnitIdentifier, unitOutcome, cancellationToken);
+            }
+            else
+            {
+                await _ledgerService.CompleteUnitAsync(unit.UnitIdentifier, unitOutcome, cancellationToken);
+            }
+        }
+    }
+
+    private async Task<ReplayVerificationResult> VerifyReplayConsistencyAsync(
+        ExecutionState state,
+        CancellationToken cancellationToken)
+    {
+        var outcomes = OrderedUnits.ToDictionary(
+            unit => unit.UnitType,
+            _ => new ReplayUnitOutcomeBuilder(),
+            StringComparer.Ordinal);
+
+        var connectionOutcome = outcomes["Connection"];
+        var persistedConnection = await _dbContext.OnboardingTfsConnections
+            .AsNoTracking()
+            .OrderBy(item => item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (persistedConnection is null)
+        {
+            connectionOutcome.ProcessedEntityCount++;
+            connectionOutcome.FailedEntityCount++;
+            connectionOutcome.HasBlockingIssue = true;
+            connectionOutcome.Issues.Add(new ReplayIssuePlan(
+                "ReplayDrift",
+                "MissingPersistedEntity",
+                OnboardingMigrationIssueSeverity.Blocking,
+                "ReplayVerification:TfsConnection",
+                nameof(TfsConnection),
+                "connection",
+                "Persisted onboarding connection state is missing, so replay verification cannot confirm a no-op.",
+                null,
+                true));
+
+            return new ReplayVerificationResult(outcomes);
+        }
+
+        state.Connection = persistedConnection;
+        var projectsLookup = await GetProjectsLookupAsync(state, persistedConnection, cancellationToken);
+        var connectionValidation = await _validationService.ValidateConnectionAsync(
+            persistedConnection,
+            cancellationToken,
+            projectsLookup,
+            state.MigrationTimestampUtc);
+
+        connectionOutcome.ProcessedEntityCount++;
+
+        if (!connectionValidation.Succeeded)
+        {
+            connectionOutcome.FailedEntityCount++;
+            connectionOutcome.HasBlockingIssue = true;
+            connectionOutcome.Issues.Add(new ReplayIssuePlan(
+                "ValidationFailure",
+                connectionValidation.Error!.Code.ToString(),
+                OnboardingMigrationIssueSeverity.Blocking,
+                "ReplayVerification:TfsConnection",
+                nameof(TfsConnection),
+                "connection",
+                connectionValidation.Error.Message,
+                connectionValidation.Error.Details,
+                true));
+
+            return new ReplayVerificationResult(outcomes);
+        }
+
+        connectionOutcome.SucceededEntityCount++;
+
+        await VerifyProjectReplayAsync(outcomes["ProjectSource"], state, projectsLookup, cancellationToken);
+        await VerifyTeamReplayAsync(outcomes["TeamSource"], state, cancellationToken);
+        await VerifyPipelineReplayAsync(outcomes["PipelineSource"], state, cancellationToken);
+        await VerifyProductRootReplayAsync(outcomes["ProductRoot"], state, cancellationToken);
+        await VerifyBindingReplayAsync(outcomes["ProductSourceBinding"], state, cancellationToken);
+
+        return new ReplayVerificationResult(outcomes);
+    }
+
+    private async Task VerifyProjectReplayAsync(
+        ReplayUnitOutcomeBuilder outcome,
+        ExecutionState state,
+        OnboardingOperationResult<IReadOnlyList<ProjectLookupResultDto>> projectsLookup,
+        CancellationToken cancellationToken)
+    {
+        var persistedProjects = await _dbContext.OnboardingProjectSources
+            .AsNoTracking()
+            .Where(item => item.TfsConnectionId == state.Connection!.Id)
+            .OrderBy(item => item.ProjectExternalId)
+            .ToArrayAsync(cancellationToken);
+
+        foreach (var project in persistedProjects)
+        {
+            outcome.ProcessedEntityCount++;
+            state.ProjectsByExternalId[project.ProjectExternalId] = project;
+            state.ProjectsByName[project.Snapshot.Name] = project;
+
+            if (!projectsLookup.Succeeded)
+            {
+                continue;
+            }
+
+            var currentProject = projectsLookup.Data!.FirstOrDefault(item =>
+                item.ProjectExternalId.Equals(project.ProjectExternalId, StringComparison.OrdinalIgnoreCase));
+
+            if (currentProject is null)
+            {
+                outcome.FailedEntityCount++;
+                outcome.HasBlockingIssue = true;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ReplayDrift",
+                    "NotFound",
+                    OnboardingMigrationIssueSeverity.Blocking,
+                    $"ReplayVerification:ProjectSource:{project.ProjectExternalId}",
+                    nameof(ProjectSource),
+                    project.ProjectExternalId,
+                    "The previously migrated project is no longer available in the current external responses.",
+                    project.ProjectExternalId,
+                    true));
+                continue;
+            }
+
+            if (!string.Equals(project.Snapshot.Name, currentProject.Name, StringComparison.Ordinal)
+                || !string.Equals(project.Snapshot.Description, currentProject.Description, StringComparison.Ordinal))
+            {
+                outcome.FailedEntityCount++;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ReplayDrift",
+                    "SnapshotMismatch",
+                    OnboardingMigrationIssueSeverity.Warning,
+                    $"ReplayVerification:ProjectSource:{project.ProjectExternalId}",
+                    nameof(ProjectSource),
+                    project.ProjectExternalId,
+                    "Current project lookup results differ from the previously migrated project snapshot.",
+                    $"persistedName={project.Snapshot.Name}; currentName={currentProject.Name}",
+                    false));
+                continue;
+            }
+
+            outcome.SucceededEntityCount++;
+        }
+    }
+
+    private async Task VerifyTeamReplayAsync(
+        ReplayUnitOutcomeBuilder outcome,
+        ExecutionState state,
+        CancellationToken cancellationToken)
+    {
+        var persistedTeams = await _dbContext.OnboardingTeamSources
+            .AsNoTracking()
+            .Include(item => item.ProjectSource)
+            .OrderBy(item => item.ProjectSourceId)
+            .ThenBy(item => item.TeamExternalId)
+            .ToArrayAsync(cancellationToken);
+
+        foreach (var team in persistedTeams)
+        {
+            outcome.ProcessedEntityCount++;
+            state.TeamsByScopedKey[CreateScopedTeamKey(team.ProjectSourceId, team.TeamExternalId)] = team;
+
+            var teamsLookup = await GetTeamsLookupAsync(state, state.Connection!, team.ProjectSource.ProjectExternalId, cancellationToken);
+            if (!teamsLookup.Succeeded)
+            {
+                outcome.FailedEntityCount++;
+                outcome.HasBlockingIssue = true;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ValidationFailure",
+                    teamsLookup.Error!.Code.ToString(),
+                    OnboardingMigrationIssueSeverity.Blocking,
+                    $"ReplayVerification:TeamSource:{team.TeamExternalId}",
+                    nameof(TeamSource),
+                    team.TeamExternalId,
+                    teamsLookup.Error.Message,
+                    teamsLookup.Error.Details,
+                    true));
+                continue;
+            }
+
+            var validation = await _validationService.ValidateTeamSourceAsync(
+                state.Connection!,
+                team.ProjectSource,
+                team,
+                cancellationToken,
+                teamsLookup.Data!,
+                state.MigrationTimestampUtc);
+
+            if (!validation.Succeeded)
+            {
+                outcome.FailedEntityCount++;
+                outcome.HasBlockingIssue = true;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ValidationFailure",
+                    validation.Error!.Code.ToString(),
+                    OnboardingMigrationIssueSeverity.Blocking,
+                    $"ReplayVerification:TeamSource:{team.TeamExternalId}",
+                    nameof(TeamSource),
+                    team.TeamExternalId,
+                    validation.Error.Message,
+                    validation.Error.Details,
+                    true));
+                continue;
+            }
+
+            var snapshot = validation.Data!.Snapshot;
+            if (!string.Equals(team.Snapshot.Name, snapshot.Name, StringComparison.Ordinal)
+                || !string.Equals(team.Snapshot.DefaultAreaPath, snapshot.DefaultAreaPath, StringComparison.Ordinal)
+                || !string.Equals(team.Snapshot.ProjectExternalId, snapshot.ProjectExternalId, StringComparison.Ordinal))
+            {
+                outcome.FailedEntityCount++;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ReplayDrift",
+                    "SnapshotMismatch",
+                    OnboardingMigrationIssueSeverity.Warning,
+                    $"ReplayVerification:TeamSource:{team.TeamExternalId}",
+                    nameof(TeamSource),
+                    team.TeamExternalId,
+                    "Current team lookup results differ from the previously migrated team snapshot.",
+                    $"persistedProject={team.Snapshot.ProjectExternalId}; currentProject={snapshot.ProjectExternalId}",
+                    false));
+                continue;
+            }
+
+            outcome.SucceededEntityCount++;
+        }
+    }
+
+    private async Task VerifyPipelineReplayAsync(
+        ReplayUnitOutcomeBuilder outcome,
+        ExecutionState state,
+        CancellationToken cancellationToken)
+    {
+        var persistedPipelines = await _dbContext.OnboardingPipelineSources
+            .AsNoTracking()
+            .Include(item => item.ProjectSource)
+            .OrderBy(item => item.ProjectSourceId)
+            .ThenBy(item => item.PipelineExternalId)
+            .ToArrayAsync(cancellationToken);
+
+        foreach (var pipeline in persistedPipelines)
+        {
+            outcome.ProcessedEntityCount++;
+            state.PipelinesByScopedKey[CreateScopedPipelineKey(pipeline.ProjectSourceId, pipeline.PipelineExternalId)] = pipeline;
+
+            var pipelinesLookup = await GetPipelinesLookupAsync(state, state.Connection!, pipeline.ProjectSource.ProjectExternalId, null, cancellationToken);
+            if (!pipelinesLookup.Succeeded)
+            {
+                outcome.FailedEntityCount++;
+                outcome.HasBlockingIssue = true;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ValidationFailure",
+                    pipelinesLookup.Error!.Code.ToString(),
+                    OnboardingMigrationIssueSeverity.Blocking,
+                    $"ReplayVerification:PipelineSource:{pipeline.PipelineExternalId}",
+                    nameof(PipelineSource),
+                    pipeline.PipelineExternalId,
+                    pipelinesLookup.Error.Message,
+                    pipelinesLookup.Error.Details,
+                    true));
+                continue;
+            }
+
+            var validation = await _validationService.ValidatePipelineSourceAsync(
+                state.Connection!,
+                pipeline.ProjectSource,
+                pipeline,
+                cancellationToken,
+                pipelinesLookup.Data!,
+                state.MigrationTimestampUtc);
+
+            if (!validation.Succeeded)
+            {
+                outcome.FailedEntityCount++;
+                outcome.HasBlockingIssue = true;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ValidationFailure",
+                    validation.Error!.Code.ToString(),
+                    OnboardingMigrationIssueSeverity.Blocking,
+                    $"ReplayVerification:PipelineSource:{pipeline.PipelineExternalId}",
+                    nameof(PipelineSource),
+                    pipeline.PipelineExternalId,
+                    validation.Error.Message,
+                    validation.Error.Details,
+                    true));
+                continue;
+            }
+
+            var snapshot = validation.Data!.Snapshot;
+            if (!string.Equals(pipeline.Snapshot.Name, snapshot.Name, StringComparison.Ordinal)
+                || !string.Equals(pipeline.Snapshot.ProjectExternalId, snapshot.ProjectExternalId, StringComparison.Ordinal)
+                || !string.Equals(pipeline.Snapshot.RepositoryExternalId, snapshot.RepositoryExternalId, StringComparison.Ordinal)
+                || !string.Equals(pipeline.Snapshot.YamlPath, snapshot.YamlPath, StringComparison.Ordinal))
+            {
+                outcome.FailedEntityCount++;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ReplayDrift",
+                    "SnapshotMismatch",
+                    OnboardingMigrationIssueSeverity.Warning,
+                    $"ReplayVerification:PipelineSource:{pipeline.PipelineExternalId}",
+                    nameof(PipelineSource),
+                    pipeline.PipelineExternalId,
+                    "Current pipeline lookup results differ from the previously migrated pipeline snapshot.",
+                    $"persistedProject={pipeline.Snapshot.ProjectExternalId}; currentProject={snapshot.ProjectExternalId}",
+                    false));
+                continue;
+            }
+
+            outcome.SucceededEntityCount++;
+        }
+    }
+
+    private async Task VerifyProductRootReplayAsync(
+        ReplayUnitOutcomeBuilder outcome,
+        ExecutionState state,
+        CancellationToken cancellationToken)
+    {
+        var persistedRoots = await _dbContext.OnboardingProductRoots
+            .AsNoTracking()
+            .Include(item => item.ProjectSource)
+            .OrderBy(item => item.ProjectSourceId)
+            .ThenBy(item => item.WorkItemExternalId)
+            .ToArrayAsync(cancellationToken);
+
+        foreach (var root in persistedRoots)
+        {
+            outcome.ProcessedEntityCount++;
+            state.ProductRootsByScopedKey[CreateScopedProductRootKey(root.ProjectSourceId, root.WorkItemExternalId)] = root;
+
+            var workItemLookup = await GetWorkItemLookupAsync(state, state.Connection!, root.WorkItemExternalId, cancellationToken);
+            var validation = await _validationService.ValidateProductRootAsync(
+                state.Connection!,
+                root.ProjectSource,
+                root,
+                cancellationToken,
+                workItemLookup,
+                state.MigrationTimestampUtc);
+
+            if (!validation.Succeeded)
+            {
+                outcome.FailedEntityCount++;
+                outcome.HasBlockingIssue = true;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ValidationFailure",
+                    validation.Error!.Code.ToString(),
+                    OnboardingMigrationIssueSeverity.Blocking,
+                    $"ReplayVerification:ProductRoot:{root.WorkItemExternalId}",
+                    nameof(ProductRoot),
+                    root.WorkItemExternalId,
+                    validation.Error.Message,
+                    validation.Error.Details,
+                    true));
+                continue;
+            }
+
+            var snapshot = validation.Data!.Snapshot;
+            if (!string.Equals(root.Snapshot.Title, snapshot.Title, StringComparison.Ordinal)
+                || !string.Equals(root.Snapshot.ProjectExternalId, snapshot.ProjectExternalId, StringComparison.Ordinal)
+                || !string.Equals(root.Snapshot.AreaPath, snapshot.AreaPath, StringComparison.Ordinal)
+                || !string.Equals(root.Snapshot.State, snapshot.State, StringComparison.Ordinal))
+            {
+                outcome.FailedEntityCount++;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ReplayDrift",
+                    "SnapshotMismatch",
+                    OnboardingMigrationIssueSeverity.Warning,
+                    $"ReplayVerification:ProductRoot:{root.WorkItemExternalId}",
+                    nameof(ProductRoot),
+                    root.WorkItemExternalId,
+                    "Current work item lookup results differ from the previously migrated product root snapshot.",
+                    $"persistedProject={root.Snapshot.ProjectExternalId}; currentProject={snapshot.ProjectExternalId}",
+                    false));
+                continue;
+            }
+
+            outcome.SucceededEntityCount++;
+        }
+    }
+
+    private async Task VerifyBindingReplayAsync(
+        ReplayUnitOutcomeBuilder outcome,
+        ExecutionState state,
+        CancellationToken cancellationToken)
+    {
+        var persistedBindings = await _dbContext.OnboardingProductSourceBindings
+            .AsNoTracking()
+            .Include(item => item.ProjectSource)
+            .Include(item => item.ProductRoot)
+            .Include(item => item.TeamSource)
+            .Include(item => item.PipelineSource)
+            .OrderBy(item => item.ProductRootId)
+            .ThenBy(item => item.SourceType)
+            .ThenBy(item => item.SourceExternalId)
+            .ToArrayAsync(cancellationToken);
+
+        foreach (var binding in persistedBindings)
+        {
+            outcome.ProcessedEntityCount++;
+
+            if (!state.ProductRootsByScopedKey.ContainsKey(CreateScopedProductRootKey(binding.ProductRoot.ProjectSourceId, binding.ProductRoot.WorkItemExternalId)))
+            {
+                outcome.FailedEntityCount++;
+                outcome.HasBlockingIssue = true;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "DependencyViolation",
+                    "DependencyViolation",
+                    OnboardingMigrationIssueSeverity.Blocking,
+                    $"ReplayVerification:Binding:{binding.SourceType}:{binding.SourceExternalId}",
+                    nameof(ProductSourceBinding),
+                    binding.SourceExternalId,
+                    "Replay verification detected a missing or invalid product root dependency for an existing binding.",
+                    binding.ProductRoot.WorkItemExternalId,
+                    true));
+                continue;
+            }
+
+            var validation = await _validationService.ValidateProductSourceBindingAsync(
+                state.Connection!,
+                binding.ProjectSource,
+                binding.ProductRoot,
+                binding,
+                binding.TeamSource,
+                binding.PipelineSource,
+                cancellationToken,
+                await GetWorkItemLookupAsync(state, state.Connection!, binding.ProductRoot.WorkItemExternalId, cancellationToken),
+                binding.TeamSource is null ? null : (await GetTeamsLookupAsync(state, state.Connection!, binding.ProjectSource.ProjectExternalId, cancellationToken)).Data,
+                binding.PipelineSource is null ? null : (await GetPipelinesLookupAsync(state, state.Connection!, binding.ProjectSource.ProjectExternalId, null, cancellationToken)).Data,
+                state.MigrationTimestampUtc);
+
+            if (!validation.Succeeded)
+            {
+                outcome.FailedEntityCount++;
+                outcome.HasBlockingIssue = true;
+                outcome.Issues.Add(new ReplayIssuePlan(
+                    "ValidationFailure",
+                    validation.Error!.Code.ToString(),
+                    OnboardingMigrationIssueSeverity.Blocking,
+                    $"ReplayVerification:Binding:{binding.SourceType}:{binding.SourceExternalId}",
+                    nameof(ProductSourceBinding),
+                    binding.SourceExternalId,
+                    validation.Error.Message,
+                    validation.Error.Details,
+                    true));
+                continue;
+            }
+
+            outcome.SucceededEntityCount++;
         }
     }
 
@@ -568,6 +1072,11 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
         var succeeded = 0;
         var failed = 0;
         var hasBlockingIssue = false;
+        var duplicateWorkItemExternalIds = legacySnapshot.ProductRoots
+            .GroupBy(item => item.WorkItemExternalId, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var productRoot in legacySnapshot.ProductRoots)
         {
@@ -586,6 +1095,24 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
                     nameof(ProductRoot),
                     productRoot.WorkItemExternalId,
                     "Validated connection and migrated project sources are required before product root migration can run.",
+                    productRoot.WorkItemExternalId,
+                    cancellationToken);
+                continue;
+            }
+
+            if (duplicateWorkItemExternalIds.Contains(productRoot.WorkItemExternalId))
+            {
+                failed++;
+                hasBlockingIssue = true;
+                await RecordBlockingIssueAsync(
+                    state.RunIdentifier,
+                    unit.UnitIdentifier,
+                    "InconsistentLegacyReference",
+                    "DependencyViolation",
+                    productRoot.SourceLegacyReference,
+                    nameof(ProductRoot),
+                    productRoot.WorkItemExternalId,
+                    "Legacy product roots must not reuse the same external work item identity across multiple products in a single migration run.",
                     productRoot.WorkItemExternalId,
                     cancellationToken);
                 continue;
@@ -646,6 +1173,7 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
 
             var persistedRoot = await UpsertProductRootAsync(mapped.Entity, projectSource, state, cancellationToken);
             succeeded++;
+            state.ProductRootsByScopedKey[CreateScopedProductRootKey(projectSource.Id, persistedRoot.WorkItemExternalId)] = persistedRoot;
             state.ProductRootsByLegacyKey[CreateLegacyProductRootKey(productRoot.ProductId, persistedRoot.WorkItemExternalId)] = persistedRoot;
         }
 
@@ -1287,7 +1815,7 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
         ExecutionState state,
         TfsConnection connection,
         string projectExternalId,
-        Guid unitIdentifier,
+        Guid? unitIdentifier,
         CancellationToken cancellationToken)
     {
         if (state.PipelineLookupsByProjectExternalId.TryGetValue(projectExternalId, out var lookup))
@@ -1305,7 +1833,7 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
             : result;
         state.PipelineLookupsByProjectExternalId[projectExternalId] = lookup;
 
-        if (!lookup.Succeeded)
+        if (!lookup.Succeeded && unitIdentifier.HasValue)
         {
             await RecordBlockingIssueAsync(
                 state.RunIdentifier,
@@ -1835,6 +2363,8 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
 
         public Dictionary<ScopedPipelineKey, PipelineSource> PipelinesByScopedKey { get; } = new();
 
+        public Dictionary<ScopedProductRootKey, ProductRoot> ProductRootsByScopedKey { get; } = new();
+
         public Dictionary<LegacyProductRootKey, ProductRoot> ProductRootsByLegacyKey { get; } = new();
 
         public Dictionary<LegacyPipelineKey, string> ProjectExternalIdByLegacyPipeline { get; } = new();
@@ -1895,4 +2425,34 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
     private readonly record struct BindingKey(int ProductRootId, ProductSourceType SourceType, string SourceExternalId);
     private readonly record struct LegacyProductRootKey(int ProductId, string WorkItemExternalId);
     private readonly record struct LegacyPipelineKey(int ProductId, string PipelineExternalId);
+
+    private sealed record ReplayVerificationResult(
+        IReadOnlyDictionary<string, ReplayUnitOutcomeBuilder> OutcomesByUnitType)
+    {
+        public bool HasIssues => OutcomesByUnitType.Values.Any(outcome => outcome.Issues.Count > 0);
+    }
+
+    private sealed class ReplayUnitOutcomeBuilder
+    {
+        public int ProcessedEntityCount { get; set; }
+
+        public int SucceededEntityCount { get; set; }
+
+        public int FailedEntityCount { get; set; }
+
+        public bool HasBlockingIssue { get; set; }
+
+        public List<ReplayIssuePlan> Issues { get; } = [];
+    }
+
+    private sealed record ReplayIssuePlan(
+        string IssueType,
+        string IssueCategory,
+        OnboardingMigrationIssueSeverity Severity,
+        string SourceLegacyReference,
+        string TargetEntityType,
+        string? TargetExternalIdentity,
+        string SanitizedMessage,
+        string? SanitizedDetails,
+        bool IsBlocking);
 }

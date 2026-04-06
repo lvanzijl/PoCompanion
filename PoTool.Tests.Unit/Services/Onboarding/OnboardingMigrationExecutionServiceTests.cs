@@ -387,6 +387,228 @@ public sealed class OnboardingMigrationExecutionServiceTests
         Assert.AreEqual(6, await context.OnboardingMigrationUnits.CountAsync());
     }
 
+    [TestMethod]
+    public async Task ExecuteAsync_ReplayWithFrozenResponses_LeavesPersistedStateUnchanged()
+    {
+        await using var connection = await CreateOpenConnectionAsync();
+        await using var context = await CreateContextAsync(connection);
+        await SeedLegacyConfigurationAsync(context);
+
+        var frozenResponses = CreateLookupClient();
+        var firstSummary = await CreateService(context, CloneLookupClient(frozenResponses)).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+        var persistedStateAfterFirstRun = await CaptureOnboardingStateAsync(context);
+
+        var secondSummary = await CreateService(context, CloneLookupClient(frozenResponses)).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+        var persistedStateAfterSecondRun = await CaptureOnboardingStateAsync(context);
+
+        CollectionAssert.AreEqual(persistedStateAfterFirstRun, persistedStateAfterSecondRun);
+        Assert.AreEqual(OnboardingMigrationRunStatus.NoOp, secondSummary.Status);
+        Assert.AreEqual(0, secondSummary.ProcessedEntityCount);
+        Assert.AreEqual(0, secondSummary.FailedEntityCount);
+        Assert.IsTrue(secondSummary.Issues.Any(issue => issue.IssueCategory == "NoOp" && issue.Severity == OnboardingMigrationIssueSeverity.Info));
+        Assert.AreEqual(0, firstSummary.BlockingIssueCount);
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_ReplayWithRenamedProject_SurfacesDriftWithoutMutatingPersistedState()
+    {
+        await using var connection = await CreateOpenConnectionAsync();
+        await using var context = await CreateContextAsync(connection);
+        await SeedLegacyConfigurationAsync(context);
+
+        var baselineResponses = CreateLookupClient();
+        await CreateService(context, CloneLookupClient(baselineResponses)).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+        var persistedStateBeforeDrift = await CaptureOnboardingStateAsync(context);
+
+        var driftedResponses = CloneLookupClient(baselineResponses);
+        driftedResponses.Projects = OnboardingOperationResult<IReadOnlyList<ProjectLookupResultDto>>.Success(
+        [
+            new ProjectLookupResultDto("project-alpha", "Alpha Renamed", "Alpha project")
+        ]);
+
+        var driftSummary = await CreateService(context, driftedResponses).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+        var persistedStateAfterDrift = await CaptureOnboardingStateAsync(context);
+
+        CollectionAssert.AreEqual(persistedStateBeforeDrift, persistedStateAfterDrift);
+        Assert.AreNotEqual(OnboardingMigrationRunStatus.NoOp, driftSummary.Status);
+        Assert.IsTrue(driftSummary.Issues.Any(issue =>
+            issue.IssueType == "ReplayDrift"
+            && issue.TargetEntityType == nameof(ProjectSource)
+            && issue.Severity == OnboardingMigrationIssueSeverity.Warning));
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_ReplayWithUnavailableWorkItem_SurfacesBlockingDriftWithoutMutatingPersistedState()
+    {
+        await using var connection = await CreateOpenConnectionAsync();
+        await using var context = await CreateContextAsync(connection);
+        await SeedLegacyConfigurationAsync(context);
+
+        var baselineResponses = CreateLookupClient();
+        await CreateService(context, CloneLookupClient(baselineResponses)).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+        var persistedStateBeforeDrift = await CaptureOnboardingStateAsync(context);
+
+        var driftedResponses = CloneLookupClient(baselineResponses);
+        driftedResponses.WorkItems["101"] = OnboardingOperationResult<WorkItemLookupResultDto>.Failure(
+            new OnboardingErrorDto(OnboardingErrorCode.TfsUnavailable, "Unavailable", "101", true));
+
+        var driftSummary = await CreateService(context, driftedResponses).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+        var persistedStateAfterDrift = await CaptureOnboardingStateAsync(context);
+
+        CollectionAssert.AreEqual(persistedStateBeforeDrift, persistedStateAfterDrift);
+        Assert.AreNotEqual(OnboardingMigrationRunStatus.NoOp, driftSummary.Status);
+        Assert.IsTrue(driftSummary.Issues.Any(issue =>
+            issue.TargetEntityType == nameof(ProductRoot)
+            && issue.IssueCategory == OnboardingErrorCode.TfsUnavailable.ToString()
+            && issue.IsBlocking));
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_ReplayWithPermissionDenied_SurfacesBlockingDriftWithoutMutatingPersistedState()
+    {
+        await using var connection = await CreateOpenConnectionAsync();
+        await using var context = await CreateContextAsync(connection);
+        await SeedLegacyConfigurationAsync(context);
+
+        var baselineResponses = CreateLookupClient();
+        await CreateService(context, CloneLookupClient(baselineResponses)).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+        var persistedStateBeforeDrift = await CaptureOnboardingStateAsync(context);
+
+        var driftedResponses = CloneLookupClient(baselineResponses);
+        driftedResponses.Projects = OnboardingOperationResult<IReadOnlyList<ProjectLookupResultDto>>.Failure(
+            new OnboardingErrorDto(OnboardingErrorCode.PermissionDenied, "Denied", "projects", false));
+
+        var driftSummary = await CreateService(context, driftedResponses).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+        var persistedStateAfterDrift = await CaptureOnboardingStateAsync(context);
+
+        CollectionAssert.AreEqual(persistedStateBeforeDrift, persistedStateAfterDrift);
+        Assert.AreNotEqual(OnboardingMigrationRunStatus.NoOp, driftSummary.Status);
+        Assert.IsTrue(driftSummary.Issues.Any(issue =>
+            issue.TargetEntityType == nameof(TfsConnection)
+            && issue.IssueCategory == OnboardingErrorCode.PermissionDenied.ToString()
+            && issue.IsBlocking));
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_WithDuplicatePipelineExternalIdsAcrossProjects_RecordsIssueAndDoesNotPersistInvalidPipelines()
+    {
+        await using var connection = await CreateOpenConnectionAsync();
+        await using var context = await CreateContextAsync(connection);
+        await SeedDuplicatePipelineAcrossProjectsAsync(context);
+
+        var lookupClient = CreateLookupClient();
+        lookupClient.Projects = OnboardingOperationResult<IReadOnlyList<ProjectLookupResultDto>>.Success(
+        [
+            new ProjectLookupResultDto("project-alpha", "Alpha", "Alpha project"),
+            new ProjectLookupResultDto("project-beta", "Beta", "Beta project")
+        ]);
+        lookupClient.Pipelines["project-alpha"] = OnboardingOperationResult<IReadOnlyList<PipelineLookupResultDto>>.Success(
+        [
+            new PipelineLookupResultDto("shared-pipeline", "project-alpha", "Build Alpha", "\\CI", "/alpha.yml", "repo-alpha", "Repo Alpha")
+        ]);
+        lookupClient.Pipelines["project-beta"] = OnboardingOperationResult<IReadOnlyList<PipelineLookupResultDto>>.Success(
+        [
+            new PipelineLookupResultDto("shared-pipeline", "project-beta", "Build Beta", "\\CI", "/beta.yml", "repo-beta", "Repo Beta")
+        ]);
+        lookupClient.WorkItems["101"] = OnboardingOperationResult<WorkItemLookupResultDto>.Success(
+            new WorkItemLookupResultDto("101", "Root Alpha", "Epic", "New", "project-alpha", "Alpha\\Area"));
+        lookupClient.WorkItems["202"] = OnboardingOperationResult<WorkItemLookupResultDto>.Success(
+            new WorkItemLookupResultDto("202", "Root Beta", "Epic", "New", "project-beta", "Beta\\Area"));
+
+        var summary = await CreateService(context, lookupClient).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+
+        Assert.AreEqual(OnboardingMigrationRunStatus.PartiallySucceeded, summary.Status);
+        Assert.AreEqual(0, await context.OnboardingPipelineSources.CountAsync());
+        Assert.IsTrue(summary.Issues.Any(issue =>
+            issue.TargetExternalIdentity == "1001"
+            && issue.IsBlocking));
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_WithDuplicateWorkItemExternalIdsAcrossProjects_RecordsIssueAndDoesNotPersistInvalidRoots()
+    {
+        await using var connection = await CreateOpenConnectionAsync();
+        await using var context = await CreateContextAsync(connection);
+        await SeedDuplicateProductRootsAcrossProjectsAsync(context);
+
+        var lookupClient = CreateLookupClient();
+        lookupClient.Projects = OnboardingOperationResult<IReadOnlyList<ProjectLookupResultDto>>.Success(
+        [
+            new ProjectLookupResultDto("project-alpha", "Alpha", "Alpha project"),
+            new ProjectLookupResultDto("project-beta", "Beta", "Beta project")
+        ]);
+        lookupClient.WorkItems["777"] = OnboardingOperationResult<WorkItemLookupResultDto>.Success(
+            new WorkItemLookupResultDto("777", "Root Alpha", "Epic", "New", "project-alpha", "Alpha\\Area"));
+        lookupClient.Pipelines["project-alpha"] = OnboardingOperationResult<IReadOnlyList<PipelineLookupResultDto>>.Success([]);
+        lookupClient.Pipelines["project-beta"] = OnboardingOperationResult<IReadOnlyList<PipelineLookupResultDto>>.Success([]);
+
+        var summary = await CreateService(context, lookupClient).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+
+        Assert.AreEqual(OnboardingMigrationRunStatus.PartiallySucceeded, summary.Status);
+        Assert.AreEqual(0, await context.OnboardingProductRoots.CountAsync());
+        Assert.IsTrue(summary.Issues.Any(issue =>
+            issue.TargetEntityType == nameof(ProductRoot)
+            && issue.IssueType == "InconsistentLegacyReference"
+            && issue.IsBlocking));
+    }
+
+    [TestMethod]
+    public async Task ExecuteAsync_LedgerCountsMatchBindingFailures()
+    {
+        await using var connection = await CreateOpenConnectionAsync();
+        await using var context = await CreateContextAsync(connection);
+        await SeedLegacyConfigurationAsync(context, includeBrokenTeam: true);
+
+        var lookupClient = CreateLookupClient();
+        var summary = await CreateService(context, lookupClient).ExecuteAsync(
+            new OnboardingMigrationExecutionRequest("2026-04-06-slice-5-proof", "dev", "Manual", OnboardingMigrationExecutionMode.Live),
+            CancellationToken.None);
+
+        var bindingUnit = summary.Units.Single(unit => unit.UnitType == "ProductSourceBinding");
+        var bindingIssues = summary.Issues.Where(issue => issue.TargetEntityType == nameof(ProductSourceBinding)).ToArray();
+
+        Assert.AreEqual(bindingUnit.ProcessedEntityCount, bindingUnit.SucceededEntityCount + bindingUnit.FailedEntityCount + bindingUnit.SkippedEntityCount);
+        Assert.HasCount(bindingUnit.FailedEntityCount, bindingIssues);
+        Assert.IsTrue(bindingIssues.All(issue => issue.IsBlocking));
+    }
+
+    [TestMethod]
+    public async Task ReadAsync_FingerprintIgnoresOrderingOnlyChanges()
+    {
+        await using var alphaConnection = await CreateOpenConnectionAsync();
+        await using var betaConnection = await CreateOpenConnectionAsync();
+        await using var alphaContext = await CreateContextAsync(alphaConnection);
+        await using var betaContext = await CreateContextAsync(betaConnection);
+
+        await SeedFingerprintOrderingScenarioAsync(alphaContext, reverseInsertOrder: false);
+        await SeedFingerprintOrderingScenarioAsync(betaContext, reverseInsertOrder: true);
+
+        var alphaSnapshot = await new OnboardingLegacyMigrationReader(alphaContext).ReadAsync(CancellationToken.None);
+        var betaSnapshot = await new OnboardingLegacyMigrationReader(betaContext).ReadAsync(CancellationToken.None);
+
+        Assert.AreEqual(alphaSnapshot.SourceFingerprint, betaSnapshot.SourceFingerprint);
+    }
+
     private static OnboardingMigrationExecutionService CreateService(
         PoToolDbContext context,
         IOnboardingLiveLookupClient lookupClient,
@@ -431,6 +653,80 @@ public sealed class OnboardingMigrationExecutionServiceTests
             new WorkItemLookupResultDto("101", "Root", "Epic", "New", "project-alpha", "Alpha\\Area"));
 
         return lookupClient;
+    }
+
+    private static FakeOnboardingLiveLookupClient CloneLookupClient(FakeOnboardingLiveLookupClient source)
+    {
+        var clone = new FakeOnboardingLiveLookupClient
+        {
+            Projects = source.Projects
+        };
+
+        foreach (var pair in source.Teams)
+        {
+            clone.Teams[pair.Key] = pair.Value;
+        }
+
+        foreach (var pair in source.Pipelines)
+        {
+            clone.Pipelines[pair.Key] = pair.Value;
+        }
+
+        foreach (var pair in source.WorkItems)
+        {
+            clone.WorkItems[pair.Key] = pair.Value;
+        }
+
+        return clone;
+    }
+
+    private static async Task<string[]> CaptureOnboardingStateAsync(PoToolDbContext context)
+    {
+        var snapshot = new List<string>();
+
+        snapshot.AddRange(await context.OnboardingTfsConnections
+            .AsNoTracking()
+            .OrderBy(item => item.ConnectionKey)
+            .Select(item => $"connection|{item.ConnectionKey}|{item.OrganizationUrl}|{item.AuthenticationMode}|{item.TimeoutSeconds}|{item.ApiVersion}|{item.AvailabilityValidationState.Status}|{item.PermissionValidationState.Status}|{item.CapabilityValidationState.Status}|{item.LastVerifiedCapabilitiesSummary}")
+            .ToArrayAsync());
+
+        snapshot.AddRange(await context.OnboardingProjectSources
+            .AsNoTracking()
+            .OrderBy(item => item.TfsConnectionId)
+            .ThenBy(item => item.ProjectExternalId)
+            .Select(item => $"project|{item.TfsConnectionId}|{item.ProjectExternalId}|{item.Snapshot.Name}|{item.Snapshot.Description}|{item.ValidationState.Status}|{item.Snapshot.Metadata.ConfirmedAtUtc:O}|{item.Snapshot.Metadata.LastSeenAtUtc:O}")
+            .ToArrayAsync());
+
+        snapshot.AddRange(await context.OnboardingTeamSources
+            .AsNoTracking()
+            .OrderBy(item => item.ProjectSourceId)
+            .ThenBy(item => item.TeamExternalId)
+            .Select(item => $"team|{item.ProjectSourceId}|{item.TeamExternalId}|{item.Snapshot.Name}|{item.Snapshot.ProjectExternalId}|{item.Snapshot.DefaultAreaPath}|{item.ValidationState.Status}")
+            .ToArrayAsync());
+
+        snapshot.AddRange(await context.OnboardingPipelineSources
+            .AsNoTracking()
+            .OrderBy(item => item.ProjectSourceId)
+            .ThenBy(item => item.PipelineExternalId)
+            .Select(item => $"pipeline|{item.ProjectSourceId}|{item.PipelineExternalId}|{item.Snapshot.Name}|{item.Snapshot.ProjectExternalId}|{item.Snapshot.RepositoryExternalId}|{item.ValidationState.Status}")
+            .ToArrayAsync());
+
+        snapshot.AddRange(await context.OnboardingProductRoots
+            .AsNoTracking()
+            .OrderBy(item => item.ProjectSourceId)
+            .ThenBy(item => item.WorkItemExternalId)
+            .Select(item => $"root|{item.ProjectSourceId}|{item.WorkItemExternalId}|{item.Snapshot.Title}|{item.Snapshot.ProjectExternalId}|{item.Snapshot.AreaPath}|{item.ValidationState.Status}")
+            .ToArrayAsync());
+
+        snapshot.AddRange(await context.OnboardingProductSourceBindings
+            .AsNoTracking()
+            .OrderBy(item => item.ProductRootId)
+            .ThenBy(item => item.SourceType)
+            .ThenBy(item => item.SourceExternalId)
+            .Select(item => $"binding|{item.ProductRootId}|{item.ProjectSourceId}|{item.TeamSourceId}|{item.PipelineSourceId}|{item.SourceType}|{item.SourceExternalId}|{item.ValidationState.Status}")
+            .ToArrayAsync());
+
+        return snapshot.ToArray();
     }
 
     private static async Task SeedLegacyConfigurationAsync(
@@ -639,6 +935,206 @@ public sealed class OnboardingMigrationExecutionServiceTests
         context.ProductBacklogRoots.AddRange(
             new ProductBacklogRootEntity { Product = alphaProduct, WorkItemTfsId = 101 },
             new ProductBacklogRootEntity { Product = betaProduct, WorkItemTfsId = 202 });
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedDuplicatePipelineAcrossProjectsAsync(PoToolDbContext context)
+    {
+        var localProject = new ProjectEntity
+        {
+            Id = "local-project",
+            Alias = "local-project",
+            Name = "Local Project"
+        };
+
+        var alphaProduct = new ProductEntity
+        {
+            Name = "Product Alpha",
+            ProjectId = localProject.Id
+        };
+
+        var betaProduct = new ProductEntity
+        {
+            Name = "Product Beta",
+            ProjectId = localProject.Id
+        };
+
+        context.Projects.Add(localProject);
+        context.Products.AddRange(alphaProduct, betaProduct);
+        context.TfsConfigs.Add(new TfsConfigEntity
+        {
+            Url = "https://dev.azure.com/example",
+            Project = "Alpha",
+            TimeoutSeconds = 30,
+            ApiVersion = "7.1",
+            DefaultAreaPath = "Alpha\\Area",
+            LastValidated = DateTimeOffset.UtcNow,
+            HasTestedConnectionSuccessfully = true,
+            HasVerifiedTfsApiSuccessfully = true,
+            UpdatedAtUtc = DateTime.UtcNow
+        });
+
+        var alphaRepository = new RepositoryEntity
+        {
+            Product = alphaProduct,
+            Name = "Repo Alpha"
+        };
+
+        var betaRepository = new RepositoryEntity
+        {
+            Product = betaProduct,
+            Name = "Repo Beta"
+        };
+
+        context.Repositories.AddRange(alphaRepository, betaRepository);
+        context.PipelineDefinitions.AddRange(
+            new PipelineDefinitionEntity
+            {
+                Product = alphaProduct,
+                Repository = alphaRepository,
+                PipelineDefinitionId = 1001,
+                RepoId = "repo-alpha",
+                RepoName = "Repo Alpha",
+                Name = "Build Alpha",
+                Folder = "\\CI",
+                YamlPath = "/alpha.yml"
+            },
+            new PipelineDefinitionEntity
+            {
+                Product = betaProduct,
+                Repository = betaRepository,
+                PipelineDefinitionId = 1001,
+                RepoId = "repo-beta",
+                RepoName = "Repo Beta",
+                Name = "Build Beta",
+                Folder = "\\CI",
+                YamlPath = "/beta.yml"
+            });
+        context.ProductBacklogRoots.AddRange(
+            new ProductBacklogRootEntity { Product = alphaProduct, WorkItemTfsId = 101 },
+            new ProductBacklogRootEntity { Product = betaProduct, WorkItemTfsId = 202 });
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedDuplicateProductRootsAcrossProjectsAsync(PoToolDbContext context)
+    {
+        var localProject = new ProjectEntity
+        {
+            Id = "local-project",
+            Alias = "local-project",
+            Name = "Local Project"
+        };
+
+        var alphaProduct = new ProductEntity
+        {
+            Name = "Product Alpha",
+            ProjectId = localProject.Id
+        };
+
+        var betaProduct = new ProductEntity
+        {
+            Name = "Product Beta",
+            ProjectId = localProject.Id
+        };
+
+        context.Projects.Add(localProject);
+        context.Products.AddRange(alphaProduct, betaProduct);
+        context.TfsConfigs.Add(new TfsConfigEntity
+        {
+            Url = "https://dev.azure.com/example",
+            Project = "Alpha",
+            TimeoutSeconds = 30,
+            ApiVersion = "7.1",
+            DefaultAreaPath = "Alpha\\Area",
+            LastValidated = DateTimeOffset.UtcNow,
+            HasTestedConnectionSuccessfully = true,
+            HasVerifiedTfsApiSuccessfully = true,
+            UpdatedAtUtc = DateTime.UtcNow
+        });
+        context.ProductBacklogRoots.AddRange(
+            new ProductBacklogRootEntity { Product = alphaProduct, WorkItemTfsId = 777 },
+            new ProductBacklogRootEntity { Product = betaProduct, WorkItemTfsId = 777 });
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedFingerprintOrderingScenarioAsync(PoToolDbContext context, bool reverseInsertOrder)
+    {
+        var localProject = new ProjectEntity
+        {
+            Id = "local-project",
+            Alias = "local-project",
+            Name = "Local Project"
+        };
+
+        var alphaProduct = new ProductEntity
+        {
+            Id = 10,
+            Name = "Product Alpha",
+            ProjectId = localProject.Id
+        };
+
+        var betaProduct = new ProductEntity
+        {
+            Id = 20,
+            Name = "Product Beta",
+            ProjectId = localProject.Id
+        };
+
+        var alphaTeam = new TeamEntity
+        {
+            Id = 100,
+            Name = "Team Alpha",
+            TeamAreaPath = "Alpha\\Area",
+            ProjectName = "Alpha",
+            TfsTeamId = "team-alpha",
+            TfsTeamName = "Team Alpha"
+        };
+
+        var betaTeam = new TeamEntity
+        {
+            Id = 200,
+            Name = "Team Beta",
+            TeamAreaPath = "Beta\\Area",
+            ProjectName = "Beta",
+            TfsTeamId = "team-beta",
+            TfsTeamName = "Team Beta"
+        };
+
+        var alphaRoot = new ProductBacklogRootEntity
+        {
+            ProductId = alphaProduct.Id,
+            WorkItemTfsId = 101
+        };
+
+        var betaRoot = new ProductBacklogRootEntity
+        {
+            ProductId = betaProduct.Id,
+            WorkItemTfsId = 202
+        };
+
+        context.Projects.Add(localProject);
+        context.Products.AddRange(alphaProduct, betaProduct);
+        context.Teams.AddRange(reverseInsertOrder ? [betaTeam, alphaTeam] : [alphaTeam, betaTeam]);
+        context.TfsConfigs.Add(new TfsConfigEntity
+        {
+            Url = "https://dev.azure.com/example",
+            Project = "Alpha",
+            TimeoutSeconds = 30,
+            ApiVersion = "7.1",
+            DefaultAreaPath = "Alpha\\Area",
+            LastValidated = new DateTimeOffset(new DateTime(2026, 4, 6, 9, 0, 0, DateTimeKind.Utc)),
+            HasTestedConnectionSuccessfully = true,
+            HasVerifiedTfsApiSuccessfully = true,
+            UpdatedAtUtc = new DateTime(2026, 4, 6, 9, 0, 0, DateTimeKind.Utc)
+        });
+
+        var alphaLink = new ProductTeamLinkEntity { ProductId = alphaProduct.Id, TeamId = alphaTeam.Id };
+        var betaLink = new ProductTeamLinkEntity { ProductId = betaProduct.Id, TeamId = betaTeam.Id };
+        context.ProductTeamLinks.AddRange(reverseInsertOrder ? [betaLink, alphaLink] : [alphaLink, betaLink]);
+        context.ProductBacklogRoots.AddRange(reverseInsertOrder ? [betaRoot, alphaRoot] : [alphaRoot, betaRoot]);
 
         await context.SaveChangesAsync();
     }
