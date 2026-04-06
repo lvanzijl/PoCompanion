@@ -1,0 +1,67 @@
+@using PoTool.Shared.Onboarding
+
+<MudPaper Elevation="1" Class="pa-3">
+    <MudStack Spacing="1">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.subtitle1">@Title</MudText>
+            <MudStack Row="true" Spacing="1">
+                @if (EntityStatus is not null)
+                {
+                    <OnboardingStatusBadge Status="@EntityStatus.Status" />
+                }
+                @if (ValidationState is not null)
+                {
+                    <OnboardingValidationBadge ValidationState="@ValidationState" />
+                }
+            </MudStack>
+        </MudStack>
+
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@Subtitle</MudText>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(ParentContext))
+        {
+            <MudText Typo="Typo.caption" Color="Color.Info">Context: @ParentContext</MudText>
+        }
+
+        @if (MetadataLines.Count > 0)
+        {
+            <MudList T="string" Dense="true" Class="py-0">
+                @foreach (var line in MetadataLines)
+                {
+                    <MudListItem T="string" Class="px-0 py-0">
+                        <MudText Typo="Typo.body2">@line</MudText>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+
+        @if (EntityStatus is not null)
+        {
+            @if (EntityStatus.BlockingReasons.Count > 0)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Variant="Variant.Outlined">
+                    @string.Join("; ", EntityStatus.BlockingReasons.Select(item => item.Message))
+                </MudAlert>
+            }
+
+            @if (EntityStatus.Warnings.Count > 0)
+            {
+                <MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Outlined">
+                    @string.Join("; ", EntityStatus.Warnings.Select(item => item.Message))
+                </MudAlert>
+            }
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string? ParentContext { get; set; }
+    [Parameter] public IReadOnlyList<string> MetadataLines { get; set; } = Array.Empty<string>();
+    [Parameter] public OnboardingValidationStateDto? ValidationState { get; set; }
+    [Parameter] public OnboardingEntityStatusDto? EntityStatus { get; set; }
+}

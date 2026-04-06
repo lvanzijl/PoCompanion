@@ -1,9 +1,10 @@
 @using Microsoft.AspNetCore.Components.Routing
 @implements IDisposable
 @inject NavigationManager NavigationManager
+@inject IFeatureFlagService FeatureFlagService
 
 <nav class="@BarClass" aria-label="Workspace navigation">
-    @foreach (var item in WorkspaceNavigationCatalog.Items)
+    @foreach (var item in WorkspaceNavigationCatalog.GetVisibleItems(FeatureFlagService))
     {
         <WorkspaceNavItem Item="item"
                           IsActive="item.IsActive(_currentRelativePath)"

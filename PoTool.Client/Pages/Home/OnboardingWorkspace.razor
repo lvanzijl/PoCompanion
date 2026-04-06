@@ -1,0 +1,544 @@
+@page "/home/onboarding"
+@using PoTool.Client.Models
+@using PoTool.Client.Components.Onboarding
+@using PoTool.Shared.Onboarding
+@using Microsoft.AspNetCore.Components.Rendering
+@inherits WorkspaceBase
+@inject IFeatureFlagService FeatureFlagService
+@inject IOnboardingWorkspaceService OnboardingWorkspaceService
+@inject OnboardingWorkspaceViewModelFactory ViewModelFactory
+
+<PageTitle>Onboarding Workspace - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
+    <MudStack Spacing="3">
+        <MudPaper Elevation="1" Class="pa-3">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Info" Size="Size.Large" />
+                        <MudText Typo="Typo.h4">Onboarding Workspace</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Read-only onboarding workspace. This view shows existing onboarding graph state only.
+                    </MudText>
+                </MudStack>
+
+                <CompactButton ButtonRole="ButtonRole.Utility"
+                               Icon="@Icons.Material.Filled.Refresh"
+                               OnClick="RefreshAsync">
+                    Refresh
+                </CompactButton>
+            </MudStack>
+        </MudPaper>
+
+        @if (!_isEnabled)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                The onboarding workspace feature flag is disabled.
+            </MudAlert>
+        }
+        else
+        {
+            <MudPaper Elevation="1" Class="pa-3">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6" md="3">
+                        <CompactSelect T="int?"
+                                       Label="Connection"
+                                       Value="@_filter.ConnectionId"
+                                       ValueChanged="OnConnectionChangedAsync"
+                                       Clearable="true">
+                            @foreach (var option in _viewModel.FilterOptions.Connections)
+                            {
+                                <MudSelectItem T="int?" Value="@option.Value">@option.Label</MudSelectItem>
+                            }
+                        </CompactSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <CompactSelect T="int?"
+                                       Label="Project"
+                                       Value="@_filter.ProjectId"
+                                       ValueChanged="OnProjectChangedAsync"
+                                       Clearable="true">
+                            @foreach (var option in _viewModel.FilterOptions.Projects)
+                            {
+                                <MudSelectItem T="int?" Value="@option.Value">@option.Label</MudSelectItem>
+                            }
+                        </CompactSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <CompactSelect T="int?"
+                                       Label="Product root"
+                                       Value="@_filter.ProductRootId"
+                                       ValueChanged="OnRootChangedAsync"
+                                       Clearable="true">
+                            @foreach (var option in _viewModel.FilterOptions.ProductRoots)
+                            {
+                                <MudSelectItem T="int?" Value="@option.Value">@option.Label</MudSelectItem>
+                            }
+                        </CompactSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <CompactSelect T="OnboardingConfigurationStatus?"
+                                       Label="Status"
+                                       Value="@_filter.Status"
+                                       ValueChanged="OnStatusChangedAsync"
+                                       Clearable="true">
+                            @foreach (var option in _viewModel.FilterOptions.Statuses)
+                            {
+                                <MudSelectItem T="OnboardingConfigurationStatus?" Value="@option.Value">@option.Label</MudSelectItem>
+                            }
+                        </CompactSelect>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            @if (_viewModel.LoadState == OnboardingWorkspaceLoadState.Loading)
+            {
+                <MudPaper Elevation="1" Class="pa-6">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Info" />
+                    <MudText Typo="Typo.body2" Class="mt-2">Loading onboarding workspace…</MudText>
+                </MudPaper>
+            }
+            else if (_viewModel.LoadState == OnboardingWorkspaceLoadState.Failed)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @_viewModel.ErrorMessage
+                </MudAlert>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@_viewModel.Message</MudAlert>
+
+                @if (_viewModel.Summary is not null)
+                {
+                    <MudPaper Elevation="1" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.h5">Global summary</MudText>
+                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                <OnboardingStatusBadge Status="@_viewModel.Summary.OverallStatus" />
+                                <MudChip T="string" Label="true" Size="Size.Small">Connection: @_viewModel.Summary.ConnectionStatus</MudChip>
+                                <MudChip T="string" Label="true" Size="Size.Small">Data sources: @_viewModel.Summary.DataSourceSetupStatus</MudChip>
+                                <MudChip T="string" Label="true" Size="Size.Small">Domain: @_viewModel.Summary.DomainConfigurationStatus</MudChip>
+                            </MudStack>
+                            <MudGrid Spacing="2">
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Projects</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.ProjectSourcesValid/@_viewModel.Summary.Counts.ProjectSourcesTotal</MudText></MudItem>
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Teams</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.TeamSourcesValid/@_viewModel.Summary.Counts.TeamSourcesTotal</MudText></MudItem>
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Pipelines</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.PipelineSourcesValid/@_viewModel.Summary.Counts.PipelineSourcesTotal</MudText></MudItem>
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Roots</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.ProductRootsValid/@_viewModel.Summary.Counts.ProductRootsTotal</MudText></MudItem>
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Bindings</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.BindingsValid/@_viewModel.Summary.Counts.BindingsTotal</MudText></MudItem>
+                            </MudGrid>
+
+                            @if (_viewModel.Summary.Blockers.Count > 0)
+                            {
+                                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                                    <MudText Typo="Typo.subtitle2">Visible blockers</MudText>
+                                    <MudList T="string" Dense="true">
+                                        @foreach (var blocker in _viewModel.Summary.Blockers)
+                                        {
+                                            <MudListItem T="string">@blocker.Message</MudListItem>
+                                        }
+                                    </MudList>
+                                </MudAlert>
+                            }
+
+                            @if (_viewModel.Summary.Warnings.Count > 0)
+                            {
+                                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                                    <MudText Typo="Typo.subtitle2">Visible warnings</MudText>
+                                    <MudList T="string" Dense="true">
+                                        @foreach (var warning in _viewModel.Summary.Warnings)
+                                        {
+                                            <MudListItem T="string">@warning.Message</MudListItem>
+                                        }
+                                    </MudList>
+                                </MudAlert>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
+
+                <MudExpansionPanels MultiExpansion="true">
+                    <MudExpansionPanel Text="Connections">
+                        @RenderConnections()
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Projects">
+                        @RenderProjects()
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Teams">
+                        @RenderTeamGroups()
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Pipelines">
+                        @RenderPipelineGroups()
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Product Roots">
+                        @RenderRootGroups()
+                    </MudExpansionPanel>
+                    <MudExpansionPanel Text="Bindings">
+                        @RenderBindingGroups()
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            }
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private bool _isEnabled;
+    private bool _hasLoaded;
+    private OnboardingWorkspaceFilter _filter = new(null, null, null, null);
+    private OnboardingWorkspaceViewModel _viewModel = null!;
+
+    protected override void OnInitialized()
+    {
+        ParseContextQueryParameters();
+        _viewModel = ViewModelFactory.CreateLoading(_filter);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _isEnabled = FeatureFlagService.IsEnabled(FeatureFlagKeys.OnboardingWorkspace);
+        if (!_isEnabled)
+        {
+            NavigationManager.NavigateTo(WorkspaceRoutes.Home, replace: true);
+            return;
+        }
+
+        if (!_hasLoaded)
+        {
+            _hasLoaded = true;
+            await LoadAsync();
+        }
+    }
+
+    private async Task RefreshAsync()
+        => await LoadAsync();
+
+    private async Task OnConnectionChangedAsync(int? value)
+    {
+        _filter = _filter with
+        {
+            ConnectionId = value,
+            ProjectId = null,
+            ProductRootId = null
+        };
+        await LoadAsync();
+    }
+
+    private async Task OnProjectChangedAsync(int? value)
+    {
+        _filter = _filter with
+        {
+            ProjectId = value,
+            ProductRootId = null
+        };
+        await LoadAsync();
+    }
+
+    private async Task OnRootChangedAsync(int? value)
+    {
+        _filter = _filter with { ProductRootId = value };
+        await LoadAsync();
+    }
+
+    private async Task OnStatusChangedAsync(OnboardingConfigurationStatus? value)
+    {
+        _filter = _filter with { Status = value };
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _viewModel = ViewModelFactory.CreateLoading(_filter);
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var data = await OnboardingWorkspaceService.GetWorkspaceDataAsync(_filter);
+            _viewModel = ViewModelFactory.Create(data);
+        }
+        catch (HttpRequestException exception)
+        {
+            _viewModel = ViewModelFactory.CreateFailure(_filter, exception.Message);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private RenderFragment RenderConnections() => builder =>
+    {
+        if (_viewModel.Connections.Count == 0)
+        {
+            builder.OpenComponent<MudAlert>(0);
+            builder.AddAttribute(1, "Severity", Severity.Info);
+            builder.AddAttribute(2, "Variant", Variant.Outlined);
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(contentBuilder => contentBuilder.AddContent(4, "No visible connections match the current filter.")));
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<MudGrid>(5);
+        builder.AddAttribute(6, "Spacing", 2);
+        builder.AddAttribute(7, "ChildContent", (RenderFragment)(gridBuilder =>
+        {
+            var index = 8;
+            foreach (var connection in _viewModel.Connections)
+            {
+                gridBuilder.OpenComponent<MudItem>(index++);
+                gridBuilder.AddAttribute(index++, "xs", 12);
+                gridBuilder.AddAttribute(index++, "md", 6);
+                gridBuilder.AddAttribute(index++, "ChildContent", (RenderFragment)(itemBuilder =>
+                {
+                    itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+                    itemBuilder.AddAttribute(index++, "Title", connection.OrganizationUrl);
+                    itemBuilder.AddAttribute(index++, "Subtitle", $"Key: {connection.ConnectionKey}");
+                    itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+                    {
+                        $"Authentication: {connection.AuthenticationMode}",
+                        $"API version: {connection.ApiVersion}",
+                        $"Timeout: {connection.TimeoutSeconds}s"
+                    });
+                    itemBuilder.AddAttribute(index++, "EntityStatus", connection.Status);
+                    itemBuilder.AddAttribute(index++, "ValidationState", connection.Validation.CapabilityValidationState);
+                    itemBuilder.CloseComponent();
+                }));
+                gridBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderProjects() => builder =>
+    {
+        if (_viewModel.Projects.Count == 0)
+        {
+            builder.OpenComponent<MudAlert>(0);
+            builder.AddAttribute(1, "Severity", Severity.Info);
+            builder.AddAttribute(2, "Variant", Variant.Outlined);
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(contentBuilder => contentBuilder.AddContent(4, "No visible projects match the current filter.")));
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<MudGrid>(5);
+        builder.AddAttribute(6, "Spacing", 2);
+        builder.AddAttribute(7, "ChildContent", (RenderFragment)(gridBuilder =>
+        {
+            var index = 8;
+            foreach (var project in _viewModel.Projects)
+            {
+                gridBuilder.OpenComponent<MudItem>(index++);
+                gridBuilder.AddAttribute(index++, "xs", 12);
+                gridBuilder.AddAttribute(index++, "md", 6);
+                gridBuilder.AddAttribute(index++, "ChildContent", (RenderFragment)(itemBuilder =>
+                {
+                    itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+                    itemBuilder.AddAttribute(index++, "Title", project.Snapshot.Name);
+                    itemBuilder.AddAttribute(index++, "Subtitle", project.ProjectExternalId);
+                    itemBuilder.AddAttribute(index++, "ParentContext", $"Connection {project.TfsConnectionId}");
+                    itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+                    {
+                        $"Enabled: {project.Enabled}",
+                        $"Description: {project.Snapshot.Description ?? "None"}"
+                    });
+                    itemBuilder.AddAttribute(index++, "EntityStatus", project.Status);
+                    itemBuilder.AddAttribute(index++, "ValidationState", project.ValidationState);
+                    itemBuilder.CloseComponent();
+                }));
+                gridBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderTeamGroups() => builder => RenderGroupedEntities(
+        builder,
+        _viewModel.TeamGroups,
+        "No visible teams match the current filter.",
+        (itemBuilder, index, group, team) =>
+        {
+            itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+            itemBuilder.AddAttribute(index++, "Title", team.Snapshot.Name);
+            itemBuilder.AddAttribute(index++, "Subtitle", team.TeamExternalId);
+            itemBuilder.AddAttribute(index++, "ParentContext", $"{group.Project.ProjectName} ({group.Project.ProjectExternalId})");
+            itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+            {
+                $"Enabled: {team.Enabled}",
+                $"Default area path: {team.Snapshot.DefaultAreaPath}"
+            });
+            itemBuilder.AddAttribute(index++, "EntityStatus", team.Status);
+            itemBuilder.AddAttribute(index++, "ValidationState", team.ValidationState);
+            itemBuilder.CloseComponent();
+            return index;
+        });
+
+    private RenderFragment RenderPipelineGroups() => builder => RenderGroupedEntities(
+        builder,
+        _viewModel.PipelineGroups,
+        "No visible pipelines match the current filter.",
+        (itemBuilder, index, group, pipeline) =>
+        {
+            itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+            itemBuilder.AddAttribute(index++, "Title", pipeline.Snapshot.Name);
+            itemBuilder.AddAttribute(index++, "Subtitle", pipeline.PipelineExternalId);
+            itemBuilder.AddAttribute(index++, "ParentContext", $"{group.Project.ProjectName} ({group.Project.ProjectExternalId})");
+            itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+            {
+                $"Enabled: {pipeline.Enabled}",
+                $"Folder: {pipeline.Snapshot.Folder ?? "None"}",
+                $"Yaml path: {pipeline.Snapshot.YamlPath ?? "None"}"
+            });
+            itemBuilder.AddAttribute(index++, "EntityStatus", pipeline.Status);
+            itemBuilder.AddAttribute(index++, "ValidationState", pipeline.ValidationState);
+            itemBuilder.CloseComponent();
+            return index;
+        });
+
+    private RenderFragment RenderRootGroups() => builder => RenderGroupedEntities(
+        builder,
+        _viewModel.ProductRootGroups,
+        "No visible product roots match the current filter.",
+        (itemBuilder, index, group, root) =>
+        {
+            itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+            itemBuilder.AddAttribute(index++, "Title", root.Snapshot.Title);
+            itemBuilder.AddAttribute(index++, "Subtitle", root.WorkItemExternalId);
+            itemBuilder.AddAttribute(index++, "ParentContext", $"{group.Project.ProjectName} ({group.Project.ProjectExternalId})");
+            itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+            {
+                $"Enabled: {root.Enabled}",
+                $"Type: {root.Snapshot.WorkItemType}",
+                $"State: {root.Snapshot.State}"
+            });
+            itemBuilder.AddAttribute(index++, "EntityStatus", root.Status);
+            itemBuilder.AddAttribute(index++, "ValidationState", root.ValidationState);
+            itemBuilder.CloseComponent();
+            return index;
+        });
+
+    private RenderFragment RenderBindingGroups() => builder =>
+    {
+        if (_viewModel.BindingGroups.Count == 0)
+        {
+            builder.OpenComponent<MudAlert>(0);
+            builder.AddAttribute(1, "Severity", Severity.Info);
+            builder.AddAttribute(2, "Variant", Variant.Outlined);
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(contentBuilder => contentBuilder.AddContent(4, "No visible bindings match the current filter.")));
+            builder.CloseComponent();
+            return;
+        }
+
+        var index = 5;
+        foreach (var group in _viewModel.BindingGroups)
+        {
+            builder.OpenComponent<MudPaper>(index++);
+            builder.AddAttribute(index++, "Elevation", 1);
+            builder.AddAttribute(index++, "Class", "pa-3 mb-3");
+            builder.AddAttribute(index++, "ChildContent", (RenderFragment)(groupBuilder =>
+            {
+                var nested = 0;
+                groupBuilder.OpenComponent<MudText>(nested++);
+                groupBuilder.AddAttribute(nested++, "Typo", Typo.h6);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(titleBuilder => titleBuilder.AddContent(0, $"{group.Root.Title} ({group.Root.WorkItemExternalId})")));
+                groupBuilder.CloseComponent();
+
+                groupBuilder.OpenComponent<MudText>(nested++);
+                groupBuilder.AddAttribute(nested++, "Typo", Typo.body2);
+                groupBuilder.AddAttribute(nested++, "Color", Color.Secondary);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(titleBuilder => titleBuilder.AddContent(0, $"Project context: {group.Root.ProjectExternalId}")));
+                groupBuilder.CloseComponent();
+
+                groupBuilder.OpenComponent<MudGrid>(nested++);
+                groupBuilder.AddAttribute(nested++, "Spacing", 2);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(gridBuilder =>
+                {
+                    var cardIndex = 0;
+                    foreach (var binding in group.Bindings)
+                    {
+                        gridBuilder.OpenComponent<MudItem>(cardIndex++);
+                        gridBuilder.AddAttribute(cardIndex++, "xs", 12);
+                        gridBuilder.AddAttribute(cardIndex++, "md", 6);
+                        gridBuilder.AddAttribute(cardIndex++, "ChildContent", (RenderFragment)(itemBuilder =>
+                        {
+                            itemBuilder.OpenComponent<OnboardingEntityCard>(cardIndex++);
+                            itemBuilder.AddAttribute(cardIndex++, "Title", $"{binding.SourceType} binding");
+                            itemBuilder.AddAttribute(cardIndex++, "Subtitle", binding.SourceExternalId);
+                            itemBuilder.AddAttribute(cardIndex++, "ParentContext", $"Root {group.Root.Title} in project {group.Root.ProjectExternalId}");
+                            itemBuilder.AddAttribute(cardIndex++, "MetadataLines", new[]
+                            {
+                                $"Project source id: {binding.ProjectSourceId}",
+                                $"Team source id: {binding.TeamSourceId?.ToString() ?? "n/a"}",
+                                $"Pipeline source id: {binding.PipelineSourceId?.ToString() ?? "n/a"}"
+                            });
+                            itemBuilder.AddAttribute(cardIndex++, "EntityStatus", binding.Status);
+                            itemBuilder.AddAttribute(cardIndex++, "ValidationState", binding.ValidationState);
+                            itemBuilder.CloseComponent();
+                        }));
+                        gridBuilder.CloseComponent();
+                    }
+                }));
+                groupBuilder.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
+    };
+
+    private void RenderGroupedEntities<TItem>(
+        RenderTreeBuilder builder,
+        IReadOnlyList<OnboardingProjectGroupViewModel<TItem>> groups,
+        string emptyMessage,
+        Func<RenderTreeBuilder, int, OnboardingProjectGroupViewModel<TItem>, TItem, int> renderItem)
+    {
+        if (groups.Count == 0)
+        {
+            builder.OpenComponent<MudAlert>(0);
+            builder.AddAttribute(1, "Severity", Severity.Info);
+            builder.AddAttribute(2, "Variant", Variant.Outlined);
+            builder.AddAttribute(3, "ChildContent", (RenderFragment)(contentBuilder => contentBuilder.AddContent(4, emptyMessage)));
+            builder.CloseComponent();
+            return;
+        }
+
+        var index = 5;
+        foreach (var group in groups)
+        {
+            builder.OpenComponent<MudPaper>(index++);
+            builder.AddAttribute(index++, "Elevation", 1);
+            builder.AddAttribute(index++, "Class", "pa-3 mb-3");
+            builder.AddAttribute(index++, "ChildContent", (RenderFragment)(groupBuilder =>
+            {
+                var nested = 0;
+                groupBuilder.OpenComponent<MudText>(nested++);
+                groupBuilder.AddAttribute(nested++, "Typo", Typo.h6);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(titleBuilder => titleBuilder.AddContent(0, $"{group.Project.ProjectName} ({group.Project.ProjectExternalId})")));
+                groupBuilder.CloseComponent();
+
+                groupBuilder.OpenComponent<MudGrid>(nested++);
+                groupBuilder.AddAttribute(nested++, "Spacing", 2);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(gridBuilder =>
+                {
+                    var cardIndex = 0;
+                    foreach (var item in group.Items)
+                    {
+                        gridBuilder.OpenComponent<MudItem>(cardIndex++);
+                        gridBuilder.AddAttribute(cardIndex++, "xs", 12);
+                        gridBuilder.AddAttribute(cardIndex++, "md", 6);
+                        gridBuilder.AddAttribute(cardIndex++, "ChildContent", (RenderFragment)(itemBuilder =>
+                        {
+                            cardIndex = renderItem(itemBuilder, cardIndex, group, item);
+                        }));
+                        gridBuilder.CloseComponent();
+                    }
+                }));
+                groupBuilder.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
+    }
+}

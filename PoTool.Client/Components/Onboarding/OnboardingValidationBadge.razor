@@ -1,0 +1,29 @@
+@using PoTool.Shared.Onboarding
+
+<MudChip T="string"
+         Label="true"
+         Size="Size.Small"
+         Color="@ResolveColor(ValidationState.Status)">
+    @ResolveLabel(ValidationState.Status)
+</MudChip>
+
+@code {
+    [Parameter, EditorRequired] public OnboardingValidationStateDto ValidationState { get; set; } = default!;
+
+    private static Color ResolveColor(OnboardingValidationStatus status)
+        => status switch
+        {
+            OnboardingValidationStatus.Valid => Color.Success,
+            OnboardingValidationStatus.Invalid => Color.Error,
+            OnboardingValidationStatus.Unknown => Color.Default,
+            _ => Color.Warning
+        };
+
+    private static string ResolveLabel(OnboardingValidationStatus status)
+        => status switch
+        {
+            OnboardingValidationStatus.PermissionDenied => "Permission denied",
+            OnboardingValidationStatus.CapabilityDenied => "Capability denied",
+            _ => status.ToString()
+        };
+}

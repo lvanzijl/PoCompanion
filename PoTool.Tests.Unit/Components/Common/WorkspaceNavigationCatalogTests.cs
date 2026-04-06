@@ -1,5 +1,6 @@
 using PoTool.Client.Components.Common;
 using PoTool.Client.Models;
+using PoTool.Client.Services;
 
 namespace PoTool.Tests.Unit.Components.Common;
 
@@ -37,5 +38,35 @@ public class WorkspaceNavigationCatalogTests
         var isActive = item.IsActive(route);
 
         Assert.AreEqual(expectedActive, isActive);
+    }
+
+    [TestMethod]
+    public void GetVisibleItems_HidesOnboarding_WhenFeatureFlagDisabled()
+    {
+        var result = WorkspaceNavigationCatalog.GetVisibleItems(new TestFeatureFlagService(false));
+
+        Assert.IsFalse(result.Any(item => item.Label == "Onboarding"));
+    }
+
+    [TestMethod]
+    public void GetVisibleItems_ShowsOnboarding_WhenFeatureFlagEnabled()
+    {
+        var result = WorkspaceNavigationCatalog.GetVisibleItems(new TestFeatureFlagService(true));
+
+        var item = result.Single(definition => definition.Label == "Onboarding");
+        Assert.IsTrue(item.IsActive(WorkspaceRoutes.OnboardingWorkspace));
+    }
+
+    private sealed class TestFeatureFlagService : IFeatureFlagService
+    {
+        private readonly bool _enabled;
+
+        public TestFeatureFlagService(bool enabled)
+        {
+            _enabled = enabled;
+        }
+
+        public bool IsEnabled(string key)
+            => key == FeatureFlagKeys.OnboardingWorkspace && _enabled;
     }
 }

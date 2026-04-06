@@ -8,7 +8,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5291"
+      "url": "http://127.0.0.1:5291"
     }
   ],
   "paths": {
@@ -2834,6 +2834,1738 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DataStateResponseDtoOfSprintQueryResponseDtoOfWorkItemActivityDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/connections": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_ListConnections",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "nullable": true,
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+                }
+              ]
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingTfsConnectionDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_CreateConnection",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTfsConnectionRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingTfsConnectionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/connections/{id}": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_GetConnection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingTfsConnectionDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_UpdateConnection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTfsConnectionRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingTfsConnectionDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_DeleteConnection",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingSoftDeleteRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingSoftDeleteResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/projects": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_ListProjects",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "nullable": true,
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+                }
+              ]
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingProjectSourceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_CreateProject",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectSourceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingProjectSourceDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/projects/{id}": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_GetProject",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingProjectSourceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_UpdateProject",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectSourceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingProjectSourceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_DeleteProject",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingSoftDeleteRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingSoftDeleteResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/teams": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_ListTeams",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "nullable": true,
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+                }
+              ]
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingTeamSourceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_CreateTeam",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTeamSourceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingTeamSourceDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/teams/{id}": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_GetTeam",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingTeamSourceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_UpdateTeam",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTeamSourceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingTeamSourceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_DeleteTeam",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingSoftDeleteRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingSoftDeleteResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/pipelines": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_ListPipelines",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "nullable": true,
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+                }
+              ]
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingPipelineSourceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_CreatePipeline",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePipelineSourceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingPipelineSourceDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/pipelines/{id}": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_GetPipeline",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingPipelineSourceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_UpdatePipeline",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePipelineSourceRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingPipelineSourceDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_DeletePipeline",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingSoftDeleteRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingSoftDeleteResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/roots": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_ListRoots",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "nullable": true,
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+                }
+              ]
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingProductRootDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_CreateRoot",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductRootRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingProductRootDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/roots/{id}": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_GetRoot",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingProductRootDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_UpdateRoot",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductRootRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingProductRootDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_DeleteRoot",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingSoftDeleteRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingSoftDeleteResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/bindings": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_ListBindings",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "productRootId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "nullable": true,
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+                }
+              ]
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingProductSourceBindingDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_CreateBinding",
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductSourceBindingRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingProductSourceBindingDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/bindings/{id}": {
+      "get": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_GetBinding",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingProductSourceBindingDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_UpdateBinding",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductSourceBindingRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingProductSourceBindingDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "OnboardingCrud"
+        ],
+        "operationId": "OnboardingCrud_DeleteBinding",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingSoftDeleteRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingSoftDeleteResultDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/lookups/projects": {
+      "get": {
+        "tags": [
+          "OnboardingLookup"
+        ],
+        "operationId": "OnboardingLookup_GetProjects",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "top",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            },
+            "x-position": 2
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            },
+            "x-position": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfProjectLookupResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/lookups/projects/{projectExternalId}/teams": {
+      "get": {
+        "tags": [
+          "OnboardingLookup"
+        ],
+        "operationId": "OnboardingLookup_GetTeams",
+        "parameters": [
+          {
+            "name": "projectExternalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "top",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            },
+            "x-position": 3
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfTeamLookupResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/lookups/projects/{projectExternalId}/pipelines": {
+      "get": {
+        "tags": [
+          "OnboardingLookup"
+        ],
+        "operationId": "OnboardingLookup_GetPipelines",
+        "parameters": [
+          {
+            "name": "projectExternalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "top",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            },
+            "x-position": 3
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            },
+            "x-position": 4
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfPipelineLookupResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/lookups/work-items": {
+      "get": {
+        "tags": [
+          "OnboardingLookup"
+        ],
+        "operationId": "OnboardingLookup_SearchWorkItems",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "projectExternalId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "workItemTypes",
+            "in": "query",
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            "x-position": 3
+          },
+          {
+            "name": "top",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            },
+            "x-position": 4
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            },
+            "x-position": 5
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfIReadOnlyListOfWorkItemLookupResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/lookups/work-items/{workItemExternalId}": {
+      "get": {
+        "tags": [
+          "OnboardingLookup"
+        ],
+        "operationId": "OnboardingLookup_GetWorkItem",
+        "parameters": [
+          {
+            "name": "workItemExternalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfWorkItemLookupResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/onboarding/status": {
+      "get": {
+        "tags": [
+          "OnboardingStatus"
+        ],
+        "operationId": "OnboardingStatus_GetStatus",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingSuccessEnvelopeOfOnboardingStatusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingErrorDto"
                 }
               }
             }
@@ -13311,6 +15043,1495 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingTfsConnectionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/OnboardingTfsConnectionDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OnboardingTfsConnectionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "connectionKey": {
+            "type": "string"
+          },
+          "organizationUrl": {
+            "type": "string"
+          },
+          "authenticationMode": {
+            "type": "string"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "apiVersion": {
+            "type": "string"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/TfsConnectionValidationResultDto"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingEntityStatusDto"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/OnboardingAuditDto"
+          }
+        }
+      },
+      "TfsConnectionValidationResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organizationUrl": {
+            "type": "string"
+          },
+          "authenticationMode": {
+            "type": "string"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "apiVersion": {
+            "type": "string"
+          },
+          "availabilityValidationState": {
+            "$ref": "#/components/schemas/OnboardingValidationStateDto"
+          },
+          "permissionValidationState": {
+            "$ref": "#/components/schemas/OnboardingValidationStateDto"
+          },
+          "capabilityValidationState": {
+            "$ref": "#/components/schemas/OnboardingValidationStateDto"
+          },
+          "lastSuccessfulValidationAtUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastAttemptedValidationAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validationFailureReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastVerifiedCapabilitiesSummary": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingValidationStateDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OnboardingValidationStatus"
+          },
+          "checkedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validatedFrom": {
+            "$ref": "#/components/schemas/OnboardingValidationSource"
+          },
+          "errorCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "errorMessageSanitized": {
+            "type": "string",
+            "nullable": true
+          },
+          "warningCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "permissionScopeSummary": {
+            "type": "string",
+            "nullable": true
+          },
+          "capabilitySummary": {
+            "type": "string",
+            "nullable": true
+          },
+          "notFoundExternalId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingValidationStatus": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Unknown",
+          "Valid",
+          "Invalid",
+          "Unavailable",
+          "PermissionDenied",
+          "CapabilityDenied"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "OnboardingValidationSource": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Live",
+          "SnapshotOnly"
+        ],
+        "enum": [
+          0,
+          1
+        ]
+      },
+      "OnboardingEntityStatusDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+          },
+          "blockingReasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStatusIssueDto"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStatusIssueDto"
+            }
+          }
+        }
+      },
+      "OnboardingConfigurationStatus": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "NotConfigured",
+          "PartiallyConfigured",
+          "Complete"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "OnboardingStatusIssueDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "entityType": {
+            "type": "string",
+            "nullable": true
+          },
+          "entityExternalId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingAuditDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "createdAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletedAtUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "deletionReason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfOnboardingTfsConnectionDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingTfsConnectionDto"
+              }
+            ]
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateTfsConnectionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "organizationUrl": {
+            "type": "string"
+          },
+          "authenticationMode": {
+            "type": "string"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "apiVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateTfsConnectionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "authenticationMode": {
+            "type": "string",
+            "nullable": true
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "apiVersion": {
+            "type": "string",
+            "nullable": true
+          },
+          "connectionKey": {
+            "type": "string",
+            "nullable": true
+          },
+          "organizationUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfOnboardingSoftDeleteResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingSoftDeleteResultDto"
+              }
+            ]
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OnboardingSoftDeleteResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deletedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "deletionReason": {
+            "type": "string"
+          }
+        }
+      },
+      "OnboardingSoftDeleteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingProjectSourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/OnboardingProjectSourceDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OnboardingProjectSourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tfsConnectionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectExternalId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ProjectSnapshotDto"
+          },
+          "validationState": {
+            "$ref": "#/components/schemas/OnboardingValidationStateDto"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingEntityStatusDto"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/OnboardingAuditDto"
+          }
+        }
+      },
+      "ProjectSnapshotDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectExternalId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/SnapshotMetadataDto"
+          }
+        }
+      },
+      "SnapshotMetadataDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "confirmedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isCurrent": {
+            "type": "boolean"
+          },
+          "renameDetected": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "staleReason": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfOnboardingProjectSourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingProjectSourceDto"
+              }
+            ]
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateProjectSourceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tfsConnectionId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectExternalId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateProjectSourceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "tfsConnectionId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "projectExternalId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingTeamSourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/OnboardingTeamSourceDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OnboardingTeamSourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamExternalId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/TeamSnapshotDto"
+          },
+          "validationState": {
+            "$ref": "#/components/schemas/OnboardingValidationStateDto"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingEntityStatusDto"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/OnboardingAuditDto"
+          }
+        }
+      },
+      "TeamSnapshotDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamExternalId": {
+            "type": "string"
+          },
+          "projectExternalId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "defaultAreaPath": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/SnapshotMetadataDto"
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfOnboardingTeamSourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingTeamSourceDto"
+              }
+            ]
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateTeamSourceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamExternalId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "defaultAreaPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateTeamSourceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "defaultAreaPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "teamExternalId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingPipelineSourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/OnboardingPipelineSourceDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OnboardingPipelineSourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineExternalId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/PipelineSnapshotDto"
+          },
+          "validationState": {
+            "$ref": "#/components/schemas/OnboardingValidationStateDto"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingEntityStatusDto"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/OnboardingAuditDto"
+          }
+        }
+      },
+      "PipelineSnapshotDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pipelineExternalId": {
+            "type": "string"
+          },
+          "projectExternalId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string",
+            "nullable": true
+          },
+          "yamlPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryExternalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/SnapshotMetadataDto"
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfOnboardingPipelineSourceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingPipelineSourceDto"
+              }
+            ]
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreatePipelineSourceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineExternalId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "folder": {
+            "type": "string",
+            "nullable": true
+          },
+          "yamlPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryExternalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryName": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdatePipelineSourceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "folder": {
+            "type": "string",
+            "nullable": true
+          },
+          "yamlPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryExternalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryName": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pipelineExternalId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingProductRootDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/OnboardingProductRootDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OnboardingProductRootDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemExternalId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ProductRootSnapshotDto"
+          },
+          "validationState": {
+            "$ref": "#/components/schemas/OnboardingValidationStateDto"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingEntityStatusDto"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/OnboardingAuditDto"
+          }
+        }
+      },
+      "ProductRootSnapshotDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemExternalId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "workItemType": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "projectExternalId": {
+            "type": "string"
+          },
+          "areaPath": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/SnapshotMetadataDto"
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfOnboardingProductRootDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingProductRootDto"
+              }
+            ]
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateProductRootRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "workItemExternalId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "workItemType": {
+            "type": "string",
+            "nullable": true
+          },
+          "state": {
+            "type": "string",
+            "nullable": true
+          },
+          "areaPath": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "UpdateProductRootRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "workItemType": {
+            "type": "string",
+            "nullable": true
+          },
+          "state": {
+            "type": "string",
+            "nullable": true
+          },
+          "areaPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "workItemExternalId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfOnboardingProductSourceBindingDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/OnboardingProductSourceBindingDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OnboardingProductSourceBindingDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productRootId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pipelineSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/OnboardingProductSourceTypeDto"
+          },
+          "sourceExternalId": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "validationState": {
+            "$ref": "#/components/schemas/OnboardingValidationStateDto"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OnboardingEntityStatusDto"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/OnboardingAuditDto"
+          }
+        }
+      },
+      "OnboardingProductSourceTypeDto": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Project",
+          "Team",
+          "Pipeline"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "OnboardingSuccessEnvelopeOfOnboardingProductSourceBindingDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingProductSourceBindingDto"
+              }
+            ]
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateProductSourceBindingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "productRootId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sourceType": {
+            "$ref": "#/components/schemas/OnboardingProductSourceTypeDto"
+          },
+          "teamSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pipelineSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateProductSourceBindingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "productRootId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "projectSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "teamSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "pipelineSourceId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "sourceType": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingProductSourceTypeDto"
+              }
+            ]
+          },
+          "sourceExternalId": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfProjectLookupResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/ProjectLookupResultDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ProjectLookupResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectExternalId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingErrorDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/OnboardingErrorCode"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string",
+            "nullable": true
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OnboardingErrorCode": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "ValidationFailed",
+          "NotFound",
+          "PermissionDenied",
+          "TfsUnavailable",
+          "Conflict",
+          "DependencyViolation"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfTeamLookupResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/TeamLookupResultDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamLookupResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "teamExternalId": {
+            "type": "string"
+          },
+          "projectExternalId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "defaultAreaPath": {
+            "type": "string"
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfPipelineLookupResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "$ref": "#/components/schemas/PipelineLookupResultDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PipelineLookupResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "pipelineExternalId": {
+            "type": "string"
+          },
+          "projectExternalId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "folder": {
+            "type": "string",
+            "nullable": true
+          },
+          "yamlPath": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryExternalId": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryName": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfIReadOnlyListOfWorkItemLookupResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkItemLookupResultDto"
+            }
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "WorkItemLookupResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workItemExternalId": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "workItemType": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "projectExternalId": {
+            "type": "string"
+          },
+          "areaPath": {
+            "type": "string"
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfWorkItemLookupResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/WorkItemLookupResultDto"
+              }
+            ]
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OnboardingSuccessEnvelopeOfOnboardingStatusDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "nullable": true,
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OnboardingStatusDto"
+              }
+            ]
+          },
+          "timestampUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OnboardingStatusDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "overallStatus": {
+            "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+          },
+          "connectionStatus": {
+            "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+          },
+          "dataSourceSetupStatus": {
+            "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+          },
+          "domainConfigurationStatus": {
+            "$ref": "#/components/schemas/OnboardingConfigurationStatus"
+          },
+          "blockingReasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStatusIssueDto"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OnboardingStatusIssueDto"
+            }
+          },
+          "counts": {
+            "$ref": "#/components/schemas/OnboardingStatusCountsDto"
+          }
+        }
+      },
+      "OnboardingStatusCountsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectSourcesTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "projectSourcesValid": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamSourcesTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "teamSourcesValid": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineSourcesTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pipelineSourcesValid": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productRootsTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "productRootsValid": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bindingsTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bindingsValid": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
