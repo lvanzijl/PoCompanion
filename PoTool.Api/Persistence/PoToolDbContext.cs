@@ -307,6 +307,21 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<ProductSourceBinding> OnboardingProductSourceBindings => Set<ProductSourceBinding>();
 
+    /// <summary>
+    /// Persisted onboarding migration runs.
+    /// </summary>
+    public DbSet<MigrationRun> OnboardingMigrationRuns => Set<MigrationRun>();
+
+    /// <summary>
+    /// Persisted onboarding migration units.
+    /// </summary>
+    public DbSet<MigrationUnit> OnboardingMigrationUnits => Set<MigrationUnit>();
+
+    /// <summary>
+    /// Persisted onboarding migration issues.
+    /// </summary>
+    public DbSet<MigrationIssue> OnboardingMigrationIssues => Set<MigrationIssue>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
