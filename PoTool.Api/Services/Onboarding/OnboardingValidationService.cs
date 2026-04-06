@@ -5,11 +5,43 @@ namespace PoTool.Api.Services.Onboarding;
 
 public interface IOnboardingValidationService
 {
-    Task<OnboardingOperationResult<TfsConnectionValidationResultDto>> ValidateConnectionAsync(TfsConnection connection, CancellationToken cancellationToken);
-    Task<OnboardingOperationResult<ProjectSourceValidationResultDto>> ValidateProjectSourceAsync(TfsConnection connection, ProjectSource projectSource, CancellationToken cancellationToken);
-    Task<OnboardingOperationResult<TeamSourceValidationResultDto>> ValidateTeamSourceAsync(TfsConnection connection, ProjectSource projectSource, TeamSource teamSource, CancellationToken cancellationToken);
-    Task<OnboardingOperationResult<PipelineSourceValidationResultDto>> ValidatePipelineSourceAsync(TfsConnection connection, ProjectSource projectSource, PipelineSource pipelineSource, CancellationToken cancellationToken);
-    Task<OnboardingOperationResult<ProductRootValidationResultDto>> ValidateProductRootAsync(TfsConnection connection, ProjectSource projectSource, ProductRoot productRoot, CancellationToken cancellationToken);
+    Task<OnboardingOperationResult<TfsConnectionValidationResultDto>> ValidateConnectionAsync(
+        TfsConnection connection,
+        CancellationToken cancellationToken,
+        OnboardingOperationResult<IReadOnlyList<ProjectLookupResultDto>>? projectsLookup = null,
+        DateTime? validationTimestampUtc = null);
+
+    Task<OnboardingOperationResult<ProjectSourceValidationResultDto>> ValidateProjectSourceAsync(
+        TfsConnection connection,
+        ProjectSource projectSource,
+        CancellationToken cancellationToken,
+        IReadOnlyList<ProjectLookupResultDto>? projects = null,
+        DateTime? validationTimestampUtc = null);
+
+    Task<OnboardingOperationResult<TeamSourceValidationResultDto>> ValidateTeamSourceAsync(
+        TfsConnection connection,
+        ProjectSource projectSource,
+        TeamSource teamSource,
+        CancellationToken cancellationToken,
+        IReadOnlyList<TeamLookupResultDto>? teams = null,
+        DateTime? validationTimestampUtc = null);
+
+    Task<OnboardingOperationResult<PipelineSourceValidationResultDto>> ValidatePipelineSourceAsync(
+        TfsConnection connection,
+        ProjectSource projectSource,
+        PipelineSource pipelineSource,
+        CancellationToken cancellationToken,
+        IReadOnlyList<PipelineLookupResultDto>? pipelines = null,
+        DateTime? validationTimestampUtc = null);
+
+    Task<OnboardingOperationResult<ProductRootValidationResultDto>> ValidateProductRootAsync(
+        TfsConnection connection,
+        ProjectSource projectSource,
+        ProductRoot productRoot,
+        CancellationToken cancellationToken,
+        OnboardingOperationResult<WorkItemLookupResultDto>? workItemLookup = null,
+        DateTime? validationTimestampUtc = null);
+
     Task<OnboardingOperationResult<ProductSourceBindingValidationResultDto>> ValidateProductSourceBindingAsync(
         TfsConnection connection,
         ProjectSource projectSource,
@@ -17,7 +49,11 @@ public interface IOnboardingValidationService
         ProductSourceBinding binding,
         TeamSource? teamSource,
         PipelineSource? pipelineSource,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        OnboardingOperationResult<WorkItemLookupResultDto>? productRootLookup = null,
+        IReadOnlyList<TeamLookupResultDto>? teams = null,
+        IReadOnlyList<PipelineLookupResultDto>? pipelines = null,
+        DateTime? validationTimestampUtc = null);
 }
 
 public sealed class OnboardingValidationService : IOnboardingValidationService
@@ -25,21 +61,28 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
     private readonly IOnboardingLiveLookupClient _liveLookupClient;
     private readonly IOnboardingSnapshotMapper _snapshotMapper;
     private readonly IOnboardingObservability _observability;
+    private readonly Func<DateTime> _utcNowProvider;
 
     public OnboardingValidationService(
         IOnboardingLiveLookupClient liveLookupClient,
         IOnboardingSnapshotMapper snapshotMapper,
-        IOnboardingObservability observability)
+        IOnboardingObservability observability,
+        Func<DateTime>? utcNowProvider = null)
     {
         _liveLookupClient = liveLookupClient;
         _snapshotMapper = snapshotMapper;
         _observability = observability;
+        _utcNowProvider = utcNowProvider ?? (() => DateTime.UtcNow);
     }
 
-    public async Task<OnboardingOperationResult<TfsConnectionValidationResultDto>> ValidateConnectionAsync(TfsConnection connection, CancellationToken cancellationToken)
+    public async Task<OnboardingOperationResult<TfsConnectionValidationResultDto>> ValidateConnectionAsync(
+        TfsConnection connection,
+        CancellationToken cancellationToken,
+        OnboardingOperationResult<IReadOnlyList<ProjectLookupResultDto>>? projectsLookup = null,
+        DateTime? validationTimestampUtc = null)
     {
-        var utcNow = DateTime.UtcNow;
-        var projectsResult = await _liveLookupClient.GetProjectsAsync(connection, null, 1, 0, cancellationToken);
+        var utcNow = ResolveTimestamp(validationTimestampUtc);
+        var projectsResult = projectsLookup ?? await _liveLookupClient.GetProjectsAsync(connection, null, 1, 0, cancellationToken);
         if (projectsResult.Succeeded)
         {
             return Complete("TfsConnection", OnboardingOperationResult<TfsConnectionValidationResultDto>.Success(new TfsConnectionValidationResultDto(
@@ -85,9 +128,16 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
             null));
     }
 
-    public async Task<OnboardingOperationResult<ProjectSourceValidationResultDto>> ValidateProjectSourceAsync(TfsConnection connection, ProjectSource projectSource, CancellationToken cancellationToken)
+    public async Task<OnboardingOperationResult<ProjectSourceValidationResultDto>> ValidateProjectSourceAsync(
+        TfsConnection connection,
+        ProjectSource projectSource,
+        CancellationToken cancellationToken,
+        IReadOnlyList<ProjectLookupResultDto>? projects = null,
+        DateTime? validationTimestampUtc = null)
     {
-        var lookup = await _liveLookupClient.GetProjectsAsync(connection, null, int.MaxValue, 0, cancellationToken);
+        var lookup = projects is null
+            ? await _liveLookupClient.GetProjectsAsync(connection, null, int.MaxValue, 0, cancellationToken)
+            : OnboardingOperationResult<IReadOnlyList<ProjectLookupResultDto>>.Success(projects);
         if (!lookup.Succeeded)
         {
             return Complete("ProjectSource", OnboardingOperationResult<ProjectSourceValidationResultDto>.Failure(lookup.Error!));
@@ -101,16 +151,24 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
                 projectSource.ProjectExternalId)));
         }
 
-        var utcNow = DateTime.UtcNow;
+        var utcNow = ResolveTimestamp(validationTimestampUtc);
         return Complete("ProjectSource", OnboardingOperationResult<ProjectSourceValidationResultDto>.Success(new ProjectSourceValidationResultDto(
             project.ProjectExternalId,
             _snapshotMapper.MapProjectSnapshot(project, utcNow),
             CreateValidationState(OnboardingValidationStatus.Valid, utcNow))));
     }
 
-    public async Task<OnboardingOperationResult<TeamSourceValidationResultDto>> ValidateTeamSourceAsync(TfsConnection connection, ProjectSource projectSource, TeamSource teamSource, CancellationToken cancellationToken)
+    public async Task<OnboardingOperationResult<TeamSourceValidationResultDto>> ValidateTeamSourceAsync(
+        TfsConnection connection,
+        ProjectSource projectSource,
+        TeamSource teamSource,
+        CancellationToken cancellationToken,
+        IReadOnlyList<TeamLookupResultDto>? teams = null,
+        DateTime? validationTimestampUtc = null)
     {
-        var lookup = await _liveLookupClient.GetTeamsAsync(connection, projectSource.ProjectExternalId, null, int.MaxValue, 0, cancellationToken);
+        var lookup = teams is null
+            ? await _liveLookupClient.GetTeamsAsync(connection, projectSource.ProjectExternalId, null, int.MaxValue, 0, cancellationToken)
+            : OnboardingOperationResult<IReadOnlyList<TeamLookupResultDto>>.Success(teams);
         if (!lookup.Succeeded)
         {
             return Complete("TeamSource", OnboardingOperationResult<TeamSourceValidationResultDto>.Failure(lookup.Error!));
@@ -138,7 +196,7 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
                 team.TeamExternalId)));
         }
 
-        var utcNow = DateTime.UtcNow;
+        var utcNow = ResolveTimestamp(validationTimestampUtc);
         return Complete("TeamSource", OnboardingOperationResult<TeamSourceValidationResultDto>.Success(new TeamSourceValidationResultDto(
             team.TeamExternalId,
             team.ProjectExternalId,
@@ -146,9 +204,17 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
             CreateValidationState(OnboardingValidationStatus.Valid, utcNow))));
     }
 
-    public async Task<OnboardingOperationResult<PipelineSourceValidationResultDto>> ValidatePipelineSourceAsync(TfsConnection connection, ProjectSource projectSource, PipelineSource pipelineSource, CancellationToken cancellationToken)
+    public async Task<OnboardingOperationResult<PipelineSourceValidationResultDto>> ValidatePipelineSourceAsync(
+        TfsConnection connection,
+        ProjectSource projectSource,
+        PipelineSource pipelineSource,
+        CancellationToken cancellationToken,
+        IReadOnlyList<PipelineLookupResultDto>? pipelines = null,
+        DateTime? validationTimestampUtc = null)
     {
-        var lookup = await _liveLookupClient.GetPipelinesAsync(connection, projectSource.ProjectExternalId, null, int.MaxValue, 0, cancellationToken);
+        var lookup = pipelines is null
+            ? await _liveLookupClient.GetPipelinesAsync(connection, projectSource.ProjectExternalId, null, int.MaxValue, 0, cancellationToken)
+            : OnboardingOperationResult<IReadOnlyList<PipelineLookupResultDto>>.Success(pipelines);
         if (!lookup.Succeeded)
         {
             return Complete("PipelineSource", OnboardingOperationResult<PipelineSourceValidationResultDto>.Failure(lookup.Error!));
@@ -176,7 +242,7 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
                 pipeline.PipelineExternalId)));
         }
 
-        var utcNow = DateTime.UtcNow;
+        var utcNow = ResolveTimestamp(validationTimestampUtc);
         return Complete("PipelineSource", OnboardingOperationResult<PipelineSourceValidationResultDto>.Success(new PipelineSourceValidationResultDto(
             pipeline.PipelineExternalId,
             pipeline.ProjectExternalId,
@@ -184,9 +250,15 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
             CreateValidationState(OnboardingValidationStatus.Valid, utcNow))));
     }
 
-    public async Task<OnboardingOperationResult<ProductRootValidationResultDto>> ValidateProductRootAsync(TfsConnection connection, ProjectSource projectSource, ProductRoot productRoot, CancellationToken cancellationToken)
+    public async Task<OnboardingOperationResult<ProductRootValidationResultDto>> ValidateProductRootAsync(
+        TfsConnection connection,
+        ProjectSource projectSource,
+        ProductRoot productRoot,
+        CancellationToken cancellationToken,
+        OnboardingOperationResult<WorkItemLookupResultDto>? workItemLookup = null,
+        DateTime? validationTimestampUtc = null)
     {
-        var lookup = await _liveLookupClient.GetWorkItemAsync(connection, productRoot.WorkItemExternalId, cancellationToken);
+        var lookup = workItemLookup ?? await _liveLookupClient.GetWorkItemAsync(connection, productRoot.WorkItemExternalId, cancellationToken);
         if (!lookup.Succeeded)
         {
             return Complete("ProductRoot", OnboardingOperationResult<ProductRootValidationResultDto>.Failure(lookup.Error!));
@@ -207,7 +279,7 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
                 workItem.WorkItemExternalId)));
         }
 
-        var utcNow = DateTime.UtcNow;
+        var utcNow = ResolveTimestamp(validationTimestampUtc);
         return Complete("ProductRoot", OnboardingOperationResult<ProductRootValidationResultDto>.Success(new ProductRootValidationResultDto(
             workItem.WorkItemExternalId,
             _snapshotMapper.MapProductRootSnapshot(workItem, utcNow),
@@ -221,12 +293,21 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
         ProductSourceBinding binding,
         TeamSource? teamSource,
         PipelineSource? pipelineSource,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        OnboardingOperationResult<WorkItemLookupResultDto>? productRootLookup = null,
+        IReadOnlyList<TeamLookupResultDto>? teams = null,
+        IReadOnlyList<PipelineLookupResultDto>? pipelines = null,
+        DateTime? validationTimestampUtc = null)
     {
-        var rootValidation = await ValidateProductRootAsync(connection, projectSource, productRoot, cancellationToken);
-        if (!rootValidation.Succeeded)
+        var utcNow = ResolveTimestamp(validationTimestampUtc);
+
+        if (!IsValidationStateValid(productRoot.ValidationState))
         {
-            return Complete("ProductSourceBinding", OnboardingOperationResult<ProductSourceBindingValidationResultDto>.Failure(rootValidation.Error!));
+            var rootValidation = await ValidateProductRootAsync(connection, projectSource, productRoot, cancellationToken, productRootLookup, utcNow);
+            if (!rootValidation.Succeeded)
+            {
+                return Complete("ProductSourceBinding", OnboardingOperationResult<ProductSourceBindingValidationResultDto>.Failure(rootValidation.Error!));
+            }
         }
 
         switch (binding.SourceType)
@@ -248,10 +329,13 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
                         binding.SourceExternalId)));
                 }
 
-                var teamValidation = await ValidateTeamSourceAsync(connection, projectSource, teamSource, cancellationToken);
-                if (!teamValidation.Succeeded)
+                if (!IsValidationStateValid(teamSource.ValidationState))
                 {
-                    return Complete("ProductSourceBinding", OnboardingOperationResult<ProductSourceBindingValidationResultDto>.Failure(teamValidation.Error!));
+                    var teamValidation = await ValidateTeamSourceAsync(connection, projectSource, teamSource, cancellationToken, teams, utcNow);
+                    if (!teamValidation.Succeeded)
+                    {
+                        return Complete("ProductSourceBinding", OnboardingOperationResult<ProductSourceBindingValidationResultDto>.Failure(teamValidation.Error!));
+                    }
                 }
 
                 if (!binding.SourceExternalId.Equals(teamSource.TeamExternalId, StringComparison.OrdinalIgnoreCase) || teamSource.ProjectSourceId != projectSource.Id)
@@ -270,10 +354,13 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
                         binding.SourceExternalId)));
                 }
 
-                var pipelineValidation = await ValidatePipelineSourceAsync(connection, projectSource, pipelineSource, cancellationToken);
-                if (!pipelineValidation.Succeeded)
+                if (!IsValidationStateValid(pipelineSource.ValidationState))
                 {
-                    return Complete("ProductSourceBinding", OnboardingOperationResult<ProductSourceBindingValidationResultDto>.Failure(pipelineValidation.Error!));
+                    var pipelineValidation = await ValidatePipelineSourceAsync(connection, projectSource, pipelineSource, cancellationToken, pipelines, utcNow);
+                    if (!pipelineValidation.Succeeded)
+                    {
+                        return Complete("ProductSourceBinding", OnboardingOperationResult<ProductSourceBindingValidationResultDto>.Failure(pipelineValidation.Error!));
+                    }
                 }
 
                 if (!binding.SourceExternalId.Equals(pipelineSource.PipelineExternalId, StringComparison.OrdinalIgnoreCase) || pipelineSource.ProjectSourceId != projectSource.Id)
@@ -290,7 +377,6 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
                     binding.SourceType.ToString())));
         }
 
-        var utcNow = DateTime.UtcNow;
         return Complete("ProductSourceBinding", OnboardingOperationResult<ProductSourceBindingValidationResultDto>.Success(new ProductSourceBindingValidationResultDto(
             productRoot.WorkItemExternalId,
             binding.SourceType switch
@@ -311,6 +397,12 @@ public sealed class OnboardingValidationService : IOnboardingValidationService
         _observability.LogValidationCompleted(entityType, result.Succeeded, result.Error?.Code);
         return result;
     }
+
+    private DateTime ResolveTimestamp(DateTime? validationTimestampUtc)
+        => validationTimestampUtc ?? _utcNowProvider();
+
+    private static bool IsValidationStateValid(OnboardingValidationState validationState)
+        => validationState.Status.Equals(nameof(OnboardingValidationStatus.Valid), StringComparison.Ordinal);
 
     private static OnboardingValidationStateDto CreateValidationState(
         OnboardingValidationStatus status,

@@ -4,6 +4,7 @@ public enum OnboardingMigrationRunStatus
 {
     NotStarted,
     Running,
+    NoOp,
     Succeeded,
     Failed,
     PartiallySucceeded,

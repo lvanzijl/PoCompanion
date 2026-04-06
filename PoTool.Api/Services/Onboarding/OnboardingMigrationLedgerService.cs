@@ -387,6 +387,11 @@ public sealed class OnboardingMigrationLedgerService : IOnboardingMigrationLedge
             return OnboardingMigrationRunStatus.Succeeded;
         }
 
+        if (unitList.All(unit => unit.Status == OnboardingMigrationUnitStatus.Skipped))
+        {
+            return OnboardingMigrationRunStatus.NoOp;
+        }
+
         var failedCount = unitList.Count(unit => unit.Status == OnboardingMigrationUnitStatus.Failed);
         if (failedCount == 0)
         {
