@@ -202,6 +202,11 @@ public class OnboardingWorkspaceViewModelFactoryTests
         Assert.AreEqual(OnboardingGraphSection.Projects, projectProblem.GraphSection);
         Assert.AreEqual("project-10", projectProblem.TargetElementId);
         Assert.AreEqual("Link project to connection", projectProblem.SuggestedAction);
+        Assert.AreEqual("link-project", projectProblem.ExecutionIntent.IntentType);
+        Assert.AreEqual(OnboardingExecutionConfidenceLevel.High, projectProblem.ExecutionIntent.ConfidenceLevel);
+        Assert.AreEqual(1, projectProblem.ConnectionId);
+        Assert.AreEqual(10, projectProblem.ProjectId);
+        StringAssert.Contains(projectProblem.ExecutionIntent.NavigationTarget.Route, "onboardingProjectId=10");
         StringAssert.Contains(projectProblem.ExpectedImpact, "project");
 
         var teamProblem = result.ProblemGroups
@@ -214,6 +219,7 @@ public class OnboardingWorkspaceViewModelFactoryTests
         Assert.AreEqual("Project Project One", teamProblem.RootCauseEntity);
         Assert.AreEqual("project-10", teamProblem.RootCauseTargetElementId);
         Assert.AreEqual("Resolve validation issue", teamProblem.SuggestedAction);
+        Assert.AreEqual(OnboardingExecutionConfidenceLevel.Fallback, teamProblem.ExecutionIntent.ConfidenceLevel);
     }
 
     [TestMethod]
@@ -259,6 +265,8 @@ public class OnboardingWorkspaceViewModelFactoryTests
         Assert.AreEqual(1, result.RootCauseGroups[0].DerivedIssueCount);
         Assert.AreEqual("root-13", result.RootCauseGroups[0].TargetElementId);
         Assert.AreEqual("Link project to connection", result.RootCauseGroups[0].SuggestedAction);
+        Assert.AreEqual("link-project", result.RootCauseGroups[0].ExecutionIntent.IntentType);
+        Assert.AreEqual(13, result.RootCauseGroups[0].ExecutionIntent.RootId);
     }
 
     [TestMethod]
@@ -336,6 +344,7 @@ public class OnboardingWorkspaceViewModelFactoryTests
         Assert.IsTrue(result.GraphSections.Single(section => section.Section == OnboardingGraphSection.Bindings).DefaultExpanded);
         Assert.AreEqual("root-13", result.ProblemSummary?.TopBlockers[0].TargetElementId);
         Assert.AreEqual("binding-14", result.ProblemGroups.Single().Items[0].TargetElementId);
+        StringAssert.Contains(result.ProblemGroups.Single().Items[0].ExecutionIntent.NavigationTarget.Route, "onboardingRootId=13");
     }
 
     private static OnboardingWorkspaceData CreateWorkspaceData(

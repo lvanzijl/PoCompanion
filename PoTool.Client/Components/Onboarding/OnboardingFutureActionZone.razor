@@ -1,0 +1,11 @@
+<MudPaper Elevation="0" Class="pa-3 mt-2" Style="border: 1px dashed var(--mud-palette-lines-default);">
+    <MudStack Spacing="1">
+        <MudText Typo="Typo.subtitle2">@Title</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">@Message</MudText>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Message { get; set; } = string.Empty;
+}

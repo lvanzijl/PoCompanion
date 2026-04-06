@@ -85,6 +85,42 @@ public enum OnboardingGraphSection
     Bindings
 }
 
+public enum OnboardingExecutionConfidenceLevel
+{
+    High,
+    Medium,
+    Fallback
+}
+
+public static class OnboardingExecutionIntentQueryKeys
+{
+    public const string ConnectionId = "onboardingConnectionId";
+    public const string ProjectId = "onboardingProjectId";
+    public const string RootId = "onboardingRootId";
+    public const string BindingId = "onboardingBindingId";
+    public const string Section = "onboardingSection";
+    public const string TargetElementId = "onboardingTarget";
+    public const string IntentType = "onboardingIntentType";
+}
+
+public sealed record ExecutionIntentNavigationTargetViewModel(
+    string Route,
+    string AnchorId,
+    OnboardingGraphSection Section,
+    string TargetElementId,
+    IReadOnlyList<OnboardingGraphSection> ExpandedSections);
+
+public sealed record ExecutionIntentViewModel(
+    string IntentType,
+    OnboardingProblemScope TargetScope,
+    int? ConnectionId,
+    int? ProjectId,
+    int? RootId,
+    int? BindingId,
+    string SuggestedActionLabel,
+    OnboardingExecutionConfidenceLevel ConfidenceLevel,
+    ExecutionIntentNavigationTargetViewModel NavigationTarget);
+
 public sealed record ActionableProblemViewModel(
     string ProblemKey,
     string Title,
@@ -103,7 +139,12 @@ public sealed record ActionableProblemViewModel(
     string RootCauseEntity,
     OnboardingGraphSection RootCauseGraphSection,
     string RootCauseTargetElementId,
-    string RootCauseLabel);
+    string RootCauseLabel,
+    int? ConnectionId,
+    int? ProjectId,
+    int? RootId,
+    int? BindingId,
+    ExecutionIntentViewModel ExecutionIntent);
 
 public sealed record OnboardingProblemGroupViewModel(
     OnboardingProblemScope Scope,
@@ -125,7 +166,8 @@ public sealed record OnboardingRootCauseGroupViewModel(
     OnboardingGraphSection GraphSection,
     string TargetElementId,
     ActionableProblemViewModel PrimaryProblem,
-    IReadOnlyList<ActionableProblemViewModel> Items);
+    IReadOnlyList<ActionableProblemViewModel> Items,
+    ExecutionIntentViewModel ExecutionIntent);
 
 public sealed record OnboardingProblemSummaryViewModel(
     IReadOnlyList<OnboardingRootCauseGroupViewModel> TopBlockers,

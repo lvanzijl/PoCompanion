@@ -1,6 +1,8 @@
 @page "/home/onboarding"
+@using System.Web
 @using Microsoft.AspNetCore.Components.Rendering
 @using PoTool.Client.Components.Onboarding
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Shared.Onboarding
 @inherits WorkspaceBase
@@ -21,7 +23,7 @@
                         <MudText Typo="Typo.h4">Onboarding Workspace</MudText>
                     </MudStack>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Read-only onboarding workspace. Use graph view for structure and problem-first view to see what should be fixed first.
+                        Read-only onboarding workspace. Use graph view for structure, problem-first view for priorities, and fix-location navigation to reach the right execution context without mutating data.
                     </MudText>
                 </MudStack>
 
@@ -203,7 +205,7 @@
                                     @foreach (var problem in _viewModel.ProblemSummary.TopBlockers)
                                     {
                                      <MudItem xs="12" md="6">
-                                            <OnboardingRootCauseCard RootCause="@problem" OnNavigate="NavigateToRootCauseAsync" />
+                                            <OnboardingRootCauseCard RootCause="@problem" OnNavigate="GoToFixLocationAsync" />
                                      </MudItem>
                                  }
                              </MudGrid>
@@ -235,9 +237,11 @@
     private bool _productRootsExpanded;
     private bool _bindingsExpanded;
     private string? _pendingScrollTarget;
+    private string? _highlightedTargetElementId;
     private OnboardingWorkspaceViewMode _viewMode = OnboardingWorkspaceViewMode.Graph;
     private OnboardingWorkspaceFilter _filter = new(null, null, null, null);
     private OnboardingWorkspaceViewModel _viewModel = null!;
+    private PendingExecutionNavigation? _pendingExecutionNavigation;
 
     protected override void OnInitialized()
     {
@@ -325,6 +329,7 @@
     {
         _viewMode = OnboardingWorkspaceViewMode.Graph;
         ExpandSection(problem.GraphSection);
+        _highlightedTargetElementId = problem.TargetElementId;
         _pendingScrollTarget = problem.TargetElementId;
         await InvokeAsync(StateHasChanged);
     }
@@ -333,8 +338,26 @@
     {
         _viewMode = OnboardingWorkspaceViewMode.Graph;
         ExpandSection(rootCause.GraphSection);
+        _highlightedTargetElementId = rootCause.TargetElementId;
         _pendingScrollTarget = rootCause.TargetElementId;
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task GoToFixLocationAsync(ExecutionIntentViewModel intent)
+    {
+        _viewMode = OnboardingWorkspaceViewMode.Graph;
+        _filter = new OnboardingWorkspaceFilter(
+            intent.ConnectionId,
+            intent.ProjectId,
+            intent.RootId,
+            null);
+
+        _pendingExecutionNavigation = new PendingExecutionNavigation(
+            intent.NavigationTarget.TargetElementId,
+            intent.NavigationTarget.ExpandedSections);
+
+        NavigationManager.NavigateTo(intent.NavigationTarget.Route, replace: true);
+        await LoadAsync();
     }
 
     private async Task LoadAsync()
@@ -347,6 +370,7 @@
             var data = await OnboardingWorkspaceService.GetWorkspaceDataAsync(_filter);
             _viewModel = ViewModelFactory.Create(data);
             ApplyGraphSectionDefaults();
+            ApplyPendingExecutionNavigation();
         }
         catch (HttpRequestException exception)
         {
@@ -391,6 +415,73 @@
                 break;
         }
     }
+
+    protected override void ParseContextQueryParameters()
+    {
+        base.ParseContextQueryParameters();
+
+        var context = ParseExecutionNavigationContext(NavigationManager.Uri);
+        if (context is null)
+        {
+            return;
+        }
+
+        _filter = new OnboardingWorkspaceFilter(
+            context.ConnectionId,
+            context.ProjectId,
+            context.RootId,
+            null);
+
+        _pendingExecutionNavigation = new PendingExecutionNavigation(
+            context.TargetElementId,
+            [context.Section]);
+    }
+
+    private static ParsedExecutionNavigationContext? ParseExecutionNavigationContext(string uri)
+    {
+        var absoluteUri = Uri.TryCreate(uri, UriKind.Absolute, out var parsedAbsolute)
+            ? parsedAbsolute
+            : new Uri(new Uri("http://localhost"), uri);
+
+        var query = HttpUtility.ParseQueryString(absoluteUri.Query);
+        if (!Enum.TryParse<OnboardingGraphSection>(query[OnboardingExecutionIntentQueryKeys.Section], out var section))
+        {
+            return null;
+        }
+
+        var targetElementId = query[OnboardingExecutionIntentQueryKeys.TargetElementId];
+        if (string.IsNullOrWhiteSpace(targetElementId))
+        {
+            return null;
+        }
+
+        return new ParsedExecutionNavigationContext(
+            ParseNullableInt(query[OnboardingExecutionIntentQueryKeys.ConnectionId]),
+            ParseNullableInt(query[OnboardingExecutionIntentQueryKeys.ProjectId]),
+            ParseNullableInt(query[OnboardingExecutionIntentQueryKeys.RootId]),
+            section,
+            targetElementId);
+    }
+
+    private void ApplyPendingExecutionNavigation()
+    {
+        if (_pendingExecutionNavigation is null)
+        {
+            return;
+        }
+
+        foreach (var section in _pendingExecutionNavigation.ExpandedSections)
+        {
+            ExpandSection(section);
+        }
+
+        _highlightedTargetElementId = _pendingExecutionNavigation.TargetElementId;
+        _pendingScrollTarget = _pendingExecutionNavigation.TargetElementId;
+        _pendingExecutionNavigation = null;
+    }
+
+    private static int? ParseNullableInt(string? value)
+        => int.TryParse(value, out var parsed) ? parsed : null;
 
     private RenderFragment RenderProblemFirstView() => builder =>
     {
@@ -482,7 +573,7 @@
                                 {
                                     itemBuilder.OpenComponent<OnboardingProblemCard>(problemIndex++);
                                     itemBuilder.AddAttribute(problemIndex++, "Problem", problem);
-                                    itemBuilder.AddAttribute(problemIndex++, "OnNavigate", EventCallback.Factory.Create<ActionableProblemViewModel>(this, NavigateToProblemAsync));
+                                    itemBuilder.AddAttribute(problemIndex++, "OnNavigate", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
                                     itemBuilder.CloseComponent();
                                 }));
                                 gridBuilder.CloseComponent();
@@ -534,7 +625,7 @@
                     {
                         itemBuilder.OpenComponent<OnboardingRootCauseCard>(gridIndex++);
                         itemBuilder.AddAttribute(gridIndex++, "RootCause", item);
-                        itemBuilder.AddAttribute(gridIndex++, "OnNavigate", EventCallback.Factory.Create<OnboardingRootCauseGroupViewModel>(this, NavigateToRootCauseAsync));
+                        itemBuilder.AddAttribute(gridIndex++, "OnNavigate", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
                         itemBuilder.CloseComponent();
                     }));
                     gridBuilder.CloseComponent();
@@ -567,7 +658,7 @@
                         var stackIndex = 0;
                         stackBuilder.OpenComponent<OnboardingRootCauseCard>(stackIndex++);
                         stackBuilder.AddAttribute(stackIndex++, "RootCause", rootCause);
-                        stackBuilder.AddAttribute(stackIndex++, "OnNavigate", EventCallback.Factory.Create<OnboardingRootCauseGroupViewModel>(this, NavigateToRootCauseAsync));
+                        stackBuilder.AddAttribute(stackIndex++, "OnNavigate", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
                         stackBuilder.CloseComponent();
 
                         stackBuilder.OpenComponent<MudText>(stackIndex++);
@@ -589,7 +680,7 @@
                                 {
                                     itemBuilder.OpenComponent<OnboardingProblemCard>(gridIndex++);
                                     itemBuilder.AddAttribute(gridIndex++, "Problem", item);
-                                    itemBuilder.AddAttribute(gridIndex++, "OnNavigate", EventCallback.Factory.Create<ActionableProblemViewModel>(this, NavigateToProblemAsync));
+                                    itemBuilder.AddAttribute(gridIndex++, "OnNavigate", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
                                     itemBuilder.CloseComponent();
                                 }));
                                 gridBuilder.CloseComponent();
@@ -743,13 +834,21 @@
                         connection.Validation.AvailabilityValidationState,
                         connection.Validation.PermissionValidationState,
                         connection.Validation.CapabilityValidationState));
+                    itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"connection-{connection.Id}"));
+                    itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"connection-{connection.Id}"));
                     itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"connection-{connection.Id}"));
                     itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"connection-{connection.Id}"));
+                    itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"connection-{connection.Id}"));
+                    itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
                     itemBuilder.CloseComponent();
                 }));
                 gridBuilder.CloseComponent();
             }
         }));
+        builder.CloseComponent();
+        builder.OpenComponent<OnboardingFutureActionZone>(3);
+        builder.AddAttribute(4, "Title", "Future action zone");
+        builder.AddAttribute(5, "Message", "Connection execution controls will appear here in Slice 8.");
         builder.CloseComponent();
     };
 
@@ -787,13 +886,21 @@
                     itemBuilder.AddAttribute(index++, "ValidationState", project.ValidationState);
                     itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(project.Status, project.ValidationState));
                     itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(project.Status, project.ValidationState));
+                    itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"project-{project.Id}"));
+                    itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"project-{project.Id}"));
                     itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"project-{project.Id}"));
                     itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"project-{project.Id}"));
+                    itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"project-{project.Id}"));
+                    itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
                     itemBuilder.CloseComponent();
                 }));
                 gridBuilder.CloseComponent();
             }
         }));
+        builder.CloseComponent();
+        builder.OpenComponent<OnboardingFutureActionZone>(3);
+        builder.AddAttribute(4, "Title", "Future action zone");
+        builder.AddAttribute(5, "Message", "Project-linking controls will appear here in Slice 8.");
         builder.CloseComponent();
     };
 
@@ -801,6 +908,8 @@
         builder,
         _viewModel.TeamGroups,
         "No visible teams match the current filter.",
+        "Future action zone",
+        "Team-assignment controls will appear here in Slice 8.",
         (itemBuilder, index, group, team) =>
         {
             itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
@@ -817,8 +926,12 @@
             itemBuilder.AddAttribute(index++, "ValidationState", team.ValidationState);
             itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(team.Status, team.ValidationState));
             itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(team.Status, team.ValidationState));
+            itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"team-{team.Id}"));
+            itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"team-{team.Id}"));
             itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"team-{team.Id}"));
             itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"team-{team.Id}"));
+            itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"team-{team.Id}"));
+            itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
             itemBuilder.CloseComponent();
             return index;
         });
@@ -827,6 +940,8 @@
         builder,
         _viewModel.PipelineGroups,
         "No visible pipelines match the current filter.",
+        "Future action zone",
+        "Pipeline-assignment controls will appear here in Slice 8.",
         (itemBuilder, index, group, pipeline) =>
         {
             itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
@@ -844,8 +959,12 @@
             itemBuilder.AddAttribute(index++, "ValidationState", pipeline.ValidationState);
             itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(pipeline.Status, pipeline.ValidationState));
             itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(pipeline.Status, pipeline.ValidationState));
+            itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"pipeline-{pipeline.Id}"));
+            itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"pipeline-{pipeline.Id}"));
             itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"pipeline-{pipeline.Id}"));
             itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"pipeline-{pipeline.Id}"));
+            itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"pipeline-{pipeline.Id}"));
+            itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
             itemBuilder.CloseComponent();
             return index;
         });
@@ -854,6 +973,8 @@
         builder,
         _viewModel.ProductRootGroups,
         "No visible product roots match the current filter.",
+        "Future action zone",
+        "Root and binding execution controls will appear here in Slice 8.",
         (itemBuilder, index, group, root) =>
         {
             itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
@@ -871,8 +992,12 @@
             itemBuilder.AddAttribute(index++, "ValidationState", root.ValidationState);
             itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(root.Status, root.ValidationState));
             itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(root.Status, root.ValidationState));
+            itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"root-{root.Id}"));
+            itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"root-{root.Id}"));
             itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"root-{root.Id}"));
             itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"root-{root.Id}"));
+            itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"root-{root.Id}"));
+            itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
             itemBuilder.CloseComponent();
             return index;
         });
@@ -932,13 +1057,22 @@
                             itemBuilder.AddAttribute(cardIndex++, "ValidationState", binding.ValidationState);
                             itemBuilder.AddAttribute(cardIndex++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(binding.Status, binding.ValidationState));
                             itemBuilder.AddAttribute(cardIndex++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(binding.Status, binding.ValidationState));
+                            itemBuilder.AddAttribute(cardIndex++, "ExecutionIntent", GetExecutionIntent($"binding-{binding.Id}"));
+                            itemBuilder.AddAttribute(cardIndex++, "ConfidenceLevel", GetConfidenceLevel($"binding-{binding.Id}"));
                             itemBuilder.AddAttribute(cardIndex++, "SuggestedAction", GetSuggestedAction($"binding-{binding.Id}"));
                             itemBuilder.AddAttribute(cardIndex++, "RootCauseHint", GetRootCauseHint($"binding-{binding.Id}"));
+                            itemBuilder.AddAttribute(cardIndex++, "IsHighlighted", IsHighlighted($"binding-{binding.Id}"));
+                            itemBuilder.AddAttribute(cardIndex++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
                             itemBuilder.CloseComponent();
                         }));
                         gridBuilder.CloseComponent();
                     }
                 }));
+                groupBuilder.CloseComponent();
+
+                groupBuilder.OpenComponent<OnboardingFutureActionZone>(nested++);
+                groupBuilder.AddAttribute(nested++, "Title", "Future action zone");
+                groupBuilder.AddAttribute(nested++, "Message", "Binding execution controls will appear here in Slice 8.");
                 groupBuilder.CloseComponent();
             }));
             builder.CloseComponent();
@@ -949,6 +1083,8 @@
         RenderTreeBuilder builder,
         IReadOnlyList<OnboardingProjectGroupViewModel<TItem>> groups,
         string emptyMessage,
+        string? placeholderTitle,
+        string? placeholderMessage,
         Func<RenderTreeBuilder, int, OnboardingProjectGroupViewModel<TItem>, TItem, int> renderItem)
     {
         if (groups.Count == 0)
@@ -989,6 +1125,14 @@
                     }
                 }));
                 groupBuilder.CloseComponent();
+
+                if (!string.IsNullOrWhiteSpace(placeholderTitle) && !string.IsNullOrWhiteSpace(placeholderMessage))
+                {
+                    groupBuilder.OpenComponent<OnboardingFutureActionZone>(nested++);
+                    groupBuilder.AddAttribute(nested++, "Title", placeholderTitle);
+                    groupBuilder.AddAttribute(nested++, "Message", placeholderMessage);
+                    groupBuilder.CloseComponent();
+                }
             }));
             builder.CloseComponent();
         }
@@ -1006,6 +1150,12 @@
     private string? GetSuggestedAction(string targetElementId)
         => GetPrimaryProblemForTarget(targetElementId)?.SuggestedAction;
 
+    private ExecutionIntentViewModel? GetExecutionIntent(string targetElementId)
+        => GetPrimaryProblemForTarget(targetElementId)?.ExecutionIntent;
+
+    private OnboardingExecutionConfidenceLevel? GetConfidenceLevel(string targetElementId)
+        => GetExecutionIntent(targetElementId)?.ConfidenceLevel;
+
     private string? GetRootCauseHint(string targetElementId)
     {
         var problem = GetPrimaryProblemForTarget(targetElementId);
@@ -1013,6 +1163,9 @@
             ? null
             : $"Part of root cause: {problem.RootCauseEntity}";
     }
+
+    private bool IsHighlighted(string targetElementId)
+        => string.Equals(_highlightedTargetElementId, targetElementId, StringComparison.Ordinal);
 
     private ActionableProblemViewModel? GetPrimaryProblemForTarget(string targetElementId)
         => _viewModel.ProblemGroups
@@ -1037,4 +1190,15 @@
     private OnboardingGraphSectionStateViewModel GetSectionState(OnboardingGraphSection section)
         => _viewModel.GraphSections.FirstOrDefault(item => item.Section == section)
            ?? new OnboardingGraphSectionStateViewModel(section, section.ToString(), $"section-{section}", 0, 0, false);
+
+    private sealed record PendingExecutionNavigation(
+        string TargetElementId,
+        IReadOnlyList<OnboardingGraphSection> ExpandedSections);
+
+    private sealed record ParsedExecutionNavigationContext(
+        int? ConnectionId,
+        int? ProjectId,
+        int? RootId,
+        OnboardingGraphSection Section,
+        string TargetElementId);
 }

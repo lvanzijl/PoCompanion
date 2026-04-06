@@ -19,6 +19,9 @@
 
         <MudText Typo="Typo.body2">Why: @RootCause.PrimaryProblem.Reason</MudText>
         <MudText Typo="Typo.body2">Next: @RootCause.SuggestedAction</MudText>
+        <MudChip T="string" Label="true" Size="Size.Small" Color="@ResolveConfidenceColor()">
+            Confidence: @RootCause.ExecutionIntent.ConfidenceLevel
+        </MudChip>
         <MudText Typo="Typo.caption" Color="Color.Secondary">Impact: @RootCause.ExpectedImpact</MudText>
 
         @if (RootCause.DerivedIssueCount > 0)
@@ -34,9 +37,9 @@
             </MudText>
 
             <CompactButton ButtonRole="ButtonRole.Utility"
-                           Icon="@Icons.Material.Filled.CenterFocusStrong"
-                           OnClick="@(() => OnNavigate.InvokeAsync(RootCause))">
-                Show in graph
+                           Icon="@Icons.Material.Filled.OpenInNew"
+                           OnClick="@(() => OnNavigate.InvokeAsync(RootCause.ExecutionIntent))">
+                Go to fix location
             </CompactButton>
         </MudStack>
     </MudStack>
@@ -44,7 +47,7 @@
 
 @code {
     [Parameter, EditorRequired] public OnboardingRootCauseGroupViewModel RootCause { get; set; } = default!;
-    [Parameter] public EventCallback<OnboardingRootCauseGroupViewModel> OnNavigate { get; set; }
+    [Parameter] public EventCallback<ExecutionIntentViewModel> OnNavigate { get; set; }
 
     private string ScopeLabel => RootCause.Scope switch
     {
@@ -65,4 +68,12 @@
         => RootCause.Severity == OnboardingProblemSeverity.Blocking
             ? Color.Error
             : Color.Warning;
+
+    private Color ResolveConfidenceColor()
+        => RootCause.ExecutionIntent.ConfidenceLevel switch
+        {
+            OnboardingExecutionConfidenceLevel.High => Color.Success,
+            OnboardingExecutionConfidenceLevel.Medium => Color.Warning,
+            _ => Color.Default
+        };
 }

@@ -20,6 +20,9 @@
         <MudText Typo="Typo.caption" Color="Color.Info">Where: @Problem.Location</MudText>
         <MudText Typo="Typo.body2">Why: @Problem.Reason</MudText>
         <MudText Typo="Typo.body2">Next: @Problem.SuggestedAction</MudText>
+        <MudChip T="string" Label="true" Size="Size.Small" Color="@ResolveConfidenceColor()">
+            Confidence: @Problem.ExecutionIntent.ConfidenceLevel
+        </MudChip>
         <MudText Typo="Typo.caption" Color="Color.Secondary">Impact: @Problem.ExpectedImpact</MudText>
 
         @if (Problem.ImpactedChildrenCount > 0)
@@ -42,9 +45,9 @@
             </MudText>
 
             <CompactButton ButtonRole="ButtonRole.Utility"
-                           Icon="@Icons.Material.Filled.CenterFocusStrong"
-                           OnClick="@(() => OnNavigate.InvokeAsync(Problem))">
-                Show in graph
+                           Icon="@Icons.Material.Filled.OpenInNew"
+                           OnClick="@(() => OnNavigate.InvokeAsync(Problem.ExecutionIntent))">
+                Go to fix location
             </CompactButton>
         </MudStack>
     </MudStack>
@@ -52,7 +55,7 @@
 
 @code {
     [Parameter, EditorRequired] public ActionableProblemViewModel Problem { get; set; } = default!;
-    [Parameter] public EventCallback<ActionableProblemViewModel> OnNavigate { get; set; }
+    [Parameter] public EventCallback<ExecutionIntentViewModel> OnNavigate { get; set; }
 
     private string ScopeLabel => Problem.Scope switch
     {
@@ -73,4 +76,12 @@
         => Problem.Severity == OnboardingProblemSeverity.Blocking
             ? Color.Error
             : Color.Warning;
+
+    private Color ResolveConfidenceColor()
+        => Problem.ExecutionIntent.ConfidenceLevel switch
+        {
+            OnboardingExecutionConfidenceLevel.High => Color.Success,
+            OnboardingExecutionConfidenceLevel.Medium => Color.Warning,
+            _ => Color.Default
+        };
 }

@@ -2,6 +2,14 @@
   {
     "date": "2026-04-06",
     "type": "Changed",
+    "title": "The onboarding workspace now deep-links each suggested fix to the right read-only execution context",
+    "impact": "When the OnboardingWorkspace feature flag is enabled, onboarding problems and root causes now expose deterministic execution intents, confidence labels, fix-location navigation with pre-selected connection/project/root context, highlighted graph targets, and non-interactive future action zones so users can move from guidance to the correct execution surface without any write behavior.",
+    "area": "Home / Onboarding",
+    "link": "/home/onboarding"
+  },
+  {
+    "date": "2026-04-06",
+    "type": "Changed",
     "title": "The onboarding workspace now explains the next step, impact, and shared root causes",
     "impact": "When the OnboardingWorkspace feature flag is enabled, the read-only onboarding workspace now maps visible onboarding problems to deterministic suggested actions, shows what each issue will unblock, groups repeated symptoms under shared root causes, and adds minimal action hints inside the graph without introducing any write or import behavior.",
     "area": "Home / Onboarding",

@@ -9,8 +9,10 @@ public class OnboardingWorkspaceReadOnlyAuditTests
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingEntityCard.razor",
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingProblemCard.razor",
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingRootCauseCard.razor",
+        "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingFutureActionZone.razor",
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingStatusBadge.razor",
-        "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingValidationBadge.razor"
+        "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingValidationBadge.razor",
+        "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/OnboardingExecutionIntentService.cs"
     ];
 
     [TestMethod]
@@ -51,6 +53,31 @@ public class OnboardingWorkspaceReadOnlyAuditTests
             Assert.IsFalse(content.Contains("OnboardingWizard", StringComparison.Ordinal), $"Wizard reference found in {file}.");
             Assert.IsFalse(content.Contains("IOnboardingWizardState", StringComparison.Ordinal), $"Wizard state reference found in {file}.");
             Assert.IsFalse(content.Contains("HttpClient", StringComparison.Ordinal), $"Direct HttpClient usage found in {file}.");
+        }
+    }
+
+    [TestMethod]
+    public void WorkspaceFiles_DoNotUseWriteEndpoints()
+    {
+        var forbiddenCalls = new[]
+        {
+            "PostAsJsonAsync",
+            "PutAsJsonAsync",
+            "PatchAsJsonAsync",
+            "DeleteAsync",
+            "SendAsync(",
+            "POST",
+            "PUT",
+            "DELETE"
+        };
+
+        foreach (var file in WorkspaceFiles)
+        {
+            var content = File.ReadAllText(file);
+            foreach (var call in forbiddenCalls)
+            {
+                Assert.IsFalse(content.Contains(call, StringComparison.Ordinal), $"Unexpected write call '{call}' found in {file}.");
+            }
         }
     }
 }

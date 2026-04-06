@@ -27,6 +27,13 @@
             <MudText Typo="Typo.caption" Color="Color.Info">Next: @SuggestedAction</MudText>
         }
 
+        @if (ConfidenceLevel is not null)
+        {
+            <MudChip T="string" Label="true" Size="Size.Small" Color="@ResolveConfidenceColor()">
+                Confidence: @ConfidenceLevel
+            </MudChip>
+        }
+
         @if (!string.IsNullOrWhiteSpace(RootCauseHint))
         {
             <MudText Typo="Typo.caption" Color="Color.Secondary">@RootCauseHint</MudText>
@@ -70,6 +77,17 @@
                 </MudAlert>
             }
         }
+
+        @if (ExecutionIntent is not null)
+        {
+            <MudStack Row="true" Justify="Justify.FlexEnd">
+                <CompactButton ButtonRole="ButtonRole.Utility"
+                               Icon="@Icons.Material.Filled.OpenInNew"
+                               OnClick="@(() => OnOpenLocation.InvokeAsync(ExecutionIntent))">
+                    Open location
+                </CompactButton>
+            </MudStack>
+        }
     </MudStack>
 </MudPaper>
 </div>
@@ -86,15 +104,40 @@
     [Parameter] public string? ProblemSummary { get; set; }
     [Parameter] public string? SuggestedAction { get; set; }
     [Parameter] public string? RootCauseHint { get; set; }
+    [Parameter] public OnboardingExecutionConfidenceLevel? ConfidenceLevel { get; set; }
+    [Parameter] public ExecutionIntentViewModel? ExecutionIntent { get; set; }
+    [Parameter] public EventCallback<ExecutionIntentViewModel> OnOpenLocation { get; set; }
+    [Parameter] public bool IsHighlighted { get; set; }
 
     private string ResolvedClass => "pa-3";
 
-    private string? ResolvedStyle => ProblemSeverity switch
+    private string? ResolvedStyle
     {
-        OnboardingProblemSeverity.Blocking => "border-left: 4px solid var(--mud-palette-error);",
-        OnboardingProblemSeverity.Warning => "border-left: 4px solid var(--mud-palette-warning);",
-        _ => null
-    };
+        get
+        {
+            var styles = new List<string>();
+
+            switch (ProblemSeverity)
+            {
+                case OnboardingProblemSeverity.Blocking:
+                    styles.Add("border-left: 4px solid var(--mud-palette-error);");
+                    break;
+                case OnboardingProblemSeverity.Warning:
+                    styles.Add("border-left: 4px solid var(--mud-palette-warning);");
+                    break;
+            }
+
+            if (IsHighlighted)
+            {
+                styles.Add("outline: 2px solid var(--mud-palette-info);");
+                styles.Add("background-color: rgba(33, 150, 243, 0.08);");
+            }
+
+            return styles.Count == 0
+                ? null
+                : string.Join(' ', styles);
+        }
+    }
 
     private Color ResolveProblemColor()
         => ProblemSeverity switch
@@ -102,5 +145,13 @@
             OnboardingProblemSeverity.Blocking => Color.Error,
             OnboardingProblemSeverity.Warning => Color.Warning,
             _ => Color.Secondary
+        };
+
+    private Color ResolveConfidenceColor()
+        => ConfidenceLevel switch
+        {
+            OnboardingExecutionConfidenceLevel.High => Color.Success,
+            OnboardingExecutionConfidenceLevel.Medium => Color.Warning,
+            _ => Color.Default
         };
 }
