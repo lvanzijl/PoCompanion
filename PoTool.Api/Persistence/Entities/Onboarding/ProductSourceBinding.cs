@@ -1,6 +1,6 @@
 namespace PoTool.Api.Persistence.Entities.Onboarding;
 
-public sealed class ProductSourceBinding : OnboardingEntityBase
+public sealed class ProductSourceBinding : OnboardingGraphEntityBase
 {
     public int ProductRootId { get; set; }
 

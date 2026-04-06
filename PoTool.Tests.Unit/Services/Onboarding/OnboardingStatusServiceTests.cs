@@ -158,6 +158,24 @@ public sealed class OnboardingStatusServiceTests
         CollectionAssert.Contains(result.Data.BlockingReasons.Select(item => item.Code).ToList(), "PROJECT_SOURCE_INVALID");
     }
 
+    [TestMethod]
+    public async Task GetStatusAsync_IgnoresSoftDeletedEntities()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        connection.SoftDelete(DateTime.UtcNow, "cleanup");
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+
+        var result = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual(OnboardingConfigurationStatus.NotConfigured, result.Data!.OverallStatus);
+        CollectionAssert.Contains(result.Data.BlockingReasons.Select(item => item.Code).ToList(), "CONNECTION_REQUIRED");
+    }
+
     private static OnboardingStatusService CreateService(PoToolDbContext dbContext)
         => new(dbContext, Mock.Of<IOnboardingObservability>());
 

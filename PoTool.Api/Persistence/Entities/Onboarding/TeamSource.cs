@@ -1,6 +1,6 @@
 namespace PoTool.Api.Persistence.Entities.Onboarding;
 
-public sealed class TeamSource : OnboardingEntityBase
+public sealed class TeamSource : OnboardingGraphEntityBase
 {
     public int ProjectSourceId { get; set; }
 

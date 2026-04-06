@@ -6,7 +6,7 @@ namespace PoTool.Api.Persistence.Configurations.Onboarding;
 internal static class OnboardingEntityConfigurationHelpers
 {
     internal static void ConfigureEntityBase<T>(EntityTypeBuilder<T> builder)
-        where T : OnboardingEntityBase
+        where T : OnboardingGraphEntityBase
     {
         builder.Property(entity => entity.CreatedAtUtc)
             .IsRequired();

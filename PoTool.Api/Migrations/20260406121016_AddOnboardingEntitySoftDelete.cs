@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace PoTool.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddOnboardingCrudSoftDelete : Migration
+    public partial class AddOnboardingEntitySoftDelete : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -127,63 +127,6 @@ namespace PoTool.Api.Migrations
             migrationBuilder.AddColumn<bool>(
                 name: "IsDeleted",
                 table: "OnboardingPipelineSources",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "DeletedAtUtc",
-                table: "OnboardingMigrationUnits",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "DeletionReason",
-                table: "OnboardingMigrationUnits",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsDeleted",
-                table: "OnboardingMigrationUnits",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "DeletedAtUtc",
-                table: "OnboardingMigrationRuns",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "DeletionReason",
-                table: "OnboardingMigrationRuns",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsDeleted",
-                table: "OnboardingMigrationRuns",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "DeletedAtUtc",
-                table: "OnboardingMigrationIssues",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "DeletionReason",
-                table: "OnboardingMigrationIssues",
-                type: "TEXT",
-                nullable: true);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsDeleted",
-                table: "OnboardingMigrationIssues",
                 type: "INTEGER",
                 nullable: false,
                 defaultValue: false);
@@ -317,42 +260,6 @@ namespace PoTool.Api.Migrations
             migrationBuilder.DropColumn(
                 name: "IsDeleted",
                 table: "OnboardingPipelineSources");
-
-            migrationBuilder.DropColumn(
-                name: "DeletedAtUtc",
-                table: "OnboardingMigrationUnits");
-
-            migrationBuilder.DropColumn(
-                name: "DeletionReason",
-                table: "OnboardingMigrationUnits");
-
-            migrationBuilder.DropColumn(
-                name: "IsDeleted",
-                table: "OnboardingMigrationUnits");
-
-            migrationBuilder.DropColumn(
-                name: "DeletedAtUtc",
-                table: "OnboardingMigrationRuns");
-
-            migrationBuilder.DropColumn(
-                name: "DeletionReason",
-                table: "OnboardingMigrationRuns");
-
-            migrationBuilder.DropColumn(
-                name: "IsDeleted",
-                table: "OnboardingMigrationRuns");
-
-            migrationBuilder.DropColumn(
-                name: "DeletedAtUtc",
-                table: "OnboardingMigrationIssues");
-
-            migrationBuilder.DropColumn(
-                name: "DeletionReason",
-                table: "OnboardingMigrationIssues");
-
-            migrationBuilder.DropColumn(
-                name: "IsDeleted",
-                table: "OnboardingMigrationIssues");
         }
     }
 }

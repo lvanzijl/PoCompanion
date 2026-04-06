@@ -466,16 +466,7 @@ namespace PoTool.Api.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DeletionReason")
-                        .HasColumnType("TEXT");
-
                     b.Property<bool>("IsBlocking")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("IssueCategory")
@@ -552,12 +543,6 @@ namespace PoTool.Api.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DeletionReason")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("EnvironmentRing")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -576,9 +561,6 @@ namespace PoTool.Api.Migrations
 
                     b.Property<DateTime?>("FinishedAtUtc")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("IssueCount")
                         .HasColumnType("INTEGER");
@@ -648,12 +630,6 @@ namespace PoTool.Api.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DeletionReason")
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("ExecutionOrder")
                         .HasColumnType("INTEGER");
 
@@ -662,9 +638,6 @@ namespace PoTool.Api.Migrations
 
                     b.Property<DateTime?>("FinishedAtUtc")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("MigrationRunId")
                         .HasColumnType("INTEGER");

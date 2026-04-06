@@ -1,6 +1,6 @@
 namespace PoTool.Api.Persistence.Entities.Onboarding;
 
-public sealed class ProjectSource : OnboardingEntityBase
+public sealed class ProjectSource : OnboardingGraphEntityBase
 {
     public int TfsConnectionId { get; set; }
 

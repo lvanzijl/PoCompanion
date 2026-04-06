@@ -1,6 +1,6 @@
 namespace PoTool.Api.Persistence.Entities.Onboarding;
 
-public sealed class PipelineSource : OnboardingEntityBase
+public sealed class PipelineSource : OnboardingGraphEntityBase
 {
     public int ProjectSourceId { get; set; }
 

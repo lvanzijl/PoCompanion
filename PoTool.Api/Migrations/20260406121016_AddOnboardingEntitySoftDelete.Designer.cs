@@ -11,8 +11,8 @@ using PoTool.Api.Persistence;
 namespace PoTool.Api.Migrations
 {
     [DbContext(typeof(PoToolDbContext))]
-    [Migration("20260406120648_AddOnboardingCrudSoftDelete")]
-    partial class AddOnboardingCrudSoftDelete
+    [Migration("20260406121016_AddOnboardingEntitySoftDelete")]
+    partial class AddOnboardingEntitySoftDelete
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -469,16 +469,7 @@ namespace PoTool.Api.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DeletionReason")
-                        .HasColumnType("TEXT");
-
                     b.Property<bool>("IsBlocking")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("IssueCategory")
@@ -555,12 +546,6 @@ namespace PoTool.Api.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DeletionReason")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("EnvironmentRing")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -579,9 +564,6 @@ namespace PoTool.Api.Migrations
 
                     b.Property<DateTime?>("FinishedAtUtc")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("IssueCount")
                         .HasColumnType("INTEGER");
@@ -651,12 +633,6 @@ namespace PoTool.Api.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DeletionReason")
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("ExecutionOrder")
                         .HasColumnType("INTEGER");
 
@@ -665,9 +641,6 @@ namespace PoTool.Api.Migrations
 
                     b.Property<DateTime?>("FinishedAtUtc")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("MigrationRunId")
                         .HasColumnType("INTEGER");
