@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-06",
+    "type": "Fixed",
+    "title": "Onboarding fix flows now stay in the right workspace context and complete create actions reliably",
+    "impact": "When the OnboardingWorkspace feature flag is enabled, onboarding no longer fails on unclassified onboarding API routes, create actions now treat valid created responses as success, and global project/root blockers now open the correct action zones with preserved parent context so connection and project fixes refresh the workspace as expected.",
+    "area": "Home / Onboarding",
+    "link": "/home/onboarding"
+  },
+  {
+    "date": "2026-04-06",
     "type": "Changed",
     "title": "The onboarding workspace can now execute safe onboarding fixes through intent-first action zones",
     "impact": "When the OnboardingWorkspace feature flag is enabled, onboarding fix locations now open write-capable action zones for connection, project, team, pipeline, product-root, and binding mutations, validate input before calling the existing onboarding CRUD API, show explicit success or failure feedback, preserve the current execution context, and refresh the graph plus problem projections after each successful change.",
