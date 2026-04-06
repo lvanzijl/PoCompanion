@@ -121,6 +121,28 @@ public sealed record ExecutionIntentViewModel(
     OnboardingExecutionConfidenceLevel ConfidenceLevel,
     ExecutionIntentNavigationTargetViewModel NavigationTarget);
 
+public enum OnboardingExecutionFeedbackKind
+{
+    Success,
+    Warning,
+    Error
+}
+
+public sealed record OnboardingExecutionFeedbackViewModel(
+    OnboardingExecutionFeedbackKind Kind,
+    string Title,
+    string Message,
+    string? Details,
+    bool Retryable);
+
+public sealed record OnboardingExecutionResult(
+    bool MutationApplied,
+    ExecutionIntentViewModel Intent,
+    OnboardingWorkspaceFilter AppliedFilter,
+    OnboardingWorkspaceData? RefreshedData,
+    OnboardingExecutionFeedbackViewModel Feedback,
+    OnboardingErrorCode? ErrorCode);
+
 public sealed record ActionableProblemViewModel(
     string ProblemKey,
     string Title,

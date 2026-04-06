@@ -2,6 +2,14 @@
   {
     "date": "2026-04-06",
     "type": "Changed",
+    "title": "The onboarding workspace can now execute safe onboarding fixes through intent-first action zones",
+    "impact": "When the OnboardingWorkspace feature flag is enabled, onboarding fix locations now open write-capable action zones for connection, project, team, pipeline, product-root, and binding mutations, validate input before calling the existing onboarding CRUD API, show explicit success or failure feedback, preserve the current execution context, and refresh the graph plus problem projections after each successful change.",
+    "area": "Home / Onboarding",
+    "link": "/home/onboarding"
+  },
+  {
+    "date": "2026-04-06",
+    "type": "Changed",
     "title": "The onboarding workspace now deep-links each suggested fix to the right read-only execution context",
     "impact": "When the OnboardingWorkspace feature flag is enabled, onboarding problems and root causes now expose deterministic execution intents, confidence labels, fix-location navigation with pre-selected connection/project/root context, highlighted graph targets, and non-interactive future action zones so users can move from guidance to the correct execution surface without any write behavior.",
     "area": "Home / Onboarding",

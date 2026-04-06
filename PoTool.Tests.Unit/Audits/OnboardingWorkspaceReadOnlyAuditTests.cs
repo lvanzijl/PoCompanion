@@ -3,7 +3,7 @@ namespace PoTool.Tests.Unit.Audits;
 [TestClass]
 public class OnboardingWorkspaceReadOnlyAuditTests
 {
-    private static readonly string[] WorkspaceFiles =
+    private static readonly string[] NonActionZoneWorkspaceFiles =
     [
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/OnboardingWorkspace.razor",
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingEntityCard.razor",
@@ -15,8 +15,11 @@ public class OnboardingWorkspaceReadOnlyAuditTests
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/OnboardingExecutionIntentService.cs"
     ];
 
+    private const string ActionZoneFile = "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingMutationActionZone.razor";
+    private const string ExecutionServiceFile = "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/OnboardingExecutionService.cs";
+
     [TestMethod]
-    public void WorkspaceFiles_DoNotExposeWriteAffordances()
+    public void NonActionZoneWorkspaceFiles_DoNotExposeWriteAffordances()
     {
         var forbiddenTerms = new[]
         {
@@ -34,7 +37,7 @@ public class OnboardingWorkspaceReadOnlyAuditTests
             "Label=\"Edit\""
         };
 
-        foreach (var file in WorkspaceFiles)
+        foreach (var file in NonActionZoneWorkspaceFiles)
         {
             var content = File.ReadAllText(file);
             foreach (var term in forbiddenTerms)
@@ -45,22 +48,27 @@ public class OnboardingWorkspaceReadOnlyAuditTests
     }
 
     [TestMethod]
-    public void WorkspaceFiles_DoNotReferenceWizardOrDirectHttpClient()
+    public void MutationWorkspaceFiles_DoNotReferenceWizardOrDirectTfsOrHttpClient()
     {
-        foreach (var file in WorkspaceFiles)
+        foreach (var file in NonActionZoneWorkspaceFiles.Append(ActionZoneFile).Append(ExecutionServiceFile))
         {
             var content = File.ReadAllText(file);
             Assert.IsFalse(content.Contains("OnboardingWizard", StringComparison.Ordinal), $"Wizard reference found in {file}.");
             Assert.IsFalse(content.Contains("IOnboardingWizardState", StringComparison.Ordinal), $"Wizard state reference found in {file}.");
             Assert.IsFalse(content.Contains("HttpClient", StringComparison.Ordinal), $"Direct HttpClient usage found in {file}.");
+            Assert.IsFalse(content.Contains("IOnboardingLookupClient", StringComparison.Ordinal), $"Direct lookup client usage found in {file}.");
+            Assert.IsFalse(content.Contains("OnboardingLookupClient", StringComparison.Ordinal), $"Direct lookup client usage found in {file}.");
+            Assert.IsFalse(content.Contains("OnboardingLiveLookup", StringComparison.Ordinal), $"Direct TFS lookup usage found in {file}.");
         }
     }
 
     [TestMethod]
-    public void WorkspaceFiles_DoNotUseWriteEndpoints()
+    public void WorkspaceUiFiles_DoNotBypassExecutionServiceWithCrudClientsOrRawWriteCalls()
     {
         var forbiddenCalls = new[]
         {
+            "IOnboardingCrudClient",
+            "OnboardingCrudClient",
             "PostAsJsonAsync",
             "PutAsJsonAsync",
             "PatchAsJsonAsync",
@@ -71,7 +79,7 @@ public class OnboardingWorkspaceReadOnlyAuditTests
             "DELETE"
         };
 
-        foreach (var file in WorkspaceFiles)
+        foreach (var file in NonActionZoneWorkspaceFiles.Append(ActionZoneFile))
         {
             var content = File.ReadAllText(file);
             foreach (var call in forbiddenCalls)
