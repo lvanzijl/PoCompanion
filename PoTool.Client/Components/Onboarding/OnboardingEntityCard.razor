@@ -1,6 +1,7 @@
 @using PoTool.Shared.Onboarding
 
-<MudPaper Elevation="1" Class="pa-3">
+<div id="@ElementId">
+<MudPaper Elevation="1" Class="@ResolvedClass" Style="@ResolvedStyle">
     <MudStack Spacing="1">
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
             <MudText Typo="Typo.subtitle1">@Title</MudText>
@@ -15,6 +16,11 @@
                 }
             </MudStack>
         </MudStack>
+
+        @if (!string.IsNullOrWhiteSpace(ProblemSummary))
+        {
+            <MudText Typo="Typo.caption" Color="@ResolveProblemColor()">@ProblemSummary</MudText>
+        }
 
         @if (!string.IsNullOrWhiteSpace(Subtitle))
         {
@@ -56,12 +62,33 @@
         }
     </MudStack>
 </MudPaper>
+</div>
 
 @code {
+    [Parameter] public string? ElementId { get; set; }
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
     [Parameter] public string? Subtitle { get; set; }
     [Parameter] public string? ParentContext { get; set; }
     [Parameter] public IReadOnlyList<string> MetadataLines { get; set; } = Array.Empty<string>();
     [Parameter] public OnboardingValidationStateDto? ValidationState { get; set; }
     [Parameter] public OnboardingEntityStatusDto? EntityStatus { get; set; }
+    [Parameter] public OnboardingProblemSeverity? ProblemSeverity { get; set; }
+    [Parameter] public string? ProblemSummary { get; set; }
+
+    private string ResolvedClass => "pa-3";
+
+    private string? ResolvedStyle => ProblemSeverity switch
+    {
+        OnboardingProblemSeverity.Blocking => "border-left: 4px solid var(--mud-palette-error);",
+        OnboardingProblemSeverity.Warning => "border-left: 4px solid var(--mud-palette-warning);",
+        _ => null
+    };
+
+    private Color ResolveProblemColor()
+        => ProblemSeverity switch
+        {
+            OnboardingProblemSeverity.Blocking => Color.Error,
+            OnboardingProblemSeverity.Warning => Color.Warning,
+            _ => Color.Secondary
+        };
 }

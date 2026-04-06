@@ -55,6 +55,70 @@ public sealed record OnboardingSummaryViewModel(
     bool HasBlockingIssues,
     bool HasWarnings);
 
+public enum OnboardingWorkspaceViewMode
+{
+    Graph,
+    Problems
+}
+
+public enum OnboardingProblemSeverity
+{
+    Blocking,
+    Warning
+}
+
+public enum OnboardingProblemScope
+{
+    Global,
+    Project,
+    Root,
+    Binding
+}
+
+public enum OnboardingGraphSection
+{
+    Connections,
+    Projects,
+    Teams,
+    Pipelines,
+    ProductRoots,
+    Bindings
+}
+
+public sealed record OnboardingProblemItemViewModel(
+    string ProblemKey,
+    string Title,
+    string AffectedEntity,
+    string Location,
+    string Reason,
+    OnboardingProblemSeverity Severity,
+    OnboardingProblemScope Scope,
+    int ImpactedChildrenCount,
+    bool FixFirst,
+    OnboardingGraphSection GraphSection,
+    string TargetElementId);
+
+public sealed record OnboardingProblemGroupViewModel(
+    OnboardingProblemScope Scope,
+    string Title,
+    IReadOnlyList<OnboardingProblemItemViewModel> Items);
+
+public sealed record OnboardingProblemSummaryViewModel(
+    IReadOnlyList<OnboardingProblemItemViewModel> TopBlockers,
+    IReadOnlyList<OnboardingProblemItemViewModel> OtherBlockers,
+    IReadOnlyList<OnboardingProblemItemViewModel> Warnings,
+    int BlockingCount,
+    int WarningCount,
+    bool HasProblems);
+
+public sealed record OnboardingGraphSectionStateViewModel(
+    OnboardingGraphSection Section,
+    string Title,
+    string AnchorId,
+    int BlockingCount,
+    int WarningCount,
+    bool DefaultExpanded);
+
 public sealed record OnboardingProjectContextViewModel(
     int ProjectId,
     string ProjectExternalId,
@@ -88,4 +152,7 @@ public sealed record OnboardingWorkspaceViewModel(
     IReadOnlyList<OnboardingProjectGroupViewModel<OnboardingPipelineSourceDto>> PipelineGroups,
     IReadOnlyList<OnboardingProjectGroupViewModel<OnboardingProductRootDto>> ProductRootGroups,
     IReadOnlyList<OnboardingBindingGroupViewModel> BindingGroups,
+    OnboardingProblemSummaryViewModel? ProblemSummary,
+    IReadOnlyList<OnboardingProblemGroupViewModel> ProblemGroups,
+    IReadOnlyList<OnboardingGraphSectionStateViewModel> GraphSections,
     string? ErrorMessage);

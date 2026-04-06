@@ -7,6 +7,7 @@ public class OnboardingWorkspaceReadOnlyAuditTests
     [
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/OnboardingWorkspace.razor",
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingEntityCard.razor",
+        "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingProblemCard.razor",
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingStatusBadge.razor",
         "/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Onboarding/OnboardingValidationBadge.razor"
     ];

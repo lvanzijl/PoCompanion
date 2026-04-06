@@ -70,6 +70,9 @@ public class OnboardingWorkspaceViewModelFactoryTests
         Assert.HasCount(1, result.Summary.Blockers);
         Assert.HasCount(1, result.Summary.Warnings);
         Assert.AreEqual(2, result.Summary.Counts.TeamSourcesTotal);
+        Assert.IsNotNull(result.ProblemSummary);
+        Assert.AreEqual(1, result.ProblemSummary.BlockingCount);
+        Assert.AreEqual(1, result.ProblemSummary.WarningCount);
     }
 
     [TestMethod]
@@ -105,6 +108,141 @@ public class OnboardingWorkspaceViewModelFactoryTests
         Assert.AreEqual(project.ProjectExternalId, result.BindingGroups[0].Root.ProjectExternalId);
     }
 
+    [TestMethod]
+    public void Create_OrdersTopBlockersAndWarnings_ByExistingSignalsOnly()
+    {
+        var connection = CreateConnection(
+            status: new OnboardingEntityStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [new OnboardingStatusIssueDto("CONNECTION", "Connection access is blocking onboarding", null, null)],
+                []));
+        var project = CreateProject(
+            status: new OnboardingEntityStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [new OnboardingStatusIssueDto("PROJECT", "Project mapping is incomplete", null, null)],
+                []));
+        var root = CreateRoot(
+            project.Id,
+            status: new OnboardingEntityStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [],
+                [new OnboardingStatusIssueDto("ROOT", "Root metadata needs review", null, null)]));
+        var binding = CreateBinding(
+            root.Id,
+            project.Id,
+            validationState: CreateValidationState(OnboardingValidationStatus.PermissionDenied));
+
+        var result = _factory.Create(CreateWorkspaceData(
+            new OnboardingStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [new OnboardingStatusIssueDto("GLOBAL", "Global blocker", null, null)],
+                [new OnboardingStatusIssueDto("WARN", "Global warning", null, null)],
+                new OnboardingStatusCountsDto(1, 1, 1, 0, 0, 0, 1, 0, 1, 1)),
+            [connection],
+            [project],
+            [],
+            [],
+            [root],
+            [binding]));
+
+        Assert.IsNotNull(result.ProblemSummary);
+        Assert.AreEqual(4, result.ProblemSummary.BlockingCount);
+        Assert.AreEqual(2, result.ProblemSummary.WarningCount);
+        Assert.AreEqual("Global blocker", result.ProblemSummary.TopBlockers[0].Title);
+        Assert.IsTrue(result.ProblemSummary.TopBlockers.All(problem => problem.FixFirst));
+        Assert.AreEqual(OnboardingProblemScope.Global, result.ProblemSummary.TopBlockers[0].Scope);
+        Assert.AreEqual(OnboardingGraphSection.Connections, result.ProblemSummary.TopBlockers[0].GraphSection);
+        Assert.AreEqual("binding-14", result.ProblemSummary.TopBlockers[3].TargetElementId);
+        CollectionAssert.AreEquivalent(
+            new[] { "Global warning", "Root metadata needs review" },
+            result.ProblemSummary.Warnings.Select(problem => problem.Title).ToArray());
+    }
+
+    [TestMethod]
+    public void Create_ProblemItemsExposeScopeReasonAndNavigationTarget()
+    {
+        var project = CreateProject(
+            status: new OnboardingEntityStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [new OnboardingStatusIssueDto("PROJECT", "Project onboarding is blocked", null, null)],
+                []));
+        var team = CreateTeam(
+            project.Id,
+            validationState: CreateValidationState(OnboardingValidationStatus.Unavailable));
+
+        var result = _factory.Create(CreateWorkspaceData(
+            new OnboardingStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.Complete,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [],
+                [],
+                new OnboardingStatusCountsDto(1, 1, 1, 1, 0, 0, 0, 0, 0, 0)),
+            [CreateConnection()],
+            [project],
+            [team],
+            [],
+            [],
+            []));
+
+        var projectProblem = result.ProblemGroups
+            .Single(group => group.Scope == OnboardingProblemScope.Project)
+            .Items
+            .First();
+
+        Assert.AreEqual("Project onboarding is blocked", projectProblem.Title);
+        Assert.AreEqual($"Project {project.Snapshot.Name} ({project.ProjectExternalId})", projectProblem.Location);
+        Assert.AreEqual(OnboardingGraphSection.Projects, projectProblem.GraphSection);
+        Assert.AreEqual("project-10", projectProblem.TargetElementId);
+
+        var teamProblem = result.ProblemGroups
+            .Single(group => group.Scope == OnboardingProblemScope.Project)
+            .Items
+            .Single(problem => problem.TargetElementId == "team-11");
+
+        Assert.AreEqual(OnboardingProblemSeverity.Warning, teamProblem.Severity);
+        StringAssert.Contains(teamProblem.Reason, "external source is currently unavailable");
+    }
+
+    [TestMethod]
+    public void Create_FilteredProblemsKeepOnlyVisibleScopeAndExplicitSectionSignals()
+    {
+        var project = CreateProject();
+        var root = CreateRoot(project.Id);
+        var binding = CreateBinding(
+            rootId: root.Id,
+            projectId: project.Id,
+            validationState: CreateValidationState(OnboardingValidationStatus.PermissionDenied));
+
+        var result = _factory.Create(new OnboardingWorkspaceData(
+            new OnboardingWorkspaceFilter(null, 10, 13, OnboardingConfigurationStatus.PartiallyConfigured),
+            new OnboardingWorkspaceFilterOptions([], [], [], []),
+            new OnboardingStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.Complete,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [],
+                [],
+                new OnboardingStatusCountsDto(0, 0, 1, 0, 0, 0, 1, 0, 1, 1)),
+            [],
+            [project],
+            [],
+            [],
+            [root],
+            [binding]));
+
+        Assert.AreEqual(OnboardingWorkspaceLoadState.Ready, result.LoadState);
+        Assert.AreEqual(1, result.ProblemSummary?.BlockingCount);
+        Assert.AreEqual(0, result.GraphSections.Single(section => section.Section == OnboardingGraphSection.Connections).BlockingCount);
+        Assert.IsTrue(result.GraphSections.Single(section => section.Section == OnboardingGraphSection.Bindings).DefaultExpanded);
+        Assert.AreEqual("binding-14", result.ProblemSummary?.TopBlockers[0].TargetElementId);
+    }
+
     private static OnboardingWorkspaceData CreateWorkspaceData(
         OnboardingStatusDto status,
         IReadOnlyList<OnboardingTfsConnectionDto> connections,
@@ -124,7 +262,9 @@ public class OnboardingWorkspaceViewModelFactoryTests
             roots,
             bindings);
 
-    private static OnboardingTfsConnectionDto CreateConnection()
+    private static OnboardingTfsConnectionDto CreateConnection(
+        OnboardingEntityStatusDto? status = null,
+        TfsConnectionValidationResultDto? validation = null)
         => new(
             1,
             "connection-1",
@@ -132,7 +272,7 @@ public class OnboardingWorkspaceViewModelFactoryTests
             "Pat",
             30,
             "7.1",
-            new TfsConnectionValidationResultDto(
+            validation ?? new TfsConnectionValidationResultDto(
                 "https://dev.azure.com/example",
                 "Pat",
                 30,
@@ -144,54 +284,69 @@ public class OnboardingWorkspaceViewModelFactoryTests
                 DateTime.UtcNow,
                 null,
                 null),
-            new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
+            status ?? new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
             new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
 
-    private static OnboardingProjectSourceDto CreateProject()
+    private static OnboardingProjectSourceDto CreateProject(
+        OnboardingEntityStatusDto? status = null,
+        OnboardingValidationStateDto? validationState = null)
         => new(
             10,
             1,
             "project-1",
             true,
             new ProjectSnapshotDto("project-1", "Project One", null, new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)),
-            CreateValidationState(),
-            new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
+            validationState ?? CreateValidationState(),
+            status ?? new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
             new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
 
-    private static OnboardingTeamSourceDto CreateTeam(int projectId)
+    private static OnboardingTeamSourceDto CreateTeam(
+        int projectId,
+        OnboardingEntityStatusDto? status = null,
+        OnboardingValidationStateDto? validationState = null)
         => new(
             11,
             projectId,
             "team-1",
             true,
             new TeamSnapshotDto("team-1", "project-1", "Team One", "Area", null, new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)),
-            CreateValidationState(),
-            new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
+            validationState ?? CreateValidationState(),
+            status ?? new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
             new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
 
-    private static OnboardingPipelineSourceDto CreatePipeline(int projectId)
+    private static OnboardingPipelineSourceDto CreatePipeline(
+        int projectId,
+        OnboardingEntityStatusDto? status = null,
+        OnboardingValidationStateDto? validationState = null)
         => new(
             12,
             projectId,
             "pipeline-1",
             true,
             new PipelineSnapshotDto("pipeline-1", "project-1", "Pipeline One", null, null, null, null, new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)),
-            CreateValidationState(),
-            new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
+            validationState ?? CreateValidationState(),
+            status ?? new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
             new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
 
-    private static OnboardingProductRootDto CreateRoot(int projectId)
+    private static OnboardingProductRootDto CreateRoot(
+        int projectId,
+        OnboardingEntityStatusDto? status = null,
+        OnboardingValidationStateDto? validationState = null)
         => new(
             13,
             projectId,
             "root-1",
             true,
             new ProductRootSnapshotDto("root-1", "Root One", "Feature", "New", "project-1", "Area", new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)),
-            CreateValidationState(),
-            new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
+            validationState ?? CreateValidationState(),
+            status ?? new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
             new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
 
-    private static OnboardingProductSourceBindingDto CreateBinding(int rootId, int projectId)
+    private static OnboardingProductSourceBindingDto CreateBinding(
+        int rootId,
+        int projectId,
+        OnboardingEntityStatusDto? status = null,
+        OnboardingValidationStateDto? validationState = null)
         => new(
             14,
             rootId,
@@ -201,10 +356,10 @@ public class OnboardingWorkspaceViewModelFactoryTests
             OnboardingProductSourceTypeDto.Project,
             "project-1",
             true,
-            CreateValidationState(),
-            new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
+            validationState ?? CreateValidationState(),
+            status ?? new OnboardingEntityStatusDto(OnboardingConfigurationStatus.Complete, [], []),
             new OnboardingAuditDto(DateTime.UtcNow, DateTime.UtcNow, null, null));
 
-    private static OnboardingValidationStateDto CreateValidationState()
-        => new(OnboardingValidationStatus.Valid, DateTime.UtcNow, OnboardingValidationSource.Live, null, null, [], null, null, null);
+    private static OnboardingValidationStateDto CreateValidationState(OnboardingValidationStatus status = OnboardingValidationStatus.Valid)
+        => new(status, DateTime.UtcNow, OnboardingValidationSource.Live, null, null, [], null, null, null);
 }
