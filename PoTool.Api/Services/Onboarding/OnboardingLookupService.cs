@@ -43,9 +43,8 @@ public sealed class OnboardingLookupService : IOnboardingLookupService
         Func<PoTool.Api.Persistence.Entities.Onboarding.TfsConnection, Task<OnboardingOperationResult<T>>> action,
         CancellationToken cancellationToken)
     {
-        var connection = await _dbContext.OnboardingTfsConnections
-            .AsNoTracking()
-            .Where(item => !item.IsDeleted)
+        var connection = await OnboardingReadQueries.ActiveConnections(_dbContext)
+            .OrderBy(item => item.Id)
             .SingleOrDefaultAsync(cancellationToken);
 
         if (connection is null)

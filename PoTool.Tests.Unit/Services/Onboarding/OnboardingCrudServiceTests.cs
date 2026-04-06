@@ -247,9 +247,182 @@ public sealed class OnboardingCrudServiceTests
         var result = await service.DeleteBindingAsync(binding.Id, new OnboardingSoftDeleteRequest("duplicate"), CancellationToken.None);
 
         Assert.IsTrue(result.Succeeded);
-        var persisted = await dbContext.OnboardingProductSourceBindings.SingleAsync();
+        var persisted = await dbContext.OnboardingProductSourceBindings.IgnoreQueryFilters().SingleAsync();
         Assert.IsTrue(persisted.IsDeleted);
         Assert.AreEqual("duplicate", persisted.DeletionReason);
+    }
+
+    [TestMethod]
+    public async Task GlobalQueryFilters_HideSoftDeletedOnboardingEntities()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var project = CreateProject(connection.Id, "project-1");
+        dbContext.OnboardingProjectSources.Add(project);
+        await dbContext.SaveChangesAsync();
+
+        project.SoftDelete(DateTime.UtcNow, "cleanup");
+        await dbContext.SaveChangesAsync();
+
+        Assert.AreEqual(0, await dbContext.OnboardingProjectSources.CountAsync());
+        Assert.AreEqual(1, await dbContext.OnboardingProjectSources.IgnoreQueryFilters().CountAsync());
+    }
+
+    [TestMethod]
+    public async Task GetProjectAsync_WhenConnectionSoftDeleted_ReturnsNotFoundAndListExcludesGhost()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var project = CreateProject(connection.Id, "project-1");
+        dbContext.OnboardingProjectSources.Add(project);
+        await dbContext.SaveChangesAsync();
+
+        connection.SoftDelete(DateTime.UtcNow, "legacy-cleanup");
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var detail = await service.GetProjectAsync(project.Id, CancellationToken.None);
+        var list = await service.ListProjectsAsync(null, null, CancellationToken.None);
+
+        Assert.IsFalse(detail.Succeeded);
+        Assert.AreEqual(OnboardingErrorCode.NotFound, detail.Error!.Code);
+        Assert.IsEmpty(list.Data!);
+    }
+
+    [TestMethod]
+    public async Task ListTeamsAsync_FiltersAreScopedOrderedAndHideDeletedGraph()
+    {
+        await using var dbContext = CreateDbContext();
+        var firstConnection = CreateConnection();
+        firstConnection.ConnectionKey = "connection-1";
+        var secondConnection = CreateConnection();
+        secondConnection.ConnectionKey = "connection-2";
+        secondConnection.OrganizationUrl = "https://dev.azure.com/example-2";
+        dbContext.OnboardingTfsConnections.AddRange(firstConnection, secondConnection);
+        await dbContext.SaveChangesAsync();
+
+        var firstProject = CreateProject(firstConnection.Id, "project-1");
+        var secondProject = CreateProject(secondConnection.Id, "project-2");
+        dbContext.OnboardingProjectSources.AddRange(firstProject, secondProject);
+        await dbContext.SaveChangesAsync();
+
+        var beta = CreateTeam(firstProject.Id, "project-1", "team-b");
+        var alpha = CreateTeam(firstProject.Id, "project-1", "team-a");
+        var hidden = CreateTeam(secondProject.Id, "project-2", "team-hidden");
+        dbContext.OnboardingTeamSources.AddRange(beta, alpha, hidden);
+        await dbContext.SaveChangesAsync();
+
+        secondProject.SoftDelete(DateTime.UtcNow, "cleanup");
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.ListTeamsAsync(firstConnection.Id, firstProject.Id, null, CancellationToken.None);
+
+        Assert.IsTrue(result.Succeeded);
+        CollectionAssert.AreEqual(new[] { "team-a", "team-b" }, result.Data!.Select(item => item.TeamExternalId).ToArray());
+    }
+
+    [TestMethod]
+    public async Task ListBindingsAsync_HidesBrokenBindingsAndDeletedRoots()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var project = CreateProject(connection.Id, "project-1");
+        dbContext.OnboardingProjectSources.Add(project);
+        await dbContext.SaveChangesAsync();
+
+        var team = CreateTeam(project.Id, "project-1", "team-1");
+        var visibleRoot = CreateRoot(project.Id, "project-1", "root-visible");
+        var deletedRoot = CreateRoot(project.Id, "project-1", "root-deleted");
+        dbContext.OnboardingTeamSources.Add(team);
+        dbContext.OnboardingProductRoots.AddRange(visibleRoot, deletedRoot);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.OnboardingProductSourceBindings.AddRange(
+            CreateProjectBindingEntity(visibleRoot.Id, project.Id, project.ProjectExternalId),
+            CreateTeamBindingEntity(visibleRoot.Id, project.Id, team.Id, team.TeamExternalId),
+            CreateTeamBindingEntity(deletedRoot.Id, project.Id, team.Id, team.TeamExternalId),
+            CreateTeamBindingEntity(visibleRoot.Id, project.Id, team.Id, "team-mismatch"));
+        await dbContext.SaveChangesAsync();
+
+        deletedRoot.SoftDelete(DateTime.UtcNow, "cleanup");
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.ListBindingsAsync(connection.Id, project.Id, visibleRoot.Id, null, CancellationToken.None);
+
+        Assert.IsTrue(result.Succeeded);
+        CollectionAssert.AreEqual(
+            new[] { OnboardingProductSourceTypeDto.Project, OnboardingProductSourceTypeDto.Team },
+            result.Data!.Select(item => item.SourceType).ToArray());
+    }
+
+    [TestMethod]
+    public async Task ListBindingsAsync_RequiresProjectBindingForDependentBindings()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var project = CreateProject(connection.Id, "project-1");
+        dbContext.OnboardingProjectSources.Add(project);
+        await dbContext.SaveChangesAsync();
+
+        var team = CreateTeam(project.Id, "project-1", "team-1");
+        var root = CreateRoot(project.Id, "project-1", "root-1");
+        dbContext.OnboardingTeamSources.Add(team);
+        dbContext.OnboardingProductRoots.Add(root);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.OnboardingProductSourceBindings.Add(CreateTeamBindingEntity(root.Id, project.Id, team.Id, team.TeamExternalId));
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.ListBindingsAsync(null, null, null, null, CancellationToken.None);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.IsEmpty(result.Data!);
+    }
+
+    [TestMethod]
+    public async Task UpdateProjectAsync_ReadReflectsLatestValidationState()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var project = CreateProject(connection.Id, "project-1");
+        dbContext.OnboardingProjectSources.Add(project);
+        await dbContext.SaveChangesAsync();
+
+        _validationService
+            .Setup(service => service.ValidateProjectSourceAsync(
+                It.IsAny<TfsConnection>(),
+                It.Is<ProjectSource>(item => item.Id == project.Id),
+                It.IsAny<CancellationToken>(),
+                null,
+                null))
+            .ReturnsAsync(OnboardingOperationResult<ProjectSourceValidationResultDto>.Success(CreateProjectValidation("project-1", "Project One", null, OnboardingValidationStatus.Invalid)));
+
+        var service = CreateService(dbContext);
+        var update = await service.UpdateProjectAsync(project.Id, new UpdateProjectSourceRequest(true, "Updated Name", null, null, null), CancellationToken.None);
+        var read = await service.GetProjectAsync(project.Id, CancellationToken.None);
+
+        Assert.IsTrue(update.Succeeded);
+        Assert.IsTrue(read.Succeeded);
+        Assert.AreEqual(OnboardingValidationStatus.Invalid, read.Data!.ValidationState.Status);
+        Assert.AreEqual("Updated Name", read.Data.Snapshot.Name);
     }
 
     private OnboardingCrudService CreateService(PoToolDbContext dbContext)
@@ -330,6 +503,29 @@ public sealed class OnboardingCrudServiceTests
             ValidationState = CreateValidationState()
         };
 
+    private static ProductSourceBinding CreateProjectBindingEntity(int rootId, int projectId, string sourceExternalId)
+        => new()
+        {
+            ProductRootId = rootId,
+            ProjectSourceId = projectId,
+            SourceType = ProductSourceType.Project,
+            SourceExternalId = sourceExternalId,
+            Enabled = true,
+            ValidationState = CreateValidationState()
+        };
+
+    private static ProductSourceBinding CreateTeamBindingEntity(int rootId, int projectId, int teamId, string sourceExternalId)
+        => new()
+        {
+            ProductRootId = rootId,
+            ProjectSourceId = projectId,
+            TeamSourceId = teamId,
+            SourceType = ProductSourceType.Team,
+            SourceExternalId = sourceExternalId,
+            Enabled = true,
+            ValidationState = CreateValidationState()
+        };
+
     private static ProductSourceBinding CreateBinding()
         => new()
         {
@@ -357,6 +553,6 @@ public sealed class OnboardingCrudServiceTests
             RenameDetected = false
         };
 
-    private static ProjectSourceValidationResultDto CreateProjectValidation(string projectExternalId, string name, string? description)
-        => new(projectExternalId, new ProjectSnapshotDto(projectExternalId, name, description, new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)), new OnboardingValidationStateDto(OnboardingValidationStatus.Valid, DateTime.UtcNow, OnboardingValidationSource.Live, null, null, Array.Empty<string>(), null, null, null));
+    private static ProjectSourceValidationResultDto CreateProjectValidation(string projectExternalId, string name, string? description, OnboardingValidationStatus status = OnboardingValidationStatus.Valid)
+        => new(projectExternalId, new ProjectSnapshotDto(projectExternalId, name, description, new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)), new OnboardingValidationStateDto(status, DateTime.UtcNow, OnboardingValidationSource.Live, null, null, Array.Empty<string>(), null, null, null));
 }

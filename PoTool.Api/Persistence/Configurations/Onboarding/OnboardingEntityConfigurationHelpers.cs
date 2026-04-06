@@ -23,6 +23,8 @@ internal static class OnboardingEntityConfigurationHelpers
             .IsRequired();
 
         builder.HasIndex(entity => entity.IsDeleted);
+
+        builder.HasQueryFilter(entity => !entity.IsDeleted);
     }
 
     internal static void ConfigureAuditFields<T>(OwnedNavigationBuilder<T, OnboardingValidationState> builder)

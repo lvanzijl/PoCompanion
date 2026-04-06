@@ -124,7 +124,7 @@ public sealed class OnboardingStatusServiceTests
         Assert.AreEqual(OnboardingConfigurationStatus.Complete, result.Data.DataSourceSetupStatus);
         Assert.AreEqual(OnboardingConfigurationStatus.PartiallyConfigured, result.Data.DomainConfigurationStatus);
         CollectionAssert.Contains(result.Data.BlockingReasons.Select(item => item.Code).ToList(), "PRODUCT_ROOT_PROJECT_BINDING_REQUIRED");
-        CollectionAssert.Contains(result.Data.BlockingReasons.Select(item => item.Code).ToList(), "TEAM_BINDING_PROJECT_BINDING_REQUIRED");
+        CollectionAssert.DoesNotContain(result.Data.BlockingReasons.Select(item => item.Code).ToList(), "TEAM_BINDING_PROJECT_BINDING_REQUIRED");
     }
 
     [TestMethod]
@@ -174,6 +174,67 @@ public sealed class OnboardingStatusServiceTests
         Assert.IsTrue(result.Succeeded);
         Assert.AreEqual(OnboardingConfigurationStatus.NotConfigured, result.Data!.OverallStatus);
         CollectionAssert.Contains(result.Data.BlockingReasons.Select(item => item.Code).ToList(), "CONNECTION_REQUIRED");
+    }
+
+    [TestMethod]
+    public async Task GetStatusAsync_IgnoresChildrenOfSoftDeletedParents()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var project = CreateProjectSource(connection.Id, "project-1");
+        dbContext.OnboardingProjectSources.Add(project);
+        await dbContext.SaveChangesAsync();
+
+        var team = CreateTeamSource(project.Id, project.ProjectExternalId, "team-1");
+        dbContext.OnboardingTeamSources.Add(team);
+        await dbContext.SaveChangesAsync();
+
+        project.SoftDelete(DateTime.UtcNow, "cleanup");
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual(0, result.Data!.Counts.ProjectSourcesTotal);
+        Assert.AreEqual(0, result.Data.Counts.TeamSourcesTotal);
+        CollectionAssert.Contains(result.Data.BlockingReasons.Select(item => item.Code).ToList(), "PROJECT_SOURCE_REQUIRED");
+    }
+
+    [TestMethod]
+    public async Task GetStatusAsync_DeletedRootRemovesBrokenBindingInfluence()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var project = CreateProjectSource(connection.Id, "project-1");
+        dbContext.OnboardingProjectSources.Add(project);
+        await dbContext.SaveChangesAsync();
+
+        var team = CreateTeamSource(project.Id, project.ProjectExternalId, "team-1");
+        var root = CreateProductRoot(project.Id, project.ProjectExternalId, "root-1");
+        dbContext.OnboardingTeamSources.Add(team);
+        dbContext.OnboardingProductRoots.Add(root);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.OnboardingProductSourceBindings.Add(CreateTeamBinding(root.Id, project.Id, team.Id, team.TeamExternalId));
+        await dbContext.SaveChangesAsync();
+
+        root.SoftDelete(DateTime.UtcNow, "cleanup");
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.GetStatusAsync(CancellationToken.None);
+
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual(0, result.Data!.Counts.ProductRootsTotal);
+        Assert.AreEqual(0, result.Data.Counts.BindingsTotal);
+        CollectionAssert.DoesNotContain(result.Data.BlockingReasons.Select(item => item.Code).ToList(), "TEAM_BINDING_PROJECT_BINDING_REQUIRED");
     }
 
     private static OnboardingStatusService CreateService(PoToolDbContext dbContext)

@@ -62,7 +62,9 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
 
     public async Task<OnboardingOperationResult<IReadOnlyList<OnboardingTfsConnectionDto>>> ListConnectionsAsync(OnboardingConfigurationStatus? status, CancellationToken cancellationToken)
     {
-        var connections = await _dbContext.OnboardingTfsConnections.AsNoTracking().Where(item => !item.IsDeleted).OrderBy(item => item.Id).ToListAsync(cancellationToken);
+        var connections = await OnboardingReadQueries.ActiveConnections(_dbContext)
+            .OrderBy(item => item.Id)
+            .ToListAsync(cancellationToken);
         var onboardingStatus = await GetStatusAsync(cancellationToken);
         return OnboardingOperationResult<IReadOnlyList<OnboardingTfsConnectionDto>>.Success(connections.Select(connection => MapConnection(connection, onboardingStatus)).Where(item => status is null || item.Status.Status == status.Value).ToList());
     }
@@ -191,7 +193,7 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
 
     public async Task<OnboardingOperationResult<IReadOnlyList<OnboardingProjectSourceDto>>> ListProjectsAsync(int? connectionId, OnboardingConfigurationStatus? status, CancellationToken cancellationToken)
     {
-        var query = _dbContext.OnboardingProjectSources.AsNoTracking().Where(item => !item.IsDeleted);
+        var query = OnboardingReadQueries.ActiveProjects(_dbContext);
         if (connectionId.HasValue)
         {
             query = query.Where(item => item.TfsConnectionId == connectionId.Value);
@@ -315,18 +317,21 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
 
     public async Task<OnboardingOperationResult<IReadOnlyList<OnboardingTeamSourceDto>>> ListTeamsAsync(int? connectionId, int? projectId, OnboardingConfigurationStatus? status, CancellationToken cancellationToken)
     {
-        var query = _dbContext.OnboardingTeamSources.AsNoTracking().Where(item => !item.IsDeleted).Join(_dbContext.OnboardingProjectSources.AsNoTracking().Where(project => !project.IsDeleted), team => team.ProjectSourceId, project => project.Id, (team, project) => new { team, project });
+        var query = OnboardingReadQueries.ActiveTeams(_dbContext);
         if (projectId.HasValue)
         {
-            query = query.Where(item => item.team.ProjectSourceId == projectId.Value);
+            query = query.Where(item => item.ProjectSourceId == projectId.Value);
         }
 
         if (connectionId.HasValue)
         {
-            query = query.Where(item => item.project.TfsConnectionId == connectionId.Value);
+            query = query.Where(item => OnboardingReadQueries.ActiveProjects(_dbContext)
+                .Any(project => project.Id == item.ProjectSourceId && project.TfsConnectionId == connectionId.Value));
         }
 
-        var teams = await query.OrderBy(item => item.team.TeamExternalId).Select(item => item.team).ToListAsync(cancellationToken);
+        var teams = await query
+            .OrderBy(item => item.TeamExternalId)
+            .ToListAsync(cancellationToken);
         var onboardingStatus = await GetStatusAsync(cancellationToken);
         return OnboardingOperationResult<IReadOnlyList<OnboardingTeamSourceDto>>.Success(teams.Select(team => MapTeam(team, onboardingStatus)).Where(item => status is null || item.Status.Status == status.Value).ToList());
     }
@@ -446,18 +451,21 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
 
     public async Task<OnboardingOperationResult<IReadOnlyList<OnboardingPipelineSourceDto>>> ListPipelinesAsync(int? connectionId, int? projectId, OnboardingConfigurationStatus? status, CancellationToken cancellationToken)
     {
-        var query = _dbContext.OnboardingPipelineSources.AsNoTracking().Where(item => !item.IsDeleted).Join(_dbContext.OnboardingProjectSources.AsNoTracking().Where(project => !project.IsDeleted), pipeline => pipeline.ProjectSourceId, project => project.Id, (pipeline, project) => new { pipeline, project });
+        var query = OnboardingReadQueries.ActivePipelines(_dbContext);
         if (projectId.HasValue)
         {
-            query = query.Where(item => item.pipeline.ProjectSourceId == projectId.Value);
+            query = query.Where(item => item.ProjectSourceId == projectId.Value);
         }
 
         if (connectionId.HasValue)
         {
-            query = query.Where(item => item.project.TfsConnectionId == connectionId.Value);
+            query = query.Where(item => OnboardingReadQueries.ActiveProjects(_dbContext)
+                .Any(project => project.Id == item.ProjectSourceId && project.TfsConnectionId == connectionId.Value));
         }
 
-        var pipelines = await query.OrderBy(item => item.pipeline.PipelineExternalId).Select(item => item.pipeline).ToListAsync(cancellationToken);
+        var pipelines = await query
+            .OrderBy(item => item.PipelineExternalId)
+            .ToListAsync(cancellationToken);
         var onboardingStatus = await GetStatusAsync(cancellationToken);
         return OnboardingOperationResult<IReadOnlyList<OnboardingPipelineSourceDto>>.Success(pipelines.Select(pipeline => MapPipeline(pipeline, onboardingStatus)).Where(item => status is null || item.Status.Status == status.Value).ToList());
     }
@@ -577,18 +585,21 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
 
     public async Task<OnboardingOperationResult<IReadOnlyList<OnboardingProductRootDto>>> ListRootsAsync(int? connectionId, int? projectId, OnboardingConfigurationStatus? status, CancellationToken cancellationToken)
     {
-        var query = _dbContext.OnboardingProductRoots.AsNoTracking().Where(item => !item.IsDeleted).Join(_dbContext.OnboardingProjectSources.AsNoTracking().Where(project => !project.IsDeleted), root => root.ProjectSourceId, project => project.Id, (root, project) => new { root, project });
+        var query = OnboardingReadQueries.ActiveRoots(_dbContext);
         if (projectId.HasValue)
         {
-            query = query.Where(item => item.root.ProjectSourceId == projectId.Value);
+            query = query.Where(item => item.ProjectSourceId == projectId.Value);
         }
 
         if (connectionId.HasValue)
         {
-            query = query.Where(item => item.project.TfsConnectionId == connectionId.Value);
+            query = query.Where(item => OnboardingReadQueries.ActiveProjects(_dbContext)
+                .Any(project => project.Id == item.ProjectSourceId && project.TfsConnectionId == connectionId.Value));
         }
 
-        var roots = await query.OrderBy(item => item.root.WorkItemExternalId).Select(item => item.root).ToListAsync(cancellationToken);
+        var roots = await query
+            .OrderBy(item => item.WorkItemExternalId)
+            .ToListAsync(cancellationToken);
         var onboardingStatus = await GetStatusAsync(cancellationToken);
         return OnboardingOperationResult<IReadOnlyList<OnboardingProductRootDto>>.Success(roots.Select(root => MapRoot(root, onboardingStatus)).Where(item => status is null || item.Status.Status == status.Value).ToList());
     }
@@ -708,23 +719,28 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
 
     public async Task<OnboardingOperationResult<IReadOnlyList<OnboardingProductSourceBindingDto>>> ListBindingsAsync(int? connectionId, int? projectId, int? productRootId, OnboardingConfigurationStatus? status, CancellationToken cancellationToken)
     {
-        var query = _dbContext.OnboardingProductSourceBindings.AsNoTracking().Where(item => !item.IsDeleted).Join(_dbContext.OnboardingProjectSources.AsNoTracking().Where(project => !project.IsDeleted), binding => binding.ProjectSourceId, project => project.Id, (binding, project) => new { binding, project });
+        var query = OnboardingReadQueries.ActiveBindings(_dbContext);
         if (productRootId.HasValue)
         {
-            query = query.Where(item => item.binding.ProductRootId == productRootId.Value);
+            query = query.Where(item => item.ProductRootId == productRootId.Value);
         }
 
         if (projectId.HasValue)
         {
-            query = query.Where(item => item.binding.ProjectSourceId == projectId.Value);
+            query = query.Where(item => item.ProjectSourceId == projectId.Value);
         }
 
         if (connectionId.HasValue)
         {
-            query = query.Where(item => item.project.TfsConnectionId == connectionId.Value);
+            query = query.Where(item => OnboardingReadQueries.ActiveProjects(_dbContext)
+                .Any(project => project.Id == item.ProjectSourceId && project.TfsConnectionId == connectionId.Value));
         }
 
-        var bindings = await query.OrderBy(item => item.binding.ProductRootId).ThenBy(item => item.binding.SourceType).ThenBy(item => item.binding.SourceExternalId).Select(item => item.binding).ToListAsync(cancellationToken);
+        var bindings = await query
+            .OrderBy(item => item.ProductRootId)
+            .ThenBy(item => item.SourceType)
+            .ThenBy(item => item.SourceExternalId)
+            .ToListAsync(cancellationToken);
         var onboardingStatus = await GetStatusAsync(cancellationToken);
         return OnboardingOperationResult<IReadOnlyList<OnboardingProductSourceBindingDto>>.Success(bindings.Select(binding => MapBinding(binding, onboardingStatus)).Where(item => status is null || item.Status.Status == status.Value).ToList());
     }
@@ -960,37 +976,37 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
         => request.ProductRootId.HasValue || request.ProjectSourceId.HasValue || request.TeamSourceId.HasValue || request.PipelineSourceId.HasValue || request.SourceType.HasValue || request.SourceExternalId is not null ? (OnboardingErrorCode.ValidationFailed, "Binding identity fields cannot be updated.", "ProductRootId, ProjectSourceId, TeamSourceId, PipelineSourceId, SourceType, SourceExternalId") : null;
 
     private Task<TfsConnection?> FindConnectionAsync(int id, CancellationToken cancellationToken)
-        => _dbContext.OnboardingTfsConnections.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
+        => OnboardingReadQueries.ActiveConnections(_dbContext).SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
 
     private Task<TfsConnection?> FindConnectionForUpdateAsync(int id, CancellationToken cancellationToken)
         => _dbContext.OnboardingTfsConnections.SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
 
     private Task<ProjectSource?> FindProjectAsync(int id, CancellationToken cancellationToken)
-        => _dbContext.OnboardingProjectSources.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
+        => OnboardingReadQueries.ActiveProjects(_dbContext).SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
 
     private Task<ProjectSource?> FindProjectForUpdateAsync(int id, CancellationToken cancellationToken)
         => _dbContext.OnboardingProjectSources.SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
 
     private Task<TeamSource?> FindTeamAsync(int id, CancellationToken cancellationToken)
-        => _dbContext.OnboardingTeamSources.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
+        => OnboardingReadQueries.ActiveTeams(_dbContext).SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
 
     private Task<TeamSource?> FindTeamForUpdateAsync(int id, CancellationToken cancellationToken)
         => _dbContext.OnboardingTeamSources.SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
 
     private Task<PipelineSource?> FindPipelineAsync(int id, CancellationToken cancellationToken)
-        => _dbContext.OnboardingPipelineSources.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
+        => OnboardingReadQueries.ActivePipelines(_dbContext).SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
 
     private Task<PipelineSource?> FindPipelineForUpdateAsync(int id, CancellationToken cancellationToken)
         => _dbContext.OnboardingPipelineSources.SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
 
     private Task<ProductRoot?> FindRootAsync(int id, CancellationToken cancellationToken)
-        => _dbContext.OnboardingProductRoots.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
+        => OnboardingReadQueries.ActiveRoots(_dbContext).SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
 
     private Task<ProductRoot?> FindRootForUpdateAsync(int id, CancellationToken cancellationToken)
         => _dbContext.OnboardingProductRoots.SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
 
     private Task<ProductSourceBinding?> FindBindingAsync(int id, CancellationToken cancellationToken)
-        => _dbContext.OnboardingProductSourceBindings.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);
+        => OnboardingReadQueries.ActiveBindings(_dbContext).SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
 
     private Task<ProductSourceBinding?> FindBindingForUpdateAsync(int id, CancellationToken cancellationToken)
         => _dbContext.OnboardingProductSourceBindings.SingleOrDefaultAsync(item => item.Id == id && !item.IsDeleted, cancellationToken);

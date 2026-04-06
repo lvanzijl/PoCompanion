@@ -26,39 +26,27 @@ public sealed class OnboardingStatusService : IOnboardingStatusService
 
     public async Task<OnboardingOperationResult<OnboardingStatusDto>> GetStatusAsync(CancellationToken cancellationToken)
     {
-        var connection = await _dbContext.OnboardingTfsConnections
-            .AsNoTracking()
-            .Where(connectionEntity => !connectionEntity.IsDeleted)
+        var connection = await OnboardingReadQueries.ActiveConnections(_dbContext)
             .OrderBy(connectionEntity => connectionEntity.Id)
             .SingleOrDefaultAsync(cancellationToken);
 
-        var projectSources = await _dbContext.OnboardingProjectSources
-            .AsNoTracking()
-            .Where(project => !project.IsDeleted)
+        var projectSources = await OnboardingReadQueries.ActiveProjects(_dbContext)
             .OrderBy(project => project.ProjectExternalId)
             .ToListAsync(cancellationToken);
 
-        var teamSources = await _dbContext.OnboardingTeamSources
-            .AsNoTracking()
-            .Where(team => !team.IsDeleted)
+        var teamSources = await OnboardingReadQueries.ActiveTeams(_dbContext)
             .OrderBy(team => team.TeamExternalId)
             .ToListAsync(cancellationToken);
 
-        var pipelineSources = await _dbContext.OnboardingPipelineSources
-            .AsNoTracking()
-            .Where(pipeline => !pipeline.IsDeleted)
+        var pipelineSources = await OnboardingReadQueries.ActivePipelines(_dbContext)
             .OrderBy(pipeline => pipeline.PipelineExternalId)
             .ToListAsync(cancellationToken);
 
-        var productRoots = await _dbContext.OnboardingProductRoots
-            .AsNoTracking()
-            .Where(root => !root.IsDeleted)
+        var productRoots = await OnboardingReadQueries.ActiveRoots(_dbContext)
             .OrderBy(root => root.WorkItemExternalId)
             .ToListAsync(cancellationToken);
 
-        var bindings = await _dbContext.OnboardingProductSourceBindings
-            .AsNoTracking()
-            .Where(binding => !binding.IsDeleted)
+        var bindings = await OnboardingReadQueries.ActiveBindings(_dbContext)
             .OrderBy(binding => binding.ProductRootId)
             .ThenBy(binding => binding.SourceType)
             .ThenBy(binding => binding.SourceExternalId)
