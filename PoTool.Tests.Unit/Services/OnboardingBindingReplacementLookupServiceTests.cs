@@ -77,6 +77,38 @@ public sealed class OnboardingBindingReplacementLookupServiceTests
     }
 
     [TestMethod]
+    public async Task GetCandidatesAsync_ReturnsPipelineCandidatesThatExistInCurrentOnboardingContext()
+    {
+        _lookupClient
+            .Setup(client => client.GetPipelinesAsync("project-1", null, 100, 0, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OnboardingSuccessEnvelopeOfIReadOnlyListOfPipelineLookupResultDto
+            {
+                Data =
+                [
+                    new PipelineLookupResultDto("pipeline-2", "project-1", "Pipeline Two", null, null, null, null),
+                    new PipelineLookupResultDto("pipeline-9", "project-1", "Pipeline Nine", null, null, null, null)
+                ]
+            });
+
+        var result = await _service.GetCandidatesAsync(
+            new OnboardingProjectContextViewModel(1, "project-1", "Project One"),
+            CreateBinding(OnboardingProductSourceTypeDto.Pipeline, "pipeline-1"),
+            OnboardingProductSourceTypeDto.Pipeline,
+            [],
+            [
+                CreatePipeline(9, 1, "pipeline-1", "Pipeline One"),
+                CreatePipeline(10, 1, "pipeline-2", "Pipeline Two")
+            ]);
+
+        Assert.IsFalse(result.LookupFailed);
+        Assert.IsNull(result.Message);
+        Assert.HasCount(1, result.Candidates);
+        Assert.AreEqual(10, result.Candidates[0].SourceId);
+        Assert.AreEqual("Pipeline Two", result.Candidates[0].DisplayName);
+        Assert.AreEqual("pipeline-2", result.Candidates[0].Identifier);
+    }
+
+    [TestMethod]
     public async Task GetCandidatesAsync_ReturnsPermissionDeniedMessageWhenLookupFails()
     {
         var apiError = new OnboardingErrorDto(OnboardingErrorCode.PermissionDenied, "TFS denied the requested lookup.", null, false);

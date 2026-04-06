@@ -2,6 +2,14 @@
   {
     "date": "2026-04-06",
     "type": "Fixed",
+    "title": "Onboarding assignment fix links now stay in replacement mode for invalid team and pipeline bindings",
+    "impact": "When the OnboardingWorkspace feature flag is enabled, invalid team and pipeline binding blockers now route into an explicit replacement intent that highlights the binding action zone, shows only replacement-selection UI, loads project-scoped replacement candidates without falling back to create-binding mode, and keeps users in a readable empty state when no replacement candidates are available.",
+    "area": "Home / Onboarding",
+    "link": "/home/onboarding"
+  },
+  {
+    "date": "2026-04-06",
+    "type": "Fixed",
     "title": "Onboarding assignment blockers can now replace invalid team and pipeline bindings in place",
     "impact": "When the OnboardingWorkspace feature flag is enabled, team-assignment and pipeline-assignment blockers now load authoritative replacement candidates inside the binding action zone, route the selected replacement through the existing execution-intent mutation flow, update the binding through the onboarding execution service, and refresh graph plus problem counts so resolved blockers disappear without leaving the current onboarding workspace.",
     "area": "Home / Onboarding",
