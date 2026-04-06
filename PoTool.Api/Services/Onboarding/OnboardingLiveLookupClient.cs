@@ -55,15 +55,26 @@ public sealed class OnboardingLiveLookupClient : IOnboardingLiveLookupClient
     private readonly IOnboardingScopedTfsClientFactory _clientFactory;
     private readonly IOnboardingObservability _observability;
     private readonly ILogger<OnboardingLiveLookupClient> _logger;
+    private readonly IOnboardingVerificationScenarioService _verificationScenarioService;
 
     public OnboardingLiveLookupClient(
         IOnboardingScopedTfsClientFactory clientFactory,
         IOnboardingObservability observability,
         ILogger<OnboardingLiveLookupClient> logger)
+        : this(clientFactory, observability, logger, OnboardingVerificationScenarioService.Disabled)
+    {
+    }
+
+    public OnboardingLiveLookupClient(
+        IOnboardingScopedTfsClientFactory clientFactory,
+        IOnboardingObservability observability,
+        ILogger<OnboardingLiveLookupClient> logger,
+        IOnboardingVerificationScenarioService verificationScenarioService)
     {
         _clientFactory = clientFactory;
         _observability = observability;
         _logger = logger;
+        _verificationScenarioService = verificationScenarioService;
     }
 
     public async Task<OnboardingOperationResult<IReadOnlyList<ProjectLookupResultDto>>> GetProjectsAsync(
@@ -73,6 +84,11 @@ public sealed class OnboardingLiveLookupClient : IOnboardingLiveLookupClient
         int skip,
         CancellationToken cancellationToken)
     {
+        if (_verificationScenarioService.TryGetProjects(query, top, skip, out var scenarioResult))
+        {
+            return scenarioResult;
+        }
+
         return await ExecuteLookupAsync(
             "projects",
             async () =>
@@ -99,6 +115,11 @@ public sealed class OnboardingLiveLookupClient : IOnboardingLiveLookupClient
         int skip,
         CancellationToken cancellationToken)
     {
+        if (_verificationScenarioService.TryGetTeams(projectExternalId, query, top, skip, out var scenarioResult))
+        {
+            return scenarioResult;
+        }
+
         return await ExecuteLookupAsync(
             "teams",
             async () =>
@@ -131,6 +152,11 @@ public sealed class OnboardingLiveLookupClient : IOnboardingLiveLookupClient
         int skip,
         CancellationToken cancellationToken)
     {
+        if (_verificationScenarioService.TryGetPipelines(projectExternalId, query, top, skip, out var scenarioResult))
+        {
+            return scenarioResult;
+        }
+
         return await ExecuteLookupAsync(
             "pipelines",
             async () =>
@@ -175,6 +201,11 @@ public sealed class OnboardingLiveLookupClient : IOnboardingLiveLookupClient
         int skip,
         CancellationToken cancellationToken)
     {
+        if (_verificationScenarioService.TrySearchWorkItems(query, projectExternalId, workItemTypes, top, skip, out var scenarioResult))
+        {
+            return scenarioResult;
+        }
+
         return await ExecuteLookupAsync(
             "work-items-search",
             async () =>
@@ -218,6 +249,11 @@ public sealed class OnboardingLiveLookupClient : IOnboardingLiveLookupClient
         string workItemExternalId,
         CancellationToken cancellationToken)
     {
+        if (_verificationScenarioService.TryGetWorkItem(workItemExternalId, out var scenarioResult))
+        {
+            return scenarioResult;
+        }
+
         return await ExecuteLookupAsync(
             "work-items-get",
             async () =>

@@ -138,6 +138,8 @@ public static class ApiServiceCollectionExtensions
         // This single setting controls whether mock data or TFS data is used
         var useMockClient = configuration.GetValue<bool>("TfsIntegration:UseMockClient", false);
         services.AddSingleton(new TfsRuntimeMode(useMockClient));
+        services.Configure<OnboardingVerificationOptions>(configuration.GetSection("OnboardingVerification"));
+        services.AddSingleton<IOnboardingVerificationScenarioService, OnboardingVerificationScenarioService>();
 
         // Register repositories based on data source configuration
         // When UseMockClient is false (TFS mode), always use the real WorkItemRepository

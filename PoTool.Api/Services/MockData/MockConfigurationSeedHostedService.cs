@@ -2,8 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Persistence.Entities.Onboarding;
+using PoTool.Api.Services.Onboarding;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.WorkItems;
+using PoTool.Shared.Onboarding;
 using PoTool.Shared.Settings;
 
 namespace PoTool.Api.Services.MockData;
@@ -90,13 +93,16 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<MockConfigurationSeedHostedService> _logger;
+    private readonly IOnboardingVerificationScenarioService _verificationScenarioService;
 
     public MockConfigurationSeedHostedService(
         IServiceScopeFactory scopeFactory,
-        ILogger<MockConfigurationSeedHostedService> logger)
+        ILogger<MockConfigurationSeedHostedService> logger,
+        IOnboardingVerificationScenarioService verificationScenarioService)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _verificationScenarioService = verificationScenarioService;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -122,6 +128,7 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
         await EnsureMockTriageTagsAsync(context, now, cancellationToken);
         await EnsureActiveProfileAsync(context, seedPlan.ActiveProfileName, cancellationToken);
         await EnsureMockPortfolioSnapshotsAsync(context, seedPlan.ActiveProfileName, hierarchy, cancellationToken);
+        await EnsureOnboardingVerificationScenarioAsync(context, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
         _logger.LogInformation(
@@ -649,6 +656,298 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             cancellationToken,
             "persisting mock portfolio snapshots");
     }
+
+    private async Task EnsureOnboardingVerificationScenarioAsync(
+        PoToolDbContext context,
+        CancellationToken cancellationToken)
+    {
+        if (!_verificationScenarioService.IsEnabled || _verificationScenarioService.CurrentScenario is null)
+        {
+            return;
+        }
+
+        var scenario = _verificationScenarioService.CurrentScenario;
+        await ResetOnboardingVerificationGraphAsync(context, cancellationToken);
+
+        if (!scenario.Seed.IncludeConnection)
+        {
+            return;
+        }
+
+        var connection = new TfsConnection
+        {
+            ConnectionKey = "connection",
+            OrganizationUrl = MockOrganizationUrl,
+            AuthenticationMode = "Ntlm",
+            TimeoutSeconds = 30,
+            ApiVersion = "7.0",
+            AvailabilityValidationState = CreateValidValidationState(),
+            PermissionValidationState = CreateValidValidationState(),
+            CapabilityValidationState = CreateValidValidationState(),
+            LastAttemptedValidationAtUtc = DateTime.UtcNow,
+            LastSuccessfulValidationAtUtc = DateTime.UtcNow
+        };
+        context.OnboardingTfsConnections.Add(connection);
+        await SaveChangesWithDiagnosticsAsync(context, cancellationToken, "persisting onboarding verification connection");
+
+        var lookupProjects = scenario.Lookup.Projects.ToDictionary(project => project.ProjectExternalId, StringComparer.OrdinalIgnoreCase);
+        var lookupTeams = scenario.Lookup.Teams.ToDictionary(team => team.TeamExternalId, StringComparer.OrdinalIgnoreCase);
+        var lookupPipelines = scenario.Lookup.Pipelines.ToDictionary(pipeline => pipeline.PipelineExternalId, StringComparer.OrdinalIgnoreCase);
+        var lookupRoots = scenario.Lookup.WorkItems.ToDictionary(workItem => workItem.WorkItemExternalId, StringComparer.OrdinalIgnoreCase);
+
+        var projectsByExternalId = new Dictionary<string, ProjectSource>(StringComparer.OrdinalIgnoreCase);
+        foreach (var projectExternalId in scenario.Seed.ProjectExternalIds)
+        {
+            if (!lookupProjects.TryGetValue(projectExternalId, out var lookupProject))
+            {
+                throw new InvalidOperationException(
+                    $"Onboarding verification scenario '{scenario.Name}' cannot seed project '{projectExternalId}' because no lookup fixture exists for it.");
+            }
+
+            var project = new ProjectSource
+            {
+                TfsConnectionId = connection.Id,
+                ProjectExternalId = lookupProject.ProjectExternalId,
+                Enabled = true,
+                Snapshot = new ProjectSnapshot
+                {
+                    ProjectExternalId = lookupProject.ProjectExternalId,
+                    Name = lookupProject.Name,
+                    Description = lookupProject.Description,
+                    Metadata = CreateSnapshotMetadata()
+                },
+                ValidationState = CreateValidValidationState()
+            };
+
+            context.OnboardingProjectSources.Add(project);
+            projectsByExternalId.Add(projectExternalId, project);
+        }
+
+        await SaveChangesWithDiagnosticsAsync(context, cancellationToken, "persisting onboarding verification projects");
+
+        var teamsByExternalId = new Dictionary<string, TeamSource>(StringComparer.OrdinalIgnoreCase);
+        foreach (var teamExternalId in scenario.Seed.TeamExternalIds.Concat(scenario.Seed.InvalidTeamExternalIds).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!lookupTeams.TryGetValue(teamExternalId, out var lookupTeam))
+            {
+                throw new InvalidOperationException(
+                    $"Onboarding verification scenario '{scenario.Name}' cannot seed team '{teamExternalId}' because no lookup fixture exists for it.");
+            }
+
+            if (!projectsByExternalId.TryGetValue(lookupTeam.ProjectExternalId, out var project))
+            {
+                throw new InvalidOperationException(
+                    $"Onboarding verification scenario '{scenario.Name}' cannot seed team '{teamExternalId}' because project '{lookupTeam.ProjectExternalId}' is not seeded.");
+            }
+
+            var team = new TeamSource
+            {
+                ProjectSourceId = project.Id,
+                TeamExternalId = lookupTeam.TeamExternalId,
+                Enabled = true,
+                Snapshot = new TeamSnapshot
+                {
+                    TeamExternalId = lookupTeam.TeamExternalId,
+                    ProjectExternalId = lookupTeam.ProjectExternalId,
+                    Name = lookupTeam.Name,
+                    Description = lookupTeam.Description,
+                    DefaultAreaPath = lookupTeam.DefaultAreaPath,
+                    Metadata = CreateSnapshotMetadata()
+                },
+                ValidationState = scenario.Seed.InvalidTeamExternalIds.Contains(teamExternalId, StringComparer.OrdinalIgnoreCase)
+                    ? CreateInvalidValidationState()
+                    : CreateValidValidationState()
+            };
+
+            context.OnboardingTeamSources.Add(team);
+            teamsByExternalId.Add(teamExternalId, team);
+        }
+
+        var pipelinesByExternalId = new Dictionary<string, PipelineSource>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pipelineExternalId in scenario.Seed.PipelineExternalIds.Concat(scenario.Seed.InvalidPipelineExternalIds).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!lookupPipelines.TryGetValue(pipelineExternalId, out var lookupPipeline))
+            {
+                throw new InvalidOperationException(
+                    $"Onboarding verification scenario '{scenario.Name}' cannot seed pipeline '{pipelineExternalId}' because no lookup fixture exists for it.");
+            }
+
+            if (!projectsByExternalId.TryGetValue(lookupPipeline.ProjectExternalId, out var project))
+            {
+                throw new InvalidOperationException(
+                    $"Onboarding verification scenario '{scenario.Name}' cannot seed pipeline '{pipelineExternalId}' because project '{lookupPipeline.ProjectExternalId}' is not seeded.");
+            }
+
+            var pipeline = new PipelineSource
+            {
+                ProjectSourceId = project.Id,
+                PipelineExternalId = lookupPipeline.PipelineExternalId,
+                Enabled = true,
+                Snapshot = new PipelineSnapshot
+                {
+                    PipelineExternalId = lookupPipeline.PipelineExternalId,
+                    ProjectExternalId = lookupPipeline.ProjectExternalId,
+                    Name = lookupPipeline.Name,
+                    Folder = lookupPipeline.Folder,
+                    YamlPath = lookupPipeline.YamlPath,
+                    RepositoryExternalId = lookupPipeline.RepositoryExternalId,
+                    RepositoryName = lookupPipeline.RepositoryName,
+                    Metadata = CreateSnapshotMetadata()
+                },
+                ValidationState = scenario.Seed.InvalidPipelineExternalIds.Contains(pipelineExternalId, StringComparer.OrdinalIgnoreCase)
+                    ? CreateInvalidValidationState()
+                    : CreateValidValidationState()
+            };
+
+            context.OnboardingPipelineSources.Add(pipeline);
+            pipelinesByExternalId.Add(pipelineExternalId, pipeline);
+        }
+
+        await SaveChangesWithDiagnosticsAsync(context, cancellationToken, "persisting onboarding verification assignments");
+
+        var rootsByExternalId = new Dictionary<string, ProductRoot>(StringComparer.OrdinalIgnoreCase);
+        foreach (var workItemExternalId in scenario.Seed.ProductRootExternalIds)
+        {
+            if (!lookupRoots.TryGetValue(workItemExternalId, out var lookupRoot))
+            {
+                throw new InvalidOperationException(
+                    $"Onboarding verification scenario '{scenario.Name}' cannot seed product root '{workItemExternalId}' because no lookup fixture exists for it.");
+            }
+
+            if (!projectsByExternalId.TryGetValue(lookupRoot.ProjectExternalId, out var project))
+            {
+                throw new InvalidOperationException(
+                    $"Onboarding verification scenario '{scenario.Name}' cannot seed product root '{workItemExternalId}' because project '{lookupRoot.ProjectExternalId}' is not seeded.");
+            }
+
+            var root = new ProductRoot
+            {
+                ProjectSourceId = project.Id,
+                WorkItemExternalId = lookupRoot.WorkItemExternalId,
+                Enabled = true,
+                Snapshot = new ProductRootSnapshot
+                {
+                    WorkItemExternalId = lookupRoot.WorkItemExternalId,
+                    Title = lookupRoot.Title,
+                    WorkItemType = lookupRoot.WorkItemType,
+                    State = lookupRoot.State,
+                    ProjectExternalId = lookupRoot.ProjectExternalId,
+                    AreaPath = lookupRoot.AreaPath,
+                    Metadata = CreateSnapshotMetadata()
+                },
+                ValidationState = CreateValidValidationState()
+            };
+
+            context.OnboardingProductRoots.Add(root);
+            rootsByExternalId.Add(workItemExternalId, root);
+        }
+
+        await SaveChangesWithDiagnosticsAsync(context, cancellationToken, "persisting onboarding verification product roots");
+
+        foreach (var bindingSeed in scenario.Seed.Bindings)
+        {
+            if (!rootsByExternalId.TryGetValue(bindingSeed.ProductRootExternalId, out var root))
+            {
+                throw new InvalidOperationException(
+                    $"Onboarding verification scenario '{scenario.Name}' cannot seed binding for product root '{bindingSeed.ProductRootExternalId}' because that root is not seeded.");
+            }
+
+            if (!projectsByExternalId.TryGetValue(root.Snapshot.ProjectExternalId, out var project))
+            {
+                throw new InvalidOperationException(
+                    $"Onboarding verification scenario '{scenario.Name}' cannot seed binding for product root '{bindingSeed.ProductRootExternalId}' because its project scope is not seeded.");
+            }
+
+            context.OnboardingProductSourceBindings.Add(new ProductSourceBinding
+            {
+                ProductRootId = root.Id,
+                ProjectSourceId = project.Id,
+                TeamSourceId = bindingSeed.SourceType == OnboardingProductSourceTypeDto.Team
+                    ? ResolveSeededSourceId(teamsByExternalId, bindingSeed.SourceExternalId, scenario.Name, "team")
+                    : null,
+                PipelineSourceId = bindingSeed.SourceType == OnboardingProductSourceTypeDto.Pipeline
+                    ? ResolveSeededSourceId(pipelinesByExternalId, bindingSeed.SourceExternalId, scenario.Name, "pipeline")
+                    : null,
+                SourceType = bindingSeed.SourceType switch
+                {
+                    OnboardingProductSourceTypeDto.Project => ProductSourceType.Project,
+                    OnboardingProductSourceTypeDto.Team => ProductSourceType.Team,
+                    OnboardingProductSourceTypeDto.Pipeline => ProductSourceType.Pipeline,
+                    _ => throw new InvalidOperationException($"Unsupported onboarding source type '{bindingSeed.SourceType}'.")
+                },
+                SourceExternalId = bindingSeed.SourceExternalId,
+                Enabled = bindingSeed.Enabled,
+                ValidationState = CreateValidValidationState()
+            });
+        }
+
+        await SaveChangesWithDiagnosticsAsync(context, cancellationToken, "persisting onboarding verification bindings");
+    }
+
+    private static async Task ResetOnboardingVerificationGraphAsync(
+        PoToolDbContext context,
+        CancellationToken cancellationToken)
+    {
+        context.OnboardingProductSourceBindings.RemoveRange(
+            await context.OnboardingProductSourceBindings.IgnoreQueryFilters().ToListAsync(cancellationToken));
+        context.OnboardingProductRoots.RemoveRange(
+            await context.OnboardingProductRoots.IgnoreQueryFilters().ToListAsync(cancellationToken));
+        context.OnboardingPipelineSources.RemoveRange(
+            await context.OnboardingPipelineSources.IgnoreQueryFilters().ToListAsync(cancellationToken));
+        context.OnboardingTeamSources.RemoveRange(
+            await context.OnboardingTeamSources.IgnoreQueryFilters().ToListAsync(cancellationToken));
+        context.OnboardingProjectSources.RemoveRange(
+            await context.OnboardingProjectSources.IgnoreQueryFilters().ToListAsync(cancellationToken));
+        context.OnboardingTfsConnections.RemoveRange(
+            await context.OnboardingTfsConnections.IgnoreQueryFilters().ToListAsync(cancellationToken));
+
+        await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static int ResolveSeededSourceId<TSource>(
+        IReadOnlyDictionary<string, TSource> sourcesByExternalId,
+        string sourceExternalId,
+        string scenarioName,
+        string sourceType)
+        where TSource : OnboardingGraphEntityBase
+    {
+        if (!sourcesByExternalId.TryGetValue(sourceExternalId, out var source))
+        {
+            throw new InvalidOperationException(
+                $"Onboarding verification scenario '{scenarioName}' cannot seed a {sourceType} binding because source '{sourceExternalId}' was not resolved.");
+        }
+
+        if (source.Id <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Onboarding verification scenario '{scenarioName}' cannot seed a {sourceType} binding because source '{sourceExternalId}' does not have a persisted ID yet.");
+        }
+
+        return source.Id;
+    }
+
+    private static OnboardingValidationState CreateValidValidationState()
+        => new()
+        {
+            Status = OnboardingValidationStatus.Valid.ToString(),
+            ValidatedAtUtc = DateTime.UtcNow
+        };
+
+    private static OnboardingValidationState CreateInvalidValidationState()
+        => new()
+        {
+            Status = OnboardingValidationStatus.Invalid.ToString(),
+            ValidatedAtUtc = DateTime.UtcNow
+        };
+
+    private static OnboardingSnapshotMetadata CreateSnapshotMetadata()
+        => new()
+        {
+            ConfirmedAtUtc = DateTime.UtcNow,
+            LastSeenAtUtc = DateTime.UtcNow,
+            IsCurrent = true,
+            RenameDetected = false
+        };
 
     private async Task SaveChangesWithDiagnosticsAsync(
         PoToolDbContext context,
