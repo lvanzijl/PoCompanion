@@ -3,9 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Moq;
+using PoTool.Api.Configuration;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Services;
+using PoTool.Api.Services.Onboarding;
 using PoTool.Core.Filters;
 using PoTool.Api.Services.MockData;
 using PoTool.Core.Domain.DeliveryTrends.Models;
@@ -114,6 +118,47 @@ public sealed class MockConfigurationSeedHostedServiceTests
         Assert.HasCount(16, portfolioSnapshots, "Seeding should remain idempotent for the battleship CDC history.");
         Assert.HasCount(1, tfsConfigs, "Seeding should remain idempotent for mock TFS configuration.");
         Assert.HasCount(6, triageTags, "Seeding should remain idempotent for the mock triage tag catalog.");
+    }
+
+    [TestMethod]
+    public async Task StartAsync_WhenHappyBindingChainScenarioSelected_SeedsConnectionOnlyOnboardingGraph()
+    {
+        await using var provider = await CreateSqliteServiceProviderAsync(OnboardingVerificationScenarioNames.HappyBindingChain);
+        var service = provider.GetRequiredService<MockConfigurationSeedHostedService>();
+
+        await service.StartAsync(CancellationToken.None);
+
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        Assert.AreEqual(1, await context.OnboardingTfsConnections.CountAsync());
+        Assert.AreEqual(0, await context.OnboardingProjectSources.CountAsync());
+        Assert.AreEqual(0, await context.OnboardingProductRoots.CountAsync());
+        Assert.AreEqual(0, await context.OnboardingProductSourceBindings.CountAsync());
+    }
+
+    [TestMethod]
+    public async Task StartAsync_WhenTeamAssignmentScenarioSelected_SeedsReachableAssignmentBlocker()
+    {
+        await using var provider = await CreateSqliteServiceProviderAsync(OnboardingVerificationScenarioNames.TeamAssignment);
+        var service = provider.GetRequiredService<MockConfigurationSeedHostedService>();
+
+        await service.StartAsync(CancellationToken.None);
+
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+        Assert.AreEqual(1, await context.OnboardingTfsConnections.CountAsync());
+        Assert.AreEqual(1, await context.OnboardingProjectSources.CountAsync());
+        Assert.AreEqual(1, await context.OnboardingProductRoots.CountAsync());
+        Assert.AreEqual(2, await context.OnboardingProductSourceBindings.CountAsync());
+        Assert.AreEqual(1, await context.OnboardingTeamSources.CountAsync(), "Assignment blocker should persist through an invalid seeded team source.");
+
+        var statusService = new OnboardingStatusService(context, Mock.Of<IOnboardingObservability>());
+        var status = await statusService.GetStatusAsync(CancellationToken.None);
+
+        Assert.IsTrue(status.Succeeded);
+        CollectionAssert.Contains(status.Data!.BlockingReasons.Select(issue => issue.Code).ToList(), "TEAM_BINDING_SOURCE_INVALID");
     }
 
     [TestMethod]
@@ -309,21 +354,21 @@ public sealed class MockConfigurationSeedHostedServiceTests
                 NullLogger<PortfolioSnapshotSelectionService>.Instance),
             new ProductAggregationService());
 
-    private static ServiceProvider CreateSqliteServiceProvider(SqliteConnection connection)
+    private static ServiceProvider CreateSqliteServiceProvider(SqliteConnection connection, string scenario = OnboardingVerificationScenarioNames.HappyBindingChain)
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddDbContext<PoToolDbContext>(options => options.UseSqlite(connection));
-        ConfigureCommonServices(services);
+        ConfigureCommonServices(services, scenario);
 
         return services.BuildServiceProvider();
     }
 
-    private static async Task<ServiceProvider> CreateSqliteServiceProviderAsync()
+    private static async Task<ServiceProvider> CreateSqliteServiceProviderAsync(string scenario = OnboardingVerificationScenarioNames.HappyBindingChain)
     {
         var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
-        var provider = CreateSqliteServiceProvider(connection);
+        var provider = CreateSqliteServiceProvider(connection, scenario);
 
         await using var scope = provider.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
@@ -378,8 +423,14 @@ public sealed class MockConfigurationSeedHostedServiceTests
             _ => false
         };
 
-    private static void ConfigureCommonServices(IServiceCollection services)
+    private static void ConfigureCommonServices(IServiceCollection services, string scenario)
     {
+        services.AddSingleton(new TfsRuntimeMode(useMockClient: true));
+        services.AddSingleton<IOptions<OnboardingVerificationOptions>>(Options.Create(new OnboardingVerificationOptions
+        {
+            SelectedScenario = scenario
+        }));
+        services.AddSingleton<IOnboardingVerificationScenarioService, OnboardingVerificationScenarioService>();
         services.AddSingleton<BattleshipWorkItemGenerator>();
         services.AddSingleton<BattleshipDependencyGenerator>();
         services.AddSingleton<BattleshipPullRequestGenerator>();

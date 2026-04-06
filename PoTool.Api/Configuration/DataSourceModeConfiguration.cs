@@ -41,6 +41,7 @@ public static class DataSourceModeConfiguration
         "/api/roadmapsnapshots",
         "/api/sprints",
         "/api/startup",
+        "/api/onboarding",
         "/api/triagetags",
         
         // Profile and team management

@@ -51,6 +51,11 @@ public static class WorkspaceRoutes
     public const string PlanningWorkspace = "/home/planning";
 
     /// <summary>
+    /// Onboarding workspace route — read-only onboarding graph and status view.
+    /// </summary>
+    public const string OnboardingWorkspace = "/home/onboarding";
+
+    /// <summary>
     /// Home change overview route — pull request, pipeline, and work item changes since the last sync.
     /// </summary>
     public const string HomeChanges = "/home/changes";

@@ -124,6 +124,30 @@ builder.Services.AddScoped<IBuildQualityClient>(sp =>
 builder.Services.AddBugTriageClient(apiBaseUrl);
 builder.Services.AddTriageTagsClient(apiBaseUrl);
 
+builder.Services.AddScoped<IOnboardingCrudClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new OnboardingCrudClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<IOnboardingLookupClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new OnboardingLookupClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
+builder.Services.AddScoped<IOnboardingStatusClient>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    var client = new OnboardingStatusClient(httpClient);
+    client.BaseUrl = apiBaseUrl;
+    return client;
+});
+
 builder.Services.AddScoped<IPipelinesClient>(sp =>
 {
     var httpClient = sp.GetRequiredService<HttpClient>();
@@ -221,8 +245,12 @@ builder.Services.AddScoped<GlobalFilterDefaultsService>();
 builder.Services.AddScoped<ErrorMessageService>();
 builder.Services.AddScoped<StateClassificationService>();
 builder.Services.AddScoped<WorkItemVisibilityService>();
+builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddScoped<IOnboardingWizardState, OnboardingWizardState>();
+builder.Services.AddScoped<IOnboardingWorkspaceService, OnboardingWorkspaceService>();
+builder.Services.AddScoped<OnboardingExecutionService>();
+builder.Services.AddScoped<OnboardingWorkspaceViewModelFactory>();
 builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorService>();
 builder.Services.AddScoped<CacheSyncService>();
 builder.Services.AddScoped<ICacheSyncService>(sp => sp.GetRequiredService<CacheSyncService>());

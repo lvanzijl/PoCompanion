@@ -1,0 +1,983 @@
+@using MudBlazor
+@using PoTool.Client.Components.Common.Compact
+@using PoTool.Client.Models
+@using PoTool.Client.Services
+@using PoTool.Shared.Onboarding
+@inject OnboardingExecutionService ExecutionService
+
+<OnboardingFutureActionZone Title="@ResolvedTitle" Message="@ResolvedMessage">
+    @if (_lastFeedback is not null)
+    {
+        <MudAlert Severity="@ResolveSeverity(_lastFeedback.Kind)" Variant="Variant.Outlined" Dense="true">
+            <MudText Typo="Typo.subtitle2">@_lastFeedback.Title</MudText>
+            <MudText Typo="Typo.body2">@_lastFeedback.Message</MudText>
+            @if (!string.IsNullOrWhiteSpace(_lastFeedback.Details))
+            {
+                <MudText Typo="Typo.caption">@_lastFeedback.Details</MudText>
+            }
+        </MudAlert>
+    }
+
+    @if (!IsIntentEnabled)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Use <strong>Go to fix location</strong> from a problem or graph action before executing a write.
+        </MudText>
+    }
+    else if (!IsContextMatched)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            This action zone is ready, but the current execution intent is focused on a different onboarding context.
+        </MudText>
+    }
+    else
+    {
+        <MudStack Spacing="2">
+            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Info">
+                    Intent: @ActiveIntent!.SuggestedActionLabel
+                </MudChip>
+                <MudChip T="string" Label="true" Size="Size.Small" Color="@ResolveConfidenceColor()">
+                    Confidence: @ActiveIntent!.ConfidenceLevel
+                </MudChip>
+            </MudStack>
+
+            @switch (Section)
+            {
+                case OnboardingGraphSection.Connections:
+                    @RenderConnectionEditor()
+                    break;
+                case OnboardingGraphSection.Projects:
+                    @RenderProjectEditor()
+                    break;
+                case OnboardingGraphSection.Teams:
+                    @RenderTeamEditor()
+                    break;
+                case OnboardingGraphSection.Pipelines:
+                    @RenderPipelineEditor()
+                    break;
+                case OnboardingGraphSection.ProductRoots:
+                    @RenderRootEditor()
+                    break;
+                case OnboardingGraphSection.Bindings:
+                    @RenderBindingEditor()
+                    break;
+            }
+        </MudStack>
+    }
+</OnboardingFutureActionZone>
+
+@code {
+    private string _contextKey = string.Empty;
+    private OnboardingExecutionFeedbackViewModel? _lastFeedback;
+
+    private string _connectionOrganizationUrl = string.Empty;
+    private string _connectionAuthenticationMode = "Pat";
+    private string _connectionTimeoutSeconds = "30";
+    private string _connectionApiVersion = "7.1";
+    private bool _projectEnabled = true;
+    private string _projectExternalId = string.Empty;
+    private string _projectName = string.Empty;
+    private string _projectDescription = string.Empty;
+    private bool _teamEnabled = true;
+    private string _teamExternalId = string.Empty;
+    private string _teamName = string.Empty;
+    private string _teamDefaultAreaPath = string.Empty;
+    private string _teamDescription = string.Empty;
+    private bool _pipelineEnabled = true;
+    private string _pipelineExternalId = string.Empty;
+    private string _pipelineName = string.Empty;
+    private string _pipelineFolder = string.Empty;
+    private string _pipelineYamlPath = string.Empty;
+    private string _pipelineRepositoryExternalId = string.Empty;
+    private string _pipelineRepositoryName = string.Empty;
+    private bool _rootEnabled = true;
+    private string _rootWorkItemExternalId = string.Empty;
+    private string _rootTitle = string.Empty;
+    private string _rootWorkItemType = string.Empty;
+    private string _rootState = string.Empty;
+    private string _rootAreaPath = string.Empty;
+    private bool _bindingEnabled = true;
+    private OnboardingProductSourceTypeDto _bindingSourceType = OnboardingProductSourceTypeDto.Project;
+    private int? _bindingTeamSourceId;
+    private int? _bindingPipelineSourceId;
+    private string _deleteReason = string.Empty;
+    private bool _isBusy;
+
+    [Parameter, EditorRequired] public OnboardingGraphSection Section { get; set; }
+    [Parameter] public ExecutionIntentViewModel? ActiveIntent { get; set; }
+    [Parameter, EditorRequired] public OnboardingWorkspaceFilter CurrentFilter { get; set; } = new(null, null, null, null);
+    [Parameter] public OnboardingTfsConnectionDto? Connection { get; set; }
+    [Parameter] public OnboardingProjectSourceDto? Project { get; set; }
+    [Parameter] public OnboardingTeamSourceDto? Team { get; set; }
+    [Parameter] public OnboardingPipelineSourceDto? Pipeline { get; set; }
+    [Parameter] public OnboardingProductRootDto? Root { get; set; }
+    [Parameter] public OnboardingProductSourceBindingDto? Binding { get; set; }
+    [Parameter] public OnboardingProjectContextViewModel? ProjectContext { get; set; }
+    [Parameter] public IReadOnlyList<OnboardingTeamSourceDto> AvailableTeams { get; set; } = Array.Empty<OnboardingTeamSourceDto>();
+    [Parameter] public IReadOnlyList<OnboardingPipelineSourceDto> AvailablePipelines { get; set; } = Array.Empty<OnboardingPipelineSourceDto>();
+    [Parameter] public EventCallback<OnboardingExecutionResult> OnCompleted { get; set; }
+
+    private bool IsIntentEnabled => ActiveIntent is not null;
+
+    private bool IsContextMatched
+    {
+        get
+        {
+            if (ActiveIntent is null || ActiveIntent.NavigationTarget.Section != Section)
+            {
+                return false;
+            }
+
+            return Section switch
+            {
+                OnboardingGraphSection.Connections => true,
+                OnboardingGraphSection.Projects => ProjectContext is null
+                    || ActiveIntent.ProjectId == ProjectContext.ProjectId
+                    || ActiveIntent.ProjectId == Project?.Id,
+                OnboardingGraphSection.Teams or OnboardingGraphSection.Pipelines or OnboardingGraphSection.ProductRoots
+                    => ProjectContext?.ProjectId is null || ActiveIntent.ProjectId == ProjectContext.ProjectId,
+                OnboardingGraphSection.Bindings
+                    => Root is null
+                        || ActiveIntent.RootId == Root.Id
+                        || (Binding is not null && ActiveIntent.BindingId == Binding.Id),
+                _ => false
+            };
+        }
+    }
+
+    private string ResolvedTitle => Section switch
+    {
+        OnboardingGraphSection.Connections => "Connection action zone",
+        OnboardingGraphSection.Projects => "Project action zone",
+        OnboardingGraphSection.Teams => "Team action zone",
+        OnboardingGraphSection.Pipelines => "Pipeline action zone",
+        OnboardingGraphSection.ProductRoots => "Product-root action zone",
+        OnboardingGraphSection.Bindings => "Binding action zone",
+        _ => "Action zone"
+    };
+
+    private string ResolvedMessage => Section switch
+    {
+        OnboardingGraphSection.Connections => "Create, update, or delete the onboarding connection only from the active execution intent.",
+        OnboardingGraphSection.Projects => "Link or maintain a project only from the active execution intent.",
+        OnboardingGraphSection.Teams => "Assign or maintain a team only from the active execution intent.",
+        OnboardingGraphSection.Pipelines => "Assign or maintain a pipeline only from the active execution intent.",
+        OnboardingGraphSection.ProductRoots => "Add or maintain a product root only from the active execution intent.",
+        OnboardingGraphSection.Bindings => "Create or maintain a binding only from the active execution intent.",
+        _ => string.Empty
+    };
+
+    protected override void OnParametersSet()
+    {
+        var nextKey = string.Join(
+            "|",
+            Section,
+            ActiveIntent?.IntentType,
+            ActiveIntent?.ConnectionId,
+            ActiveIntent?.ProjectId,
+            ActiveIntent?.RootId,
+            ActiveIntent?.BindingId,
+            Connection?.Id,
+            Connection?.Audit.UpdatedAtUtc.Ticks,
+            Project?.Id,
+            Project?.Audit.UpdatedAtUtc.Ticks,
+            Team?.Id,
+            Team?.Audit.UpdatedAtUtc.Ticks,
+            Pipeline?.Id,
+            Pipeline?.Audit.UpdatedAtUtc.Ticks,
+            Root?.Id,
+            Root?.Audit.UpdatedAtUtc.Ticks,
+            Binding?.Id,
+            Binding?.Audit.UpdatedAtUtc.Ticks,
+            ProjectContext?.ProjectId);
+
+        if (nextKey == _contextKey)
+        {
+            return;
+        }
+
+        _contextKey = nextKey;
+        _lastFeedback = null;
+        _deleteReason = string.Empty;
+
+        _connectionOrganizationUrl = Connection?.OrganizationUrl ?? string.Empty;
+        _connectionAuthenticationMode = Connection?.AuthenticationMode ?? "Pat";
+        _connectionTimeoutSeconds = (Connection?.TimeoutSeconds ?? 30).ToString();
+        _connectionApiVersion = Connection?.ApiVersion ?? "7.1";
+
+        _projectEnabled = Project?.Enabled ?? true;
+        _projectExternalId = Project?.ProjectExternalId ?? string.Empty;
+        _projectName = Project?.Snapshot.Name ?? string.Empty;
+        _projectDescription = Project?.Snapshot.Description ?? string.Empty;
+
+        _teamEnabled = Team?.Enabled ?? true;
+        _teamExternalId = Team?.TeamExternalId ?? string.Empty;
+        _teamName = Team?.Snapshot.Name ?? string.Empty;
+        _teamDefaultAreaPath = Team?.Snapshot.DefaultAreaPath ?? string.Empty;
+        _teamDescription = Team?.Snapshot.Description ?? string.Empty;
+
+        _pipelineEnabled = Pipeline?.Enabled ?? true;
+        _pipelineExternalId = Pipeline?.PipelineExternalId ?? string.Empty;
+        _pipelineName = Pipeline?.Snapshot.Name ?? string.Empty;
+        _pipelineFolder = Pipeline?.Snapshot.Folder ?? string.Empty;
+        _pipelineYamlPath = Pipeline?.Snapshot.YamlPath ?? string.Empty;
+        _pipelineRepositoryExternalId = Pipeline?.Snapshot.RepositoryExternalId ?? string.Empty;
+        _pipelineRepositoryName = Pipeline?.Snapshot.RepositoryName ?? string.Empty;
+
+        _rootEnabled = Root?.Enabled ?? true;
+        _rootWorkItemExternalId = Root?.WorkItemExternalId ?? string.Empty;
+        _rootTitle = Root?.Snapshot.Title ?? string.Empty;
+        _rootWorkItemType = Root?.Snapshot.WorkItemType ?? string.Empty;
+        _rootState = Root?.Snapshot.State ?? string.Empty;
+        _rootAreaPath = Root?.Snapshot.AreaPath ?? string.Empty;
+
+        _bindingEnabled = Binding?.Enabled ?? true;
+        _bindingSourceType = Binding?.SourceType ?? OnboardingProductSourceTypeDto.Project;
+        _bindingTeamSourceId = Binding?.TeamSourceId ?? AvailableTeams.FirstOrDefault()?.Id;
+        _bindingPipelineSourceId = Binding?.PipelineSourceId ?? AvailablePipelines.FirstOrDefault()?.Id;
+    }
+
+    private RenderFragment RenderConnectionEditor() => builder =>
+    {
+        var index = 0;
+        builder.OpenComponent<MudText>(index++);
+        builder.AddAttribute(index++, "Typo", Typo.body2);
+        builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, Connection is null ? "Create the onboarding connection." : "Update or remove the current onboarding connection.")));
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Organization URL");
+        builder.AddAttribute(index++, "Value", _connectionOrganizationUrl);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _connectionOrganizationUrl = value));
+        builder.AddAttribute(index++, "Disabled", Connection is not null || _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Authentication mode");
+        builder.AddAttribute(index++, "Value", _connectionAuthenticationMode);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _connectionAuthenticationMode = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Timeout seconds");
+        builder.AddAttribute(index++, "Value", _connectionTimeoutSeconds);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _connectionTimeoutSeconds = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "API version");
+        builder.AddAttribute(index++, "Value", _connectionApiVersion);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _connectionApiVersion = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.AddContent(index++, RenderActionButtons(
+            Connection is null ? "Create connection" : "Save connection",
+            ExecuteConnectionAsync,
+            Connection is not null ? "Delete connection" : null,
+            Connection is not null ? ExecuteDeleteConnectionAsync : null));
+    };
+
+    private RenderFragment RenderProjectEditor() => builder =>
+    {
+        var index = 0;
+        builder.OpenComponent<MudText>(index++);
+        builder.AddAttribute(index++, "Typo", Typo.body2);
+        builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Connection context: {ResolveConnectionContext()}")));
+        builder.CloseComponent();
+
+        builder.OpenComponent<MudSwitch<bool>>(index++);
+        builder.AddAttribute(index++, "Label", "Enabled");
+        builder.AddAttribute(index++, "Value", _projectEnabled);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<bool>(this, value => _projectEnabled = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Project external ID");
+        builder.AddAttribute(index++, "Value", _projectExternalId);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _projectExternalId = value));
+        builder.AddAttribute(index++, "Disabled", Project is not null || _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Display name");
+        builder.AddAttribute(index++, "Value", _projectName);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _projectName = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Description");
+        builder.AddAttribute(index++, "Value", _projectDescription);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _projectDescription = value));
+        builder.AddAttribute(index++, "Lines", 3);
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.AddContent(index++, RenderActionButtons(
+            Project is null ? "Link project" : "Save project",
+            ExecuteProjectAsync,
+            Project is not null ? "Delete project" : null,
+            Project is not null ? ExecuteDeleteProjectAsync : null));
+    };
+
+    private RenderFragment RenderTeamEditor() => builder =>
+    {
+        var index = 0;
+        builder.OpenComponent<MudText>(index++);
+        builder.AddAttribute(index++, "Typo", Typo.body2);
+        builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Project context: {ResolveProjectContextLabel()}")));
+        builder.CloseComponent();
+
+        builder.OpenComponent<MudSwitch<bool>>(index++);
+        builder.AddAttribute(index++, "Label", "Enabled");
+        builder.AddAttribute(index++, "Value", _teamEnabled);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<bool>(this, value => _teamEnabled = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Team external ID");
+        builder.AddAttribute(index++, "Value", _teamExternalId);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _teamExternalId = value));
+        builder.AddAttribute(index++, "Disabled", Team is not null || _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Display name");
+        builder.AddAttribute(index++, "Value", _teamName);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _teamName = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Default area path");
+        builder.AddAttribute(index++, "Value", _teamDefaultAreaPath);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _teamDefaultAreaPath = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Description");
+        builder.AddAttribute(index++, "Value", _teamDescription);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _teamDescription = value));
+        builder.AddAttribute(index++, "Lines", 3);
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.AddContent(index++, RenderActionButtons(
+            Team is null ? "Add team" : "Save team",
+            ExecuteTeamAsync,
+            Team is not null ? "Delete team" : null,
+            Team is not null ? ExecuteDeleteTeamAsync : null));
+    };
+
+    private RenderFragment RenderPipelineEditor() => builder =>
+    {
+        var index = 0;
+        builder.OpenComponent<MudText>(index++);
+        builder.AddAttribute(index++, "Typo", Typo.body2);
+        builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Project context: {ResolveProjectContextLabel()}")));
+        builder.CloseComponent();
+
+        builder.OpenComponent<MudSwitch<bool>>(index++);
+        builder.AddAttribute(index++, "Label", "Enabled");
+        builder.AddAttribute(index++, "Value", _pipelineEnabled);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<bool>(this, value => _pipelineEnabled = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Pipeline external ID");
+        builder.AddAttribute(index++, "Value", _pipelineExternalId);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _pipelineExternalId = value));
+        builder.AddAttribute(index++, "Disabled", Pipeline is not null || _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Display name");
+        builder.AddAttribute(index++, "Value", _pipelineName);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _pipelineName = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Folder");
+        builder.AddAttribute(index++, "Value", _pipelineFolder);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _pipelineFolder = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "YAML path");
+        builder.AddAttribute(index++, "Value", _pipelineYamlPath);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _pipelineYamlPath = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Repository external ID");
+        builder.AddAttribute(index++, "Value", _pipelineRepositoryExternalId);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _pipelineRepositoryExternalId = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Repository name");
+        builder.AddAttribute(index++, "Value", _pipelineRepositoryName);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _pipelineRepositoryName = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.AddContent(index++, RenderActionButtons(
+            Pipeline is null ? "Add pipeline" : "Save pipeline",
+            ExecutePipelineAsync,
+            Pipeline is not null ? "Delete pipeline" : null,
+            Pipeline is not null ? ExecuteDeletePipelineAsync : null));
+    };
+
+    private RenderFragment RenderRootEditor() => builder =>
+    {
+        var index = 0;
+        builder.OpenComponent<MudText>(index++);
+        builder.AddAttribute(index++, "Typo", Typo.body2);
+        builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Project context: {ResolveProjectContextLabel()}")));
+        builder.CloseComponent();
+
+        builder.OpenComponent<MudSwitch<bool>>(index++);
+        builder.AddAttribute(index++, "Label", "Enabled");
+        builder.AddAttribute(index++, "Value", _rootEnabled);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<bool>(this, value => _rootEnabled = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Work item external ID");
+        builder.AddAttribute(index++, "Value", _rootWorkItemExternalId);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _rootWorkItemExternalId = value));
+        builder.AddAttribute(index++, "Disabled", Root is not null || _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Title");
+        builder.AddAttribute(index++, "Value", _rootTitle);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _rootTitle = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Work item type");
+        builder.AddAttribute(index++, "Value", _rootWorkItemType);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _rootWorkItemType = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "State");
+        builder.AddAttribute(index++, "Value", _rootState);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _rootState = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.OpenComponent<CompactTextField<string>>(index++);
+        builder.AddAttribute(index++, "Label", "Area path");
+        builder.AddAttribute(index++, "Value", _rootAreaPath);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _rootAreaPath = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        builder.AddContent(index++, RenderActionButtons(
+            Root is null ? "Add product root" : "Save product root",
+            ExecuteRootAsync,
+            Root is not null ? "Delete product root" : null,
+            Root is not null ? ExecuteDeleteRootAsync : null));
+    };
+
+    private RenderFragment RenderBindingEditor() => builder =>
+    {
+        var index = 0;
+        builder.OpenComponent<MudText>(index++);
+        builder.AddAttribute(index++, "Typo", Typo.body2);
+        builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Root context: {Root?.Snapshot.Title ?? Binding?.SourceExternalId ?? "Select a product root"}")));
+        builder.CloseComponent();
+
+        builder.OpenComponent<MudSwitch<bool>>(index++);
+        builder.AddAttribute(index++, "Label", "Enabled");
+        builder.AddAttribute(index++, "Value", _bindingEnabled);
+        builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<bool>(this, value => _bindingEnabled = value));
+        builder.AddAttribute(index++, "Disabled", _isBusy);
+        builder.CloseComponent();
+
+        if (Binding is not null)
+        {
+            builder.OpenComponent<MudText>(index++);
+            builder.AddAttribute(index++, "Typo", Typo.body2);
+            builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content => content.AddContent(0, $"Immutable source: {Binding.SourceType} → {Binding.SourceExternalId}")));
+            builder.CloseComponent();
+        }
+        else
+        {
+            builder.OpenComponent<CompactSelect<OnboardingProductSourceTypeDto>>(index++);
+            builder.AddAttribute(index++, "Label", "Source type");
+            builder.AddAttribute(index++, "Value", _bindingSourceType);
+            builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<OnboardingProductSourceTypeDto>(this, value => _bindingSourceType = value));
+            builder.AddAttribute(index++, "Disabled", _isBusy);
+            builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content =>
+            {
+                var nested = 0;
+                foreach (var option in Enum.GetValues<OnboardingProductSourceTypeDto>())
+                {
+                    content.OpenComponent<MudSelectItem<OnboardingProductSourceTypeDto>>(nested++);
+                    content.AddAttribute(nested++, "Value", option);
+                    content.AddAttribute(nested++, "ChildContent", (RenderFragment)(text => text.AddContent(0, option.ToString())));
+                    content.CloseComponent();
+                }
+            }));
+            builder.CloseComponent();
+
+            if (_bindingSourceType == OnboardingProductSourceTypeDto.Team)
+            {
+                builder.OpenComponent<CompactSelect<int?>>(index++);
+                builder.AddAttribute(index++, "Label", "Team source");
+                builder.AddAttribute(index++, "Value", _bindingTeamSourceId);
+                builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<int?>(this, value => _bindingTeamSourceId = value));
+                builder.AddAttribute(index++, "Disabled", _isBusy);
+                builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content =>
+                {
+                    var nested = 0;
+                    foreach (var team in AvailableTeams)
+                    {
+                        content.OpenComponent<MudSelectItem<int?>>(nested++);
+                        content.AddAttribute(nested++, "Value", team.Id);
+                        content.AddAttribute(nested++, "ChildContent", (RenderFragment)(text => text.AddContent(0, $"{team.Snapshot.Name} ({team.TeamExternalId})")));
+                        content.CloseComponent();
+                    }
+                }));
+                builder.CloseComponent();
+            }
+            else if (_bindingSourceType == OnboardingProductSourceTypeDto.Pipeline)
+            {
+                builder.OpenComponent<CompactSelect<int?>>(index++);
+                builder.AddAttribute(index++, "Label", "Pipeline source");
+                builder.AddAttribute(index++, "Value", _bindingPipelineSourceId);
+                builder.AddAttribute(index++, "ValueChanged", EventCallback.Factory.Create<int?>(this, value => _bindingPipelineSourceId = value));
+                builder.AddAttribute(index++, "Disabled", _isBusy);
+                builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content =>
+                {
+                    var nested = 0;
+                    foreach (var pipeline in AvailablePipelines)
+                    {
+                        content.OpenComponent<MudSelectItem<int?>>(nested++);
+                        content.AddAttribute(nested++, "Value", pipeline.Id);
+                        content.AddAttribute(nested++, "ChildContent", (RenderFragment)(text => text.AddContent(0, $"{pipeline.Snapshot.Name} ({pipeline.PipelineExternalId})")));
+                        content.CloseComponent();
+                    }
+                }));
+                builder.CloseComponent();
+            }
+        }
+
+        builder.AddContent(index++, RenderActionButtons(
+            Binding is null ? "Create binding" : "Save binding",
+            ExecuteBindingAsync,
+            Binding is not null ? "Delete binding" : null,
+            Binding is not null ? ExecuteDeleteBindingAsync : null));
+    };
+
+    private RenderFragment RenderActionButtons(
+        string primaryLabel,
+        Func<Task> primaryAction,
+        string? deleteLabel,
+        Func<Task>? deleteAction) => builder =>
+    {
+        var index = 0;
+        builder.OpenComponent<MudStack>(index++);
+        builder.AddAttribute(index++, "Spacing", 1);
+        builder.AddAttribute(index++, "ChildContent", (RenderFragment)(content =>
+        {
+            var nested = 0;
+            content.OpenComponent<CompactButton>(nested++);
+            content.AddAttribute(nested++, "ButtonRole", ButtonRole.Action);
+            content.AddAttribute(nested++, "Disabled", _isBusy);
+            content.AddAttribute(nested++, "OnClick", EventCallback.Factory.Create<MouseEventArgs>(this, async () => await primaryAction()));
+            content.AddAttribute(nested++, "ChildContent", (RenderFragment)(text => text.AddContent(0, primaryLabel)));
+            content.CloseComponent();
+
+            if (deleteAction is not null && !string.IsNullOrWhiteSpace(deleteLabel))
+            {
+                content.OpenComponent<CompactTextField<string>>(nested++);
+                content.AddAttribute(nested++, "Label", "Deletion reason");
+                content.AddAttribute(nested++, "Value", _deleteReason);
+                content.AddAttribute(nested++, "ValueChanged", EventCallback.Factory.Create<string>(this, value => _deleteReason = value));
+                content.AddAttribute(nested++, "Disabled", _isBusy);
+                content.CloseComponent();
+
+                content.OpenComponent<CompactButton>(nested++);
+                content.AddAttribute(nested++, "ButtonRole", ButtonRole.Critical);
+                content.AddAttribute(nested++, "Disabled", _isBusy);
+                content.AddAttribute(nested++, "OnClick", EventCallback.Factory.Create<MouseEventArgs>(this, async () => await deleteAction()));
+                content.AddAttribute(nested++, "ChildContent", (RenderFragment)(text => text.AddContent(0, deleteLabel)));
+                content.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private async Task ExecuteConnectionAsync()
+    {
+        if (!IsContextMatched || ActiveIntent is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            var result = Connection is null
+                ? await ExecutionService.CreateConnectionAsync(
+                    ActiveIntent,
+                    new CreateTfsConnectionRequest(_connectionOrganizationUrl, _connectionAuthenticationMode, ParsePositiveInt(_connectionTimeoutSeconds), _connectionApiVersion),
+                    CurrentFilter)
+                : await ExecutionService.UpdateConnectionAsync(
+                    ActiveIntent,
+                    Connection.Id,
+                    new UpdateTfsConnectionRequest(_connectionAuthenticationMode, ParsePositiveNullableInt(_connectionTimeoutSeconds), _connectionApiVersion, null, null),
+                    CurrentFilter);
+            await CompleteAsync(result);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteDeleteConnectionAsync()
+    {
+        if (Connection is null || ActiveIntent is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await CompleteAsync(await ExecutionService.DeleteConnectionAsync(ActiveIntent, Connection.Id, new OnboardingSoftDeleteRequest(_deleteReason), CurrentFilter));
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteProjectAsync()
+    {
+        if (!IsContextMatched || ActiveIntent is null)
+        {
+            return;
+        }
+
+        var connectionId = ResolveConnectionId();
+        _isBusy = true;
+        try
+        {
+            var result = Project is null
+                ? await ExecutionService.CreateProjectAsync(
+                    ActiveIntent,
+                    new CreateProjectSourceRequest(connectionId, _projectExternalId, _projectEnabled, NullIfWhiteSpace(_projectName), NullIfWhiteSpace(_projectDescription)),
+                    CurrentFilter)
+                : await ExecutionService.UpdateProjectAsync(
+                    ActiveIntent,
+                    Project.Id,
+                    new UpdateProjectSourceRequest(_projectEnabled, NullIfWhiteSpace(_projectName), NullIfWhiteSpace(_projectDescription), null, null),
+                    CurrentFilter);
+            await CompleteAsync(result);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteDeleteProjectAsync()
+    {
+        if (Project is null || ActiveIntent is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await CompleteAsync(await ExecutionService.DeleteProjectAsync(ActiveIntent, Project.Id, new OnboardingSoftDeleteRequest(_deleteReason), CurrentFilter));
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteTeamAsync()
+    {
+        if (!IsContextMatched || ActiveIntent is null)
+        {
+            return;
+        }
+
+        var projectId = ResolveProjectId();
+        _isBusy = true;
+        try
+        {
+            var result = Team is null
+                ? await ExecutionService.CreateTeamAsync(
+                    ActiveIntent,
+                    new CreateTeamSourceRequest(projectId, _teamExternalId, _teamEnabled, NullIfWhiteSpace(_teamName), NullIfWhiteSpace(_teamDefaultAreaPath), NullIfWhiteSpace(_teamDescription)),
+                    CurrentFilter)
+                : await ExecutionService.UpdateTeamAsync(
+                    ActiveIntent,
+                    Team.Id,
+                    new UpdateTeamSourceRequest(_teamEnabled, NullIfWhiteSpace(_teamName), NullIfWhiteSpace(_teamDefaultAreaPath), NullIfWhiteSpace(_teamDescription), null, null),
+                    CurrentFilter);
+            await CompleteAsync(result);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteDeleteTeamAsync()
+    {
+        if (Team is null || ActiveIntent is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await CompleteAsync(await ExecutionService.DeleteTeamAsync(ActiveIntent, Team.Id, new OnboardingSoftDeleteRequest(_deleteReason), CurrentFilter));
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecutePipelineAsync()
+    {
+        if (!IsContextMatched || ActiveIntent is null)
+        {
+            return;
+        }
+
+        var projectId = ResolveProjectId();
+        _isBusy = true;
+        try
+        {
+            var result = Pipeline is null
+                ? await ExecutionService.CreatePipelineAsync(
+                    ActiveIntent,
+                    new CreatePipelineSourceRequest(projectId, _pipelineExternalId, _pipelineEnabled, NullIfWhiteSpace(_pipelineName), NullIfWhiteSpace(_pipelineFolder), NullIfWhiteSpace(_pipelineYamlPath), NullIfWhiteSpace(_pipelineRepositoryExternalId), NullIfWhiteSpace(_pipelineRepositoryName)),
+                    CurrentFilter)
+                : await ExecutionService.UpdatePipelineAsync(
+                    ActiveIntent,
+                    Pipeline.Id,
+                    new UpdatePipelineSourceRequest(_pipelineEnabled, NullIfWhiteSpace(_pipelineName), NullIfWhiteSpace(_pipelineFolder), NullIfWhiteSpace(_pipelineYamlPath), NullIfWhiteSpace(_pipelineRepositoryExternalId), NullIfWhiteSpace(_pipelineRepositoryName), null, null),
+                    CurrentFilter);
+            await CompleteAsync(result);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteDeletePipelineAsync()
+    {
+        if (Pipeline is null || ActiveIntent is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await CompleteAsync(await ExecutionService.DeletePipelineAsync(ActiveIntent, Pipeline.Id, new OnboardingSoftDeleteRequest(_deleteReason), CurrentFilter));
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteRootAsync()
+    {
+        if (!IsContextMatched || ActiveIntent is null)
+        {
+            return;
+        }
+
+        var projectId = ResolveProjectId();
+        _isBusy = true;
+        try
+        {
+            var result = Root is null
+                ? await ExecutionService.CreateRootAsync(
+                    ActiveIntent,
+                    new CreateProductRootRequest(projectId, _rootWorkItemExternalId, _rootEnabled, NullIfWhiteSpace(_rootTitle), NullIfWhiteSpace(_rootWorkItemType), NullIfWhiteSpace(_rootState), NullIfWhiteSpace(_rootAreaPath)),
+                    CurrentFilter)
+                : await ExecutionService.UpdateRootAsync(
+                    ActiveIntent,
+                    Root.Id,
+                    new UpdateProductRootRequest(_rootEnabled, NullIfWhiteSpace(_rootTitle), NullIfWhiteSpace(_rootWorkItemType), NullIfWhiteSpace(_rootState), NullIfWhiteSpace(_rootAreaPath), null, null),
+                    CurrentFilter);
+            await CompleteAsync(result);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteDeleteRootAsync()
+    {
+        if (Root is null || ActiveIntent is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await CompleteAsync(await ExecutionService.DeleteRootAsync(ActiveIntent, Root.Id, new OnboardingSoftDeleteRequest(_deleteReason), CurrentFilter));
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteBindingAsync()
+    {
+        if (!IsContextMatched || ActiveIntent is null)
+        {
+            return;
+        }
+
+        var projectId = ResolveProjectId();
+        var rootId = Root?.Id ?? ActiveIntent.RootId.GetValueOrDefault();
+        _isBusy = true;
+        try
+        {
+            var result = Binding is null
+                ? await ExecutionService.CreateBindingAsync(
+                    ActiveIntent,
+                    new CreateProductSourceBindingRequest(
+                        rootId,
+                        _bindingSourceType,
+                        _bindingSourceType == OnboardingProductSourceTypeDto.Team ? _bindingTeamSourceId : null,
+                        _bindingSourceType == OnboardingProductSourceTypeDto.Pipeline ? _bindingPipelineSourceId : null,
+                        projectId,
+                        _bindingEnabled),
+                    CurrentFilter)
+                : await ExecutionService.UpdateBindingAsync(
+                    ActiveIntent,
+                    Binding.Id,
+                    new UpdateProductSourceBindingRequest(_bindingEnabled, null, null, null, null, null, null),
+                    CurrentFilter);
+            await CompleteAsync(result);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task ExecuteDeleteBindingAsync()
+    {
+        if (Binding is null || ActiveIntent is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            await CompleteAsync(await ExecutionService.DeleteBindingAsync(ActiveIntent, Binding.Id, new OnboardingSoftDeleteRequest(_deleteReason), CurrentFilter));
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task CompleteAsync(OnboardingExecutionResult result)
+    {
+        _lastFeedback = result.Feedback;
+        if (result.MutationApplied)
+        {
+            _deleteReason = string.Empty;
+        }
+
+        await OnCompleted.InvokeAsync(result);
+    }
+
+    private int ResolveConnectionId()
+        => Connection?.Id
+           ?? Project?.TfsConnectionId
+           ?? ActiveIntent?.ConnectionId
+           ?? CurrentFilter.ConnectionId
+           ?? 0;
+
+    private int ResolveProjectId()
+        => Project?.Id
+           ?? Team?.ProjectSourceId
+           ?? Pipeline?.ProjectSourceId
+           ?? Root?.ProjectSourceId
+           ?? Binding?.ProjectSourceId
+           ?? ProjectContext?.ProjectId
+           ?? ActiveIntent?.ProjectId
+           ?? CurrentFilter.ProjectId
+           ?? 0;
+
+    private string ResolveConnectionContext()
+        => Connection?.OrganizationUrl
+           ?? (ResolveConnectionId() > 0 ? $"Connection {ResolveConnectionId()}" : "No connection selected");
+
+    private string ResolveProjectContextLabel()
+        => ProjectContext is not null
+            ? $"{ProjectContext.ProjectName} ({ProjectContext.ProjectExternalId})"
+            : Project?.Snapshot.Name
+              ?? Root?.Snapshot.Title
+              ?? Binding?.SourceExternalId
+              ?? (ResolveProjectId() > 0 ? $"Project {ResolveProjectId()}" : "No project selected");
+
+    private Color ResolveConfidenceColor()
+        => ActiveIntent?.ConfidenceLevel switch
+        {
+            OnboardingExecutionConfidenceLevel.High => Color.Success,
+            OnboardingExecutionConfidenceLevel.Medium => Color.Warning,
+            _ => Color.Default
+        };
+
+    private static Severity ResolveSeverity(OnboardingExecutionFeedbackKind kind)
+        => kind switch
+        {
+            OnboardingExecutionFeedbackKind.Success => Severity.Success,
+            OnboardingExecutionFeedbackKind.Warning => Severity.Warning,
+            _ => Severity.Error
+        };
+
+    private static string? NullIfWhiteSpace(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static int ParsePositiveInt(string value)
+        => int.TryParse(value, out var parsed) && parsed > 0 ? parsed : 0;
+
+    private static int? ParsePositiveNullableInt(string value)
+        => int.TryParse(value, out var parsed) && parsed > 0 ? parsed : null;
+}

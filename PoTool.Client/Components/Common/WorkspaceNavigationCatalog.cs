@@ -1,5 +1,6 @@
 using MudBlazor;
 using PoTool.Client.Models;
+using PoTool.Client.Services;
 
 namespace PoTool.Client.Components.Common;
 
@@ -67,6 +68,24 @@ public static class WorkspaceNavigationCatalog
                 WorkspaceRoutes.MultiProductPlanning
             ])
     ];
+
+    private static WorkspaceNavigationItemDefinition OnboardingItem { get; } = new(
+        "Onboarding",
+        WorkspaceRoutes.OnboardingWorkspace,
+        Icons.Material.Filled.AccountTree,
+        "var(--color-info)",
+        [
+            WorkspaceRoutes.OnboardingWorkspace
+        ]);
+
+    public static IReadOnlyList<WorkspaceNavigationItemDefinition> GetVisibleItems(IFeatureFlagService featureFlagService)
+    {
+        ArgumentNullException.ThrowIfNull(featureFlagService);
+
+        return featureFlagService.IsEnabled(FeatureFlagKeys.OnboardingWorkspace)
+            ? [.. Items, OnboardingItem]
+            : Items;
+    }
 
     public static string NormalizePath(string? path)
     {

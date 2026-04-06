@@ -47,6 +47,16 @@ public class WorkspaceRoutesTests
     }
 
     [TestMethod]
+    public void OnboardingWorkspace_ReturnsExpectedRoute()
+    {
+        var route = typeof(WorkspaceRoutes)
+            .GetField(nameof(WorkspaceRoutes.OnboardingWorkspace))?
+            .GetRawConstantValue() as string;
+
+        Assert.AreEqual("/home/onboarding", route);
+    }
+
+    [TestMethod]
     public void GetProductRoadmapEditor_ReturnsProductSpecificRoute()
     {
         var result = WorkspaceRoutes.GetProductRoadmapEditor(42);

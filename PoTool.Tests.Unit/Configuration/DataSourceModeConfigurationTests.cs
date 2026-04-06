@@ -27,6 +27,16 @@ public class DataSourceModeConfigurationTests
     }
 
     [TestMethod]
+    public void GetRouteIntent_OnboardingRoute_IsLiveAllowed()
+    {
+        var intent = DataSourceModeConfiguration.GetRouteIntent("/api/onboarding/status");
+
+        Assert.AreEqual(
+            DataSourceModeConfiguration.RouteIntent.LiveAllowed,
+            intent);
+    }
+
+    [TestMethod]
     public void GetRouteIntent_TfsValidateRoute_IsLiveAllowed()
     {
         var intent = DataSourceModeConfiguration.GetRouteIntent("/api/tfsvalidate");

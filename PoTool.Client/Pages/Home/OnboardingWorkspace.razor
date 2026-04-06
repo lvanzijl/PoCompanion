@@ -1,0 +1,1441 @@
+@page "/home/onboarding"
+@using System.Web
+@using Microsoft.AspNetCore.Components.Rendering
+@using PoTool.Client.Components.Onboarding
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
+@using PoTool.Shared.Onboarding
+@inherits WorkspaceBase
+@inject IFeatureFlagService FeatureFlagService
+@inject IJSRuntime JS
+@inject IOnboardingWorkspaceService OnboardingWorkspaceService
+@inject OnboardingWorkspaceViewModelFactory ViewModelFactory
+
+<PageTitle>Onboarding Workspace - PO Companion</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
+    <MudStack Spacing="3">
+        <MudPaper Elevation="1" Class="pa-3">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Color="Color.Info" Size="Size.Large" />
+                        <MudText Typo="Typo.h4">Onboarding Workspace</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Intent-first onboarding workspace. Use the graph or problem-first views to reach the right execution context, then execute safe onboarding mutations from the prepared action zones.
+                    </MudText>
+                </MudStack>
+
+                <MudStack Row="true" Spacing="1">
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Disabled="@(_viewMode == OnboardingWorkspaceViewMode.Graph)"
+                                   Icon="@Icons.Material.Filled.AccountTree"
+                                   OnClick="ShowGraphViewAsync">
+                        Graph view
+                    </CompactButton>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Disabled="@(_viewMode == OnboardingWorkspaceViewMode.Problems)"
+                                   Icon="@Icons.Material.Filled.PriorityHigh"
+                                   OnClick="ShowProblemViewAsync">
+                        Problem-first view
+                    </CompactButton>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.Refresh"
+                                   OnClick="RefreshAsync">
+                        Refresh
+                    </CompactButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        @if (!_isEnabled)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                The onboarding workspace feature flag is disabled.
+            </MudAlert>
+        }
+        else
+        {
+            <MudPaper Elevation="1" Class="pa-3">
+                <MudGrid Spacing="2">
+                    <MudItem xs="12" sm="6" md="3">
+                        <CompactSelect T="int?"
+                                       Label="Connection"
+                                       Value="@_filter.ConnectionId"
+                                       ValueChanged="OnConnectionChangedAsync"
+                                       Clearable="true">
+                            @foreach (var option in _viewModel.FilterOptions.Connections)
+                            {
+                                <MudSelectItem T="int?" Value="@option.Value">@option.Label</MudSelectItem>
+                            }
+                        </CompactSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <CompactSelect T="int?"
+                                       Label="Project"
+                                       Value="@_filter.ProjectId"
+                                       ValueChanged="OnProjectChangedAsync"
+                                       Clearable="true">
+                            @foreach (var option in _viewModel.FilterOptions.Projects)
+                            {
+                                <MudSelectItem T="int?" Value="@option.Value">@option.Label</MudSelectItem>
+                            }
+                        </CompactSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <CompactSelect T="int?"
+                                       Label="Product root"
+                                       Value="@_filter.ProductRootId"
+                                       ValueChanged="OnRootChangedAsync"
+                                       Clearable="true">
+                            @foreach (var option in _viewModel.FilterOptions.ProductRoots)
+                            {
+                                <MudSelectItem T="int?" Value="@option.Value">@option.Label</MudSelectItem>
+                            }
+                        </CompactSelect>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <CompactSelect T="OnboardingConfigurationStatus?"
+                                       Label="Status"
+                                       Value="@_filter.Status"
+                                       ValueChanged="OnStatusChangedAsync"
+                                       Clearable="true">
+                            @foreach (var option in _viewModel.FilterOptions.Statuses)
+                            {
+                                <MudSelectItem T="OnboardingConfigurationStatus?" Value="@option.Value">@option.Label</MudSelectItem>
+                            }
+                        </CompactSelect>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            @if (_executionFeedback is not null)
+            {
+                <MudAlert Severity="@ResolveExecutionFeedbackSeverity(_executionFeedback.Kind)" Variant="Variant.Outlined">
+                    <MudText Typo="Typo.subtitle2">@_executionFeedback.Title</MudText>
+                    <MudText Typo="Typo.body2">@_executionFeedback.Message</MudText>
+                    @if (!string.IsNullOrWhiteSpace(_executionFeedback.Details))
+                    {
+                        <MudText Typo="Typo.caption">@_executionFeedback.Details</MudText>
+                    }
+                </MudAlert>
+            }
+
+            @if (_viewModel.LoadState == OnboardingWorkspaceLoadState.Loading)
+            {
+                <MudPaper Elevation="1" Class="pa-6">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Info" />
+                    <MudText Typo="Typo.body2" Class="mt-2">Loading onboarding workspace…</MudText>
+                </MudPaper>
+            }
+            else if (_viewModel.LoadState == OnboardingWorkspaceLoadState.Failed)
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                    @_viewModel.ErrorMessage
+                </MudAlert>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@_viewModel.Message</MudAlert>
+
+                @if (_viewModel.Summary is not null)
+                {
+                    <MudPaper Elevation="1" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.h5">Global summary</MudText>
+                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                <OnboardingStatusBadge Status="@_viewModel.Summary.OverallStatus" />
+                                <MudChip T="string" Label="true" Size="Size.Small">Connection: @_viewModel.Summary.ConnectionStatus</MudChip>
+                                <MudChip T="string" Label="true" Size="Size.Small">Data sources: @_viewModel.Summary.DataSourceSetupStatus</MudChip>
+                                <MudChip T="string" Label="true" Size="Size.Small">Domain: @_viewModel.Summary.DomainConfigurationStatus</MudChip>
+                                @if (_viewModel.ProblemSummary?.HasProblems == true)
+                                {
+                                    <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Error">
+                                        @_viewModel.ProblemSummary.BlockingCount blocker(s)
+                                    </MudChip>
+                                    <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Warning">
+                                        @_viewModel.ProblemSummary.WarningCount warning(s)
+                                    </MudChip>
+                                }
+                            </MudStack>
+                            <MudGrid Spacing="2">
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Projects</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.ProjectSourcesValid/@_viewModel.Summary.Counts.ProjectSourcesTotal</MudText></MudItem>
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Teams</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.TeamSourcesValid/@_viewModel.Summary.Counts.TeamSourcesTotal</MudText></MudItem>
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Pipelines</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.PipelineSourcesValid/@_viewModel.Summary.Counts.PipelineSourcesTotal</MudText></MudItem>
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Roots</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.ProductRootsValid/@_viewModel.Summary.Counts.ProductRootsTotal</MudText></MudItem>
+                                <MudItem xs="6" sm="4" md="2"><MudText Typo="Typo.caption">Bindings</MudText><MudText Typo="Typo.h6">@_viewModel.Summary.Counts.BindingsValid/@_viewModel.Summary.Counts.BindingsTotal</MudText></MudItem>
+                            </MudGrid>
+
+                            @if (_viewModel.Summary.Blockers.Count > 0)
+                            {
+                                <MudAlert Severity="Severity.Error" Variant="Variant.Outlined">
+                                    <MudText Typo="Typo.subtitle2">Visible blockers</MudText>
+                                    <MudList T="string" Dense="true">
+                                        @foreach (var blocker in _viewModel.Summary.Blockers)
+                                        {
+                                            <MudListItem T="string">@blocker.Message</MudListItem>
+                                        }
+                                    </MudList>
+                                </MudAlert>
+                            }
+
+                            @if (_viewModel.Summary.Warnings.Count > 0)
+                            {
+                                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                                    <MudText Typo="Typo.subtitle2">Visible warnings</MudText>
+                                    <MudList T="string" Dense="true">
+                                        @foreach (var warning in _viewModel.Summary.Warnings)
+                                        {
+                                            <MudListItem T="string">@warning.Message</MudListItem>
+                                        }
+                                    </MudList>
+                                </MudAlert>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
+
+                @if (_viewModel.ProblemSummary?.HasProblems == true)
+                {
+                    <MudPaper Elevation="1" Class="pa-3">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.h5">Top blockers</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                This panel is ordered only by existing blocker/warning severity, impacted child scope, and current graph relationships so users can see what to fix first within 30 seconds.
+                            </MudText>
+
+                            @if (_viewModel.ProblemSummary.TopBlockers.Count == 0)
+                            {
+                                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined">
+                                    No blockers are visible in the current filter scope.
+                                </MudAlert>
+                            }
+                            else
+                            {
+                                <MudGrid Spacing="2">
+                                    @foreach (var problem in _viewModel.ProblemSummary.TopBlockers)
+                                    {
+                                     <MudItem xs="12" md="6">
+                                            <OnboardingRootCauseCard RootCause="@problem" OnNavigate="GoToFixLocationAsync" />
+                                     </MudItem>
+                                 }
+                             </MudGrid>
+                            }
+                        </MudStack>
+                    </MudPaper>
+                }
+
+                @if (_viewMode == OnboardingWorkspaceViewMode.Problems)
+                {
+                    @RenderProblemFirstView()
+                }
+                else
+                {
+                    @RenderGraphView()
+                }
+            }
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private bool _isEnabled;
+    private bool _hasLoaded;
+    private bool _connectionsExpanded;
+    private bool _projectsExpanded;
+    private bool _teamsExpanded;
+    private bool _pipelinesExpanded;
+    private bool _productRootsExpanded;
+    private bool _bindingsExpanded;
+    private string? _pendingScrollTarget;
+    private string? _highlightedTargetElementId;
+    private ExecutionIntentViewModel? _activeExecutionIntent;
+    private OnboardingExecutionFeedbackViewModel? _executionFeedback;
+    private OnboardingWorkspaceViewMode _viewMode = OnboardingWorkspaceViewMode.Graph;
+    private OnboardingWorkspaceFilter _filter = new(null, null, null, null);
+    private OnboardingWorkspaceViewModel _viewModel = null!;
+    private PendingExecutionNavigation? _pendingExecutionNavigation;
+
+    protected override void OnInitialized()
+    {
+        ParseContextQueryParameters();
+        _viewModel = ViewModelFactory.CreateLoading(_filter);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            _isEnabled = FeatureFlagService.IsEnabled(FeatureFlagKeys.OnboardingWorkspace);
+            if (!_isEnabled)
+            {
+                NavigationManager.NavigateTo(WorkspaceRoutes.Home, replace: true);
+                return;
+            }
+
+            if (!_hasLoaded)
+            {
+                _hasLoaded = true;
+                await LoadAsync();
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(_pendingScrollTarget))
+        {
+            var scrollTarget = _pendingScrollTarget;
+            _pendingScrollTarget = null;
+            await JS.InvokeVoidAsync("PoTool.Navigation.scrollToElement", scrollTarget);
+        }
+    }
+
+    private async Task ShowGraphViewAsync()
+    {
+        _viewMode = OnboardingWorkspaceViewMode.Graph;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ShowProblemViewAsync()
+    {
+        _viewMode = OnboardingWorkspaceViewMode.Problems;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshAsync()
+        => await LoadAsync();
+
+    private async Task OnConnectionChangedAsync(int? value)
+    {
+        _activeExecutionIntent = null;
+        _executionFeedback = null;
+        _filter = _filter with
+        {
+            ConnectionId = value,
+            ProjectId = null,
+            ProductRootId = null
+        };
+        await LoadAsync();
+    }
+
+    private async Task OnProjectChangedAsync(int? value)
+    {
+        _activeExecutionIntent = null;
+        _executionFeedback = null;
+        _filter = _filter with
+        {
+            ProjectId = value,
+            ProductRootId = null
+        };
+        await LoadAsync();
+    }
+
+    private async Task OnRootChangedAsync(int? value)
+    {
+        _activeExecutionIntent = null;
+        _executionFeedback = null;
+        _filter = _filter with { ProductRootId = value };
+        await LoadAsync();
+    }
+
+    private async Task OnStatusChangedAsync(OnboardingConfigurationStatus? value)
+    {
+        _activeExecutionIntent = null;
+        _executionFeedback = null;
+        _filter = _filter with { Status = value };
+        await LoadAsync();
+    }
+
+    private async Task NavigateToProblemAsync(ActionableProblemViewModel problem)
+    {
+        _viewMode = OnboardingWorkspaceViewMode.Graph;
+        ExpandSection(problem.GraphSection);
+        _highlightedTargetElementId = problem.TargetElementId;
+        _pendingScrollTarget = problem.TargetElementId;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task NavigateToRootCauseAsync(OnboardingRootCauseGroupViewModel rootCause)
+    {
+        _viewMode = OnboardingWorkspaceViewMode.Graph;
+        ExpandSection(rootCause.GraphSection);
+        _highlightedTargetElementId = rootCause.TargetElementId;
+        _pendingScrollTarget = rootCause.TargetElementId;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task GoToFixLocationAsync(ExecutionIntentViewModel intent)
+    {
+        _viewMode = OnboardingWorkspaceViewMode.Graph;
+        _executionFeedback = null;
+        _filter = new OnboardingWorkspaceFilter(
+            intent.ConnectionId,
+            intent.ProjectId,
+            intent.RootId,
+            null);
+
+        _pendingExecutionNavigation = new PendingExecutionNavigation(
+            intent.NavigationTarget.TargetElementId,
+            intent.NavigationTarget.ExpandedSections,
+            intent.IntentType);
+
+        NavigationManager.NavigateTo(intent.NavigationTarget.Route, replace: true);
+        await LoadAsync();
+    }
+
+    private async Task OnMutationCompletedAsync(OnboardingExecutionResult result)
+    {
+        _executionFeedback = result.Feedback;
+
+        if (result.RefreshedData is null)
+        {
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        _filter = result.AppliedFilter;
+        _viewModel = ViewModelFactory.Create(result.RefreshedData);
+        ApplyGraphSectionDefaults();
+        _pendingExecutionNavigation = new PendingExecutionNavigation(
+            result.Intent.NavigationTarget.TargetElementId,
+            result.Intent.NavigationTarget.ExpandedSections,
+            result.Intent.IntentType);
+        ApplyPendingExecutionNavigation();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadAsync()
+    {
+        _viewModel = ViewModelFactory.CreateLoading(_filter);
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            var data = await OnboardingWorkspaceService.GetWorkspaceDataAsync(_filter);
+            _viewModel = ViewModelFactory.Create(data);
+            ApplyGraphSectionDefaults();
+            ApplyPendingExecutionNavigation();
+        }
+        catch (HttpRequestException exception)
+        {
+            _viewModel = ViewModelFactory.CreateFailure(_filter, exception.Message);
+            ApplyGraphSectionDefaults();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void ApplyGraphSectionDefaults()
+    {
+        _connectionsExpanded = GetSectionState(OnboardingGraphSection.Connections).DefaultExpanded;
+        _projectsExpanded = GetSectionState(OnboardingGraphSection.Projects).DefaultExpanded;
+        _teamsExpanded = GetSectionState(OnboardingGraphSection.Teams).DefaultExpanded;
+        _pipelinesExpanded = GetSectionState(OnboardingGraphSection.Pipelines).DefaultExpanded;
+        _productRootsExpanded = GetSectionState(OnboardingGraphSection.ProductRoots).DefaultExpanded;
+        _bindingsExpanded = GetSectionState(OnboardingGraphSection.Bindings).DefaultExpanded;
+    }
+
+    private void ExpandSection(OnboardingGraphSection section)
+    {
+        switch (section)
+        {
+            case OnboardingGraphSection.Connections:
+                _connectionsExpanded = true;
+                break;
+            case OnboardingGraphSection.Projects:
+                _projectsExpanded = true;
+                break;
+            case OnboardingGraphSection.Teams:
+                _teamsExpanded = true;
+                break;
+            case OnboardingGraphSection.Pipelines:
+                _pipelinesExpanded = true;
+                break;
+            case OnboardingGraphSection.ProductRoots:
+                _productRootsExpanded = true;
+                break;
+            case OnboardingGraphSection.Bindings:
+                _bindingsExpanded = true;
+                break;
+        }
+    }
+
+    protected override void ParseContextQueryParameters()
+    {
+        base.ParseContextQueryParameters();
+
+        var context = ParseExecutionNavigationContext(NavigationManager.Uri);
+        if (context is null)
+        {
+            return;
+        }
+
+        _filter = new OnboardingWorkspaceFilter(
+            context.ConnectionId,
+            context.ProjectId,
+            context.RootId,
+            null);
+
+        _pendingExecutionNavigation = new PendingExecutionNavigation(
+            context.TargetElementId,
+            [context.Section],
+            context.IntentType);
+    }
+
+    private static ParsedExecutionNavigationContext? ParseExecutionNavigationContext(string uri)
+    {
+        var absoluteUri = Uri.TryCreate(uri, UriKind.Absolute, out var parsedAbsolute)
+            ? parsedAbsolute
+            : new Uri(new Uri("http://localhost"), uri);
+
+        var query = HttpUtility.ParseQueryString(absoluteUri.Query);
+        if (!Enum.TryParse<OnboardingGraphSection>(query[OnboardingExecutionIntentQueryKeys.Section], out var section))
+        {
+            return null;
+        }
+
+        var targetElementId = query[OnboardingExecutionIntentQueryKeys.TargetElementId];
+        if (string.IsNullOrWhiteSpace(targetElementId))
+        {
+            return null;
+        }
+
+        return new ParsedExecutionNavigationContext(
+            ParseNullableInt(query[OnboardingExecutionIntentQueryKeys.ConnectionId]),
+            ParseNullableInt(query[OnboardingExecutionIntentQueryKeys.ProjectId]),
+            ParseNullableInt(query[OnboardingExecutionIntentQueryKeys.RootId]),
+            section,
+            targetElementId,
+            query[OnboardingExecutionIntentQueryKeys.IntentType]);
+    }
+
+    private void ApplyPendingExecutionNavigation()
+    {
+        if (_pendingExecutionNavigation is null)
+        {
+            return;
+        }
+
+        foreach (var section in _pendingExecutionNavigation.ExpandedSections)
+        {
+            ExpandSection(section);
+        }
+
+        _highlightedTargetElementId = _pendingExecutionNavigation.TargetElementId;
+        _pendingScrollTarget = _pendingExecutionNavigation.TargetElementId;
+        _activeExecutionIntent = FindExecutionIntent(_pendingExecutionNavigation.TargetElementId, _pendingExecutionNavigation.IntentType);
+        _pendingExecutionNavigation = null;
+    }
+
+    private static int? ParseNullableInt(string? value)
+        => int.TryParse(value, out var parsed) ? parsed : null;
+
+    private RenderFragment RenderProblemFirstView() => builder =>
+    {
+        builder.OpenComponent<MudPaper>(0);
+        builder.AddAttribute(1, "Elevation", 1);
+        builder.AddAttribute(2, "Class", "pa-3");
+        builder.AddAttribute(3, "ChildContent", (RenderFragment)(contentBuilder =>
+        {
+            var index = 0;
+            contentBuilder.OpenComponent<MudStack>(index++);
+            contentBuilder.AddAttribute(index++, "Spacing", 3);
+            contentBuilder.AddAttribute(index++, "ChildContent", (RenderFragment)(stackBuilder =>
+            {
+                var nested = 0;
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.h5);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Problem-first view")));
+                stackBuilder.CloseComponent();
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.body2);
+                stackBuilder.AddAttribute(nested++, "Color", Color.Secondary);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Root-cause-aware blockers appear before warnings and now include the suggested next step, grouped impact, and the visible issues they unblock.")));
+                stackBuilder.CloseComponent();
+
+                RenderRootCauseCategory(stackBuilder, ref nested, "Top blockers", _viewModel.ProblemSummary?.TopBlockers ?? [], Severity.Error);
+                RenderRootCauseCategory(stackBuilder, ref nested, "Other blockers", _viewModel.ProblemSummary?.OtherBlockers ?? [], Severity.Error);
+                RenderRootCauseCategory(stackBuilder, ref nested, "Warnings", _viewModel.ProblemSummary?.Warnings ?? [], Severity.Warning);
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.h6);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Root causes")));
+                stackBuilder.CloseComponent();
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.body2);
+                stackBuilder.AddAttribute(nested++, "Color", Color.Secondary);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Multiple visible symptoms with the same reason and upstream entity are grouped under one root cause so repeated issues do not dominate the workspace.")));
+                stackBuilder.CloseComponent();
+
+                if (_viewModel.RootCauseGroups.Count == 0)
+                {
+                    stackBuilder.OpenComponent<MudAlert>(nested++);
+                    stackBuilder.AddAttribute(nested++, "Severity", Severity.Success);
+                    stackBuilder.AddAttribute(nested++, "Variant", Variant.Outlined);
+                    stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "No root causes are visible in the current filter scope.")));
+                    stackBuilder.CloseComponent();
+                }
+                else
+                {
+                    stackBuilder.AddContent(nested++, RenderRootCauseGroups());
+                }
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.h6);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Derived issues")));
+                stackBuilder.CloseComponent();
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.body2);
+                stackBuilder.AddAttribute(nested++, "Color", Color.Secondary);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Underlying visible issues remain available by scope so grouped symptoms are never hidden completely.")));
+                stackBuilder.CloseComponent();
+
+                foreach (var group in _viewModel.ProblemGroups)
+                {
+                    stackBuilder.OpenComponent<MudPaper>(nested++);
+                    stackBuilder.AddAttribute(nested++, "Elevation", 0);
+                    stackBuilder.AddAttribute(nested++, "Class", "pa-3");
+                    stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(groupBuilder =>
+                    {
+                        var groupIndex = 0;
+                        groupBuilder.OpenComponent<MudText>(groupIndex++);
+                        groupBuilder.AddAttribute(groupIndex++, "Typo", Typo.subtitle1);
+                        groupBuilder.AddAttribute(groupIndex++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, group.Title)));
+                        groupBuilder.CloseComponent();
+
+                        groupBuilder.OpenComponent<MudGrid>(groupIndex++);
+                        groupBuilder.AddAttribute(groupIndex++, "Spacing", 2);
+                        groupBuilder.AddAttribute(groupIndex++, "ChildContent", (RenderFragment)(gridBuilder =>
+                        {
+                            var problemIndex = 0;
+                            foreach (var problem in group.Items)
+                            {
+                                gridBuilder.OpenComponent<MudItem>(problemIndex++);
+                                gridBuilder.AddAttribute(problemIndex++, "xs", 12);
+                                gridBuilder.AddAttribute(problemIndex++, "md", 6);
+                                gridBuilder.AddAttribute(problemIndex++, "ChildContent", (RenderFragment)(itemBuilder =>
+                                {
+                                    itemBuilder.OpenComponent<OnboardingProblemCard>(problemIndex++);
+                                    itemBuilder.AddAttribute(problemIndex++, "Problem", problem);
+                                    itemBuilder.AddAttribute(problemIndex++, "OnNavigate", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                                    itemBuilder.CloseComponent();
+                                }));
+                                gridBuilder.CloseComponent();
+                            }
+                        }));
+                        groupBuilder.CloseComponent();
+                    }));
+                    stackBuilder.CloseComponent();
+                }
+            }));
+            contentBuilder.CloseComponent();
+        }));
+        builder.CloseComponent();
+    };
+
+    private void RenderRootCauseCategory(RenderTreeBuilder builder, ref int index, string title, IReadOnlyList<OnboardingRootCauseGroupViewModel> items, Severity severity)
+    {
+        builder.OpenComponent<MudAlert>(index++);
+        builder.AddAttribute(index++, "Severity", severity);
+        builder.AddAttribute(index++, "Variant", Variant.Outlined);
+        builder.AddAttribute(index++, "ChildContent", (RenderFragment)(contentBuilder =>
+        {
+            var nested = 0;
+            contentBuilder.OpenComponent<MudText>(nested++);
+            contentBuilder.AddAttribute(nested++, "Typo", Typo.subtitle2);
+            contentBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, title)));
+            contentBuilder.CloseComponent();
+
+            if (items.Count == 0)
+            {
+                contentBuilder.OpenComponent<MudText>(nested++);
+                contentBuilder.AddAttribute(nested++, "Typo", Typo.body2);
+                contentBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "None visible in the current filter scope.")));
+                contentBuilder.CloseComponent();
+                return;
+            }
+
+            contentBuilder.OpenComponent<MudGrid>(nested++);
+            contentBuilder.AddAttribute(nested++, "Spacing", 2);
+            contentBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(gridBuilder =>
+            {
+                var gridIndex = 0;
+                foreach (var item in items)
+                {
+                    gridBuilder.OpenComponent<MudItem>(gridIndex++);
+                    gridBuilder.AddAttribute(gridIndex++, "xs", 12);
+                    gridBuilder.AddAttribute(gridIndex++, "md", 6);
+                    gridBuilder.AddAttribute(gridIndex++, "ChildContent", (RenderFragment)(itemBuilder =>
+                    {
+                        itemBuilder.OpenComponent<OnboardingRootCauseCard>(gridIndex++);
+                        itemBuilder.AddAttribute(gridIndex++, "RootCause", item);
+                        itemBuilder.AddAttribute(gridIndex++, "OnNavigate", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                        itemBuilder.CloseComponent();
+                    }));
+                    gridBuilder.CloseComponent();
+                }
+            }));
+            contentBuilder.CloseComponent();
+        }));
+        builder.CloseComponent();
+    }
+
+    private RenderFragment RenderRootCauseGroups() => builder =>
+    {
+        builder.OpenComponent<MudExpansionPanels>(0);
+        builder.AddAttribute(1, "MultiExpansion", true);
+        builder.AddAttribute(2, "ChildContent", (RenderFragment)(contentBuilder =>
+        {
+            var index = 0;
+            foreach (var rootCause in _viewModel.RootCauseGroups)
+            {
+                contentBuilder.OpenComponent<MudExpansionPanel>(index++);
+                contentBuilder.AddAttribute(index++, "Text", $"{rootCause.Title} — {rootCause.VisibleIssueCount} visible issue(s)");
+                contentBuilder.AddAttribute(index++, "Expanded", rootCause.FixFirst);
+                contentBuilder.AddAttribute(index++, "ChildContent", (RenderFragment)(panelBuilder =>
+                {
+                    var nested = 0;
+                    panelBuilder.OpenComponent<MudStack>(nested++);
+                    panelBuilder.AddAttribute(nested++, "Spacing", 2);
+                    panelBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(stackBuilder =>
+                    {
+                        var stackIndex = 0;
+                        stackBuilder.OpenComponent<OnboardingRootCauseCard>(stackIndex++);
+                        stackBuilder.AddAttribute(stackIndex++, "RootCause", rootCause);
+                        stackBuilder.AddAttribute(stackIndex++, "OnNavigate", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                        stackBuilder.CloseComponent();
+
+                        stackBuilder.OpenComponent<MudText>(stackIndex++);
+                        stackBuilder.AddAttribute(stackIndex++, "Typo", Typo.subtitle2);
+                        stackBuilder.AddAttribute(stackIndex++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Derived issues")));
+                        stackBuilder.CloseComponent();
+
+                        stackBuilder.OpenComponent<MudGrid>(stackIndex++);
+                        stackBuilder.AddAttribute(stackIndex++, "Spacing", 2);
+                        stackBuilder.AddAttribute(stackIndex++, "ChildContent", (RenderFragment)(gridBuilder =>
+                        {
+                            var gridIndex = 0;
+                            foreach (var item in rootCause.Items)
+                            {
+                                gridBuilder.OpenComponent<MudItem>(gridIndex++);
+                                gridBuilder.AddAttribute(gridIndex++, "xs", 12);
+                                gridBuilder.AddAttribute(gridIndex++, "md", 6);
+                                gridBuilder.AddAttribute(gridIndex++, "ChildContent", (RenderFragment)(itemBuilder =>
+                                {
+                                    itemBuilder.OpenComponent<OnboardingProblemCard>(gridIndex++);
+                                    itemBuilder.AddAttribute(gridIndex++, "Problem", item);
+                                    itemBuilder.AddAttribute(gridIndex++, "OnNavigate", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                                    itemBuilder.CloseComponent();
+                                }));
+                                gridBuilder.CloseComponent();
+                            }
+                        }));
+                        stackBuilder.CloseComponent();
+                    }));
+                    panelBuilder.CloseComponent();
+                }));
+                contentBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+    };
+
+    private void RenderSection(RenderTreeBuilder builder, ref int index, OnboardingGraphSection section)
+    {
+        var title = GetSectionDisplayTitle(section);
+        var anchorId = GetSectionState(section).AnchorId;
+
+        builder.OpenElement(index++, "div");
+        builder.AddAttribute(index++, "id", anchorId);
+        builder.OpenComponent<MudExpansionPanel>(index++);
+        builder.AddAttribute(index++, "Text", title);
+        switch (section)
+        {
+            case OnboardingGraphSection.Connections:
+                builder.AddAttribute(index++, "Expanded", _connectionsExpanded);
+                builder.AddAttribute(index++, "ExpandedChanged", EventCallback.Factory.Create<bool>(this, value => _connectionsExpanded = value));
+                builder.AddAttribute(index++, "ChildContent", RenderConnections());
+                break;
+            case OnboardingGraphSection.Projects:
+                builder.AddAttribute(index++, "Expanded", _projectsExpanded);
+                builder.AddAttribute(index++, "ExpandedChanged", EventCallback.Factory.Create<bool>(this, value => _projectsExpanded = value));
+                builder.AddAttribute(index++, "ChildContent", RenderProjects());
+                break;
+            case OnboardingGraphSection.Teams:
+                builder.AddAttribute(index++, "Expanded", _teamsExpanded);
+                builder.AddAttribute(index++, "ExpandedChanged", EventCallback.Factory.Create<bool>(this, value => _teamsExpanded = value));
+                builder.AddAttribute(index++, "ChildContent", RenderTeamGroups());
+                break;
+            case OnboardingGraphSection.Pipelines:
+                builder.AddAttribute(index++, "Expanded", _pipelinesExpanded);
+                builder.AddAttribute(index++, "ExpandedChanged", EventCallback.Factory.Create<bool>(this, value => _pipelinesExpanded = value));
+                builder.AddAttribute(index++, "ChildContent", RenderPipelineGroups());
+                break;
+            case OnboardingGraphSection.ProductRoots:
+                builder.AddAttribute(index++, "Expanded", _productRootsExpanded);
+                builder.AddAttribute(index++, "ExpandedChanged", EventCallback.Factory.Create<bool>(this, value => _productRootsExpanded = value));
+                builder.AddAttribute(index++, "ChildContent", RenderRootGroups());
+                break;
+            case OnboardingGraphSection.Bindings:
+                builder.AddAttribute(index++, "Expanded", _bindingsExpanded);
+                builder.AddAttribute(index++, "ExpandedChanged", EventCallback.Factory.Create<bool>(this, value => _bindingsExpanded = value));
+                builder.AddAttribute(index++, "ChildContent", RenderBindingGroups());
+                break;
+        }
+
+        builder.CloseComponent();
+        builder.CloseElement();
+    }
+
+    private RenderFragment RenderGraphViewContent() => builder =>
+    {
+        var index = 0;
+        builder.OpenComponent<MudExpansionPanels>(index++);
+        builder.AddAttribute(index++, "MultiExpansion", true);
+        builder.AddAttribute(index++, "ChildContent", (RenderFragment)(contentBuilder =>
+        {
+            var nested = 0;
+            RenderSection(contentBuilder, ref nested, OnboardingGraphSection.Connections);
+            RenderSection(contentBuilder, ref nested, OnboardingGraphSection.Projects);
+            RenderSection(contentBuilder, ref nested, OnboardingGraphSection.Teams);
+            RenderSection(contentBuilder, ref nested, OnboardingGraphSection.Pipelines);
+            RenderSection(contentBuilder, ref nested, OnboardingGraphSection.ProductRoots);
+            RenderSection(contentBuilder, ref nested, OnboardingGraphSection.Bindings);
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderGraphView() => builder =>
+    {
+        builder.OpenComponent<MudPaper>(0);
+        builder.AddAttribute(1, "Elevation", 1);
+        builder.AddAttribute(2, "Class", "pa-3");
+        builder.AddAttribute(3, "ChildContent", (RenderFragment)(contentBuilder =>
+        {
+            var index = 0;
+            contentBuilder.OpenComponent<MudStack>(index++);
+            contentBuilder.AddAttribute(index++, "Spacing", 2);
+            contentBuilder.AddAttribute(index++, "ChildContent", (RenderFragment)(stackBuilder =>
+            {
+                var nested = 0;
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.h5);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Structured graph view")));
+                stackBuilder.CloseComponent();
+
+                stackBuilder.OpenComponent<MudText>(nested++);
+                stackBuilder.AddAttribute(nested++, "Typo", Typo.body2);
+                stackBuilder.AddAttribute(nested++, "Color", Color.Secondary);
+                stackBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(textBuilder => textBuilder.AddContent(0, "Sections with blockers or warnings open by default. Healthy sections remain visible but collapsed to reduce noise.")));
+                stackBuilder.CloseComponent();
+
+                stackBuilder.AddContent(nested++, RenderGraphViewContent());
+            }));
+            contentBuilder.CloseComponent();
+        }));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderConnections() => builder =>
+    {
+        if (_viewModel.Connections.Count == 0)
+        {
+            RenderEmptyState(builder, "No visible connections match the current filter.");
+            builder.OpenComponent<OnboardingMutationActionZone>(1);
+            builder.AddAttribute(2, "Section", OnboardingGraphSection.Connections);
+            builder.AddAttribute(3, "ActiveIntent", _activeExecutionIntent);
+            builder.AddAttribute(4, "CurrentFilter", _filter);
+            builder.AddAttribute(5, "OnCompleted", EventCallback.Factory.Create<OnboardingExecutionResult>(this, OnMutationCompletedAsync));
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<MudGrid>(0);
+        builder.AddAttribute(1, "Spacing", 2);
+        builder.AddAttribute(2, "ChildContent", (RenderFragment)(gridBuilder =>
+        {
+            var index = 0;
+            foreach (var connection in _viewModel.Connections)
+            {
+                gridBuilder.OpenComponent<MudItem>(index++);
+                gridBuilder.AddAttribute(index++, "xs", 12);
+                gridBuilder.AddAttribute(index++, "md", 6);
+                gridBuilder.AddAttribute(index++, "ChildContent", (RenderFragment)(itemBuilder =>
+                {
+                    itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+                    itemBuilder.AddAttribute(index++, "ElementId", $"connection-{connection.Id}");
+                    itemBuilder.AddAttribute(index++, "Title", connection.OrganizationUrl);
+                    itemBuilder.AddAttribute(index++, "Subtitle", $"Key: {connection.ConnectionKey}");
+                    itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+                    {
+                        $"Authentication: {connection.AuthenticationMode}",
+                        $"API version: {connection.ApiVersion}",
+                        $"Timeout: {connection.TimeoutSeconds}s"
+                    });
+                    itemBuilder.AddAttribute(index++, "EntityStatus", connection.Status);
+                    itemBuilder.AddAttribute(index++, "ValidationState", connection.Validation.CapabilityValidationState);
+                    itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(
+                        connection.Status,
+                        connection.Validation.AvailabilityValidationState,
+                        connection.Validation.PermissionValidationState,
+                        connection.Validation.CapabilityValidationState));
+                    itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(
+                        connection.Status,
+                        connection.Validation.AvailabilityValidationState,
+                        connection.Validation.PermissionValidationState,
+                        connection.Validation.CapabilityValidationState));
+                    itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"connection-{connection.Id}"));
+                    itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"connection-{connection.Id}"));
+                    itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"connection-{connection.Id}"));
+                    itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"connection-{connection.Id}"));
+                    itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"connection-{connection.Id}"));
+                    itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                    itemBuilder.CloseComponent();
+                }));
+                gridBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+        builder.OpenComponent<OnboardingMutationActionZone>(3);
+        builder.AddAttribute(4, "Section", OnboardingGraphSection.Connections);
+        builder.AddAttribute(5, "ActiveIntent", _activeExecutionIntent);
+        builder.AddAttribute(6, "CurrentFilter", _filter);
+        builder.AddAttribute(7, "Connection", GetHighlightedConnection());
+        builder.AddAttribute(8, "OnCompleted", EventCallback.Factory.Create<OnboardingExecutionResult>(this, OnMutationCompletedAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderProjects() => builder =>
+    {
+        if (_viewModel.Projects.Count == 0)
+        {
+            RenderEmptyState(builder, "No visible projects match the current filter.");
+            builder.OpenComponent<OnboardingMutationActionZone>(1);
+            builder.AddAttribute(2, "Section", OnboardingGraphSection.Projects);
+            builder.AddAttribute(3, "ActiveIntent", _activeExecutionIntent);
+            builder.AddAttribute(4, "CurrentFilter", _filter);
+            builder.AddAttribute(5, "OnCompleted", EventCallback.Factory.Create<OnboardingExecutionResult>(this, OnMutationCompletedAsync));
+            builder.CloseComponent();
+            return;
+        }
+
+        builder.OpenComponent<MudGrid>(0);
+        builder.AddAttribute(1, "Spacing", 2);
+        builder.AddAttribute(2, "ChildContent", (RenderFragment)(gridBuilder =>
+        {
+            var index = 0;
+            foreach (var project in _viewModel.Projects)
+            {
+                gridBuilder.OpenComponent<MudItem>(index++);
+                gridBuilder.AddAttribute(index++, "xs", 12);
+                gridBuilder.AddAttribute(index++, "md", 6);
+                gridBuilder.AddAttribute(index++, "ChildContent", (RenderFragment)(itemBuilder =>
+                {
+                    itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+                    itemBuilder.AddAttribute(index++, "ElementId", $"project-{project.Id}");
+                    itemBuilder.AddAttribute(index++, "Title", project.Snapshot.Name);
+                    itemBuilder.AddAttribute(index++, "Subtitle", project.ProjectExternalId);
+                    itemBuilder.AddAttribute(index++, "ParentContext", $"Connection {project.TfsConnectionId}");
+                    itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+                    {
+                        $"Enabled: {project.Enabled}",
+                        $"Description: {project.Snapshot.Description ?? "None"}"
+                    });
+                    itemBuilder.AddAttribute(index++, "EntityStatus", project.Status);
+                    itemBuilder.AddAttribute(index++, "ValidationState", project.ValidationState);
+                    itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(project.Status, project.ValidationState));
+                    itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(project.Status, project.ValidationState));
+                    itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"project-{project.Id}"));
+                    itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"project-{project.Id}"));
+                    itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"project-{project.Id}"));
+                    itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"project-{project.Id}"));
+                    itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"project-{project.Id}"));
+                    itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                    itemBuilder.CloseComponent();
+                }));
+                gridBuilder.CloseComponent();
+            }
+        }));
+        builder.CloseComponent();
+        builder.OpenComponent<OnboardingMutationActionZone>(3);
+        builder.AddAttribute(4, "Section", OnboardingGraphSection.Projects);
+        builder.AddAttribute(5, "ActiveIntent", _activeExecutionIntent);
+        builder.AddAttribute(6, "CurrentFilter", _filter);
+        builder.AddAttribute(7, "Project", GetHighlightedProject());
+        builder.AddAttribute(8, "OnCompleted", EventCallback.Factory.Create<OnboardingExecutionResult>(this, OnMutationCompletedAsync));
+        builder.CloseComponent();
+    };
+
+    private RenderFragment RenderTeamGroups() => builder =>
+    {
+        if (_viewModel.TeamGroups.Count == 0)
+        {
+            RenderEmptyState(builder, "No visible teams match the current filter.");
+            RenderProjectScopedEmptyActionZone(builder, 1, OnboardingGraphSection.Teams);
+            return;
+        }
+
+        RenderGroupedEntities(
+            builder,
+            _viewModel.TeamGroups,
+            "No visible teams match the current filter.",
+            null,
+            null,
+            (itemBuilder, index, group, team) =>
+            {
+                itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+                itemBuilder.AddAttribute(index++, "ElementId", $"team-{team.Id}");
+                itemBuilder.AddAttribute(index++, "Title", team.Snapshot.Name);
+                itemBuilder.AddAttribute(index++, "Subtitle", team.TeamExternalId);
+                itemBuilder.AddAttribute(index++, "ParentContext", $"{group.Project.ProjectName} ({group.Project.ProjectExternalId})");
+                itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+                {
+                    $"Enabled: {team.Enabled}",
+                    $"Default area path: {team.Snapshot.DefaultAreaPath}"
+                });
+                itemBuilder.AddAttribute(index++, "EntityStatus", team.Status);
+                itemBuilder.AddAttribute(index++, "ValidationState", team.ValidationState);
+                itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(team.Status, team.ValidationState));
+                itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(team.Status, team.ValidationState));
+                itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"team-{team.Id}"));
+                itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"team-{team.Id}"));
+                itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"team-{team.Id}"));
+                itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"team-{team.Id}"));
+                itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"team-{team.Id}"));
+                itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                itemBuilder.CloseComponent();
+                return index;
+            });
+    };
+
+    private RenderFragment RenderPipelineGroups() => builder =>
+    {
+        if (_viewModel.PipelineGroups.Count == 0)
+        {
+            RenderEmptyState(builder, "No visible pipelines match the current filter.");
+            RenderProjectScopedEmptyActionZone(builder, 1, OnboardingGraphSection.Pipelines);
+            return;
+        }
+
+        RenderGroupedEntities(
+            builder,
+            _viewModel.PipelineGroups,
+            "No visible pipelines match the current filter.",
+            null,
+            null,
+            (itemBuilder, index, group, pipeline) =>
+            {
+                itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+                itemBuilder.AddAttribute(index++, "ElementId", $"pipeline-{pipeline.Id}");
+                itemBuilder.AddAttribute(index++, "Title", pipeline.Snapshot.Name);
+                itemBuilder.AddAttribute(index++, "Subtitle", pipeline.PipelineExternalId);
+                itemBuilder.AddAttribute(index++, "ParentContext", $"{group.Project.ProjectName} ({group.Project.ProjectExternalId})");
+                itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+                {
+                    $"Enabled: {pipeline.Enabled}",
+                    $"Folder: {pipeline.Snapshot.Folder ?? "None"}",
+                    $"Yaml path: {pipeline.Snapshot.YamlPath ?? "None"}"
+                });
+                itemBuilder.AddAttribute(index++, "EntityStatus", pipeline.Status);
+                itemBuilder.AddAttribute(index++, "ValidationState", pipeline.ValidationState);
+                itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(pipeline.Status, pipeline.ValidationState));
+                itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(pipeline.Status, pipeline.ValidationState));
+                itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"pipeline-{pipeline.Id}"));
+                itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"pipeline-{pipeline.Id}"));
+                itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"pipeline-{pipeline.Id}"));
+                itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"pipeline-{pipeline.Id}"));
+                itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"pipeline-{pipeline.Id}"));
+                itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                itemBuilder.CloseComponent();
+                return index;
+            });
+    };
+
+    private RenderFragment RenderRootGroups() => builder =>
+    {
+        if (_viewModel.ProductRootGroups.Count == 0)
+        {
+            RenderEmptyState(builder, "No visible product roots match the current filter.");
+            RenderProjectScopedEmptyActionZone(builder, 1, OnboardingGraphSection.ProductRoots);
+            return;
+        }
+
+        RenderGroupedEntities(
+            builder,
+            _viewModel.ProductRootGroups,
+            "No visible product roots match the current filter.",
+            null,
+            null,
+            (itemBuilder, index, group, root) =>
+            {
+                itemBuilder.OpenComponent<OnboardingEntityCard>(index++);
+                itemBuilder.AddAttribute(index++, "ElementId", $"root-{root.Id}");
+                itemBuilder.AddAttribute(index++, "Title", root.Snapshot.Title);
+                itemBuilder.AddAttribute(index++, "Subtitle", root.WorkItemExternalId);
+                itemBuilder.AddAttribute(index++, "ParentContext", $"{group.Project.ProjectName} ({group.Project.ProjectExternalId})");
+                itemBuilder.AddAttribute(index++, "MetadataLines", new[]
+                {
+                    $"Enabled: {root.Enabled}",
+                    $"Type: {root.Snapshot.WorkItemType}",
+                    $"State: {root.Snapshot.State}"
+                });
+                itemBuilder.AddAttribute(index++, "EntityStatus", root.Status);
+                itemBuilder.AddAttribute(index++, "ValidationState", root.ValidationState);
+                itemBuilder.AddAttribute(index++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(root.Status, root.ValidationState));
+                itemBuilder.AddAttribute(index++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(root.Status, root.ValidationState));
+                itemBuilder.AddAttribute(index++, "ExecutionIntent", GetExecutionIntent($"root-{root.Id}"));
+                itemBuilder.AddAttribute(index++, "ConfidenceLevel", GetConfidenceLevel($"root-{root.Id}"));
+                itemBuilder.AddAttribute(index++, "SuggestedAction", GetSuggestedAction($"root-{root.Id}"));
+                itemBuilder.AddAttribute(index++, "RootCauseHint", GetRootCauseHint($"root-{root.Id}"));
+                itemBuilder.AddAttribute(index++, "IsHighlighted", IsHighlighted($"root-{root.Id}"));
+                itemBuilder.AddAttribute(index++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                itemBuilder.CloseComponent();
+                return index;
+            });
+    };
+
+    private RenderFragment RenderBindingGroups() => builder =>
+    {
+        if (_viewModel.BindingGroups.Count == 0)
+        {
+            RenderEmptyState(builder, "No visible bindings match the current filter.");
+            RenderBindingScopedEmptyActionZone(builder, 1);
+            return;
+        }
+
+        var index = 0;
+        foreach (var group in _viewModel.BindingGroups)
+        {
+            builder.OpenComponent<MudPaper>(index++);
+            builder.AddAttribute(index++, "Elevation", 1);
+            builder.AddAttribute(index++, "Class", "pa-3 mb-3");
+            builder.AddAttribute(index++, "ChildContent", (RenderFragment)(groupBuilder =>
+            {
+                var nested = 0;
+                groupBuilder.OpenComponent<MudText>(nested++);
+                groupBuilder.AddAttribute(nested++, "Typo", Typo.h6);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(titleBuilder => titleBuilder.AddContent(0, $"{group.Root.Title} ({group.Root.WorkItemExternalId})")));
+                groupBuilder.CloseComponent();
+
+                groupBuilder.OpenComponent<MudText>(nested++);
+                groupBuilder.AddAttribute(nested++, "Typo", Typo.body2);
+                groupBuilder.AddAttribute(nested++, "Color", Color.Secondary);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(titleBuilder => titleBuilder.AddContent(0, $"Project context: {group.Root.ProjectExternalId}")));
+                groupBuilder.CloseComponent();
+
+                groupBuilder.OpenComponent<MudGrid>(nested++);
+                groupBuilder.AddAttribute(nested++, "Spacing", 2);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(gridBuilder =>
+                {
+                    var cardIndex = 0;
+                    foreach (var binding in group.Bindings)
+                    {
+                        gridBuilder.OpenComponent<MudItem>(cardIndex++);
+                        gridBuilder.AddAttribute(cardIndex++, "xs", 12);
+                        gridBuilder.AddAttribute(cardIndex++, "md", 6);
+                        gridBuilder.AddAttribute(cardIndex++, "ChildContent", (RenderFragment)(itemBuilder =>
+                        {
+                            itemBuilder.OpenComponent<OnboardingEntityCard>(cardIndex++);
+                            itemBuilder.AddAttribute(cardIndex++, "ElementId", $"binding-{binding.Id}");
+                            itemBuilder.AddAttribute(cardIndex++, "Title", $"{binding.SourceType} binding");
+                            itemBuilder.AddAttribute(cardIndex++, "Subtitle", binding.SourceExternalId);
+                            itemBuilder.AddAttribute(cardIndex++, "ParentContext", $"Root {group.Root.Title} in project {group.Root.ProjectExternalId}");
+                            itemBuilder.AddAttribute(cardIndex++, "MetadataLines", new[]
+                            {
+                                $"Project source id: {binding.ProjectSourceId}",
+                                $"Team source id: {binding.TeamSourceId?.ToString() ?? "n/a"}",
+                                $"Pipeline source id: {binding.PipelineSourceId?.ToString() ?? "n/a"}"
+                            });
+                            itemBuilder.AddAttribute(cardIndex++, "EntityStatus", binding.Status);
+                            itemBuilder.AddAttribute(cardIndex++, "ValidationState", binding.ValidationState);
+                            itemBuilder.AddAttribute(cardIndex++, "ProblemSeverity", OnboardingSignalPresentation.ResolveEntityProblemSeverity(binding.Status, binding.ValidationState));
+                            itemBuilder.AddAttribute(cardIndex++, "ProblemSummary", OnboardingSignalPresentation.BuildEntityProblemSummary(binding.Status, binding.ValidationState));
+                            itemBuilder.AddAttribute(cardIndex++, "ExecutionIntent", GetExecutionIntent($"binding-{binding.Id}"));
+                            itemBuilder.AddAttribute(cardIndex++, "ConfidenceLevel", GetConfidenceLevel($"binding-{binding.Id}"));
+                            itemBuilder.AddAttribute(cardIndex++, "SuggestedAction", GetSuggestedAction($"binding-{binding.Id}"));
+                            itemBuilder.AddAttribute(cardIndex++, "RootCauseHint", GetRootCauseHint($"binding-{binding.Id}"));
+                            itemBuilder.AddAttribute(cardIndex++, "IsHighlighted", IsHighlighted($"binding-{binding.Id}"));
+                            itemBuilder.AddAttribute(cardIndex++, "OnOpenLocation", EventCallback.Factory.Create<ExecutionIntentViewModel>(this, GoToFixLocationAsync));
+                            itemBuilder.CloseComponent();
+                        }));
+                        gridBuilder.CloseComponent();
+                    }
+                }));
+                groupBuilder.CloseComponent();
+
+                var rootEntity = _viewModel.ProductRootGroups
+                    .SelectMany(item => item.Items)
+                    .FirstOrDefault(item => item.Id == group.Root.RootId);
+                var projectEntity = rootEntity is null
+                    ? null
+                    : _viewModel.Projects.FirstOrDefault(item => item.Id == rootEntity.ProjectSourceId);
+
+                groupBuilder.OpenComponent<OnboardingMutationActionZone>(nested++);
+                groupBuilder.AddAttribute(nested++, "Section", OnboardingGraphSection.Bindings);
+                groupBuilder.AddAttribute(nested++, "ActiveIntent", _activeExecutionIntent);
+                groupBuilder.AddAttribute(nested++, "CurrentFilter", _filter);
+                groupBuilder.AddAttribute(nested++, "Root", rootEntity);
+                groupBuilder.AddAttribute(nested++, "Binding", GetHighlightedBinding(group.Root.RootId));
+                groupBuilder.AddAttribute(nested++, "ProjectContext", projectEntity is null
+                    ? null
+                    : new OnboardingProjectContextViewModel(projectEntity.Id, projectEntity.ProjectExternalId, projectEntity.Snapshot.Name));
+                groupBuilder.AddAttribute(nested++, "AvailableTeams", projectEntity is null ? Array.Empty<OnboardingTeamSourceDto>() : GetAvailableTeams(projectEntity.Id));
+                groupBuilder.AddAttribute(nested++, "AvailablePipelines", projectEntity is null ? Array.Empty<OnboardingPipelineSourceDto>() : GetAvailablePipelines(projectEntity.Id));
+                groupBuilder.AddAttribute(nested++, "OnCompleted", EventCallback.Factory.Create<OnboardingExecutionResult>(this, OnMutationCompletedAsync));
+                groupBuilder.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
+    };
+
+    private void RenderGroupedEntities<TItem>(
+        RenderTreeBuilder builder,
+        IReadOnlyList<OnboardingProjectGroupViewModel<TItem>> groups,
+        string emptyMessage,
+        string? placeholderTitle,
+        string? placeholderMessage,
+        Func<RenderTreeBuilder, int, OnboardingProjectGroupViewModel<TItem>, TItem, int> renderItem)
+    {
+        if (groups.Count == 0)
+        {
+            RenderEmptyState(builder, emptyMessage);
+            return;
+        }
+
+        var index = 0;
+        foreach (var group in groups)
+        {
+            builder.OpenComponent<MudPaper>(index++);
+            builder.AddAttribute(index++, "Elevation", 1);
+            builder.AddAttribute(index++, "Class", "pa-3 mb-3");
+            builder.AddAttribute(index++, "ChildContent", (RenderFragment)(groupBuilder =>
+            {
+                var nested = 0;
+                groupBuilder.OpenComponent<MudText>(nested++);
+                groupBuilder.AddAttribute(nested++, "Typo", Typo.h6);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(titleBuilder => titleBuilder.AddContent(0, $"{group.Project.ProjectName} ({group.Project.ProjectExternalId})")));
+                groupBuilder.CloseComponent();
+
+                groupBuilder.OpenComponent<MudGrid>(nested++);
+                groupBuilder.AddAttribute(nested++, "Spacing", 2);
+                groupBuilder.AddAttribute(nested++, "ChildContent", (RenderFragment)(gridBuilder =>
+                {
+                    var cardIndex = 0;
+                    foreach (var item in group.Items)
+                    {
+                        gridBuilder.OpenComponent<MudItem>(cardIndex++);
+                        gridBuilder.AddAttribute(cardIndex++, "xs", 12);
+                        gridBuilder.AddAttribute(cardIndex++, "md", 6);
+                        gridBuilder.AddAttribute(cardIndex++, "ChildContent", (RenderFragment)(itemBuilder =>
+                        {
+                            cardIndex = renderItem(itemBuilder, cardIndex, group, item);
+                        }));
+                        gridBuilder.CloseComponent();
+                    }
+                }));
+                groupBuilder.CloseComponent();
+
+                var projectContext = group.Project;
+                var highlightedTeam = typeof(TItem) == typeof(OnboardingTeamSourceDto)
+                    ? GetHighlightedTeam(group.Project.ProjectId)
+                    : null;
+                var highlightedPipeline = typeof(TItem) == typeof(OnboardingPipelineSourceDto)
+                    ? GetHighlightedPipeline(group.Project.ProjectId)
+                    : null;
+                var highlightedRoot = typeof(TItem) == typeof(OnboardingProductRootDto)
+                    ? GetHighlightedRoot(group.Project.ProjectId)
+                    : null;
+                var section = typeof(TItem) == typeof(OnboardingTeamSourceDto)
+                    ? OnboardingGraphSection.Teams
+                    : typeof(TItem) == typeof(OnboardingPipelineSourceDto)
+                        ? OnboardingGraphSection.Pipelines
+                        : OnboardingGraphSection.ProductRoots;
+
+                groupBuilder.OpenComponent<OnboardingMutationActionZone>(nested++);
+                groupBuilder.AddAttribute(nested++, "Section", section);
+                groupBuilder.AddAttribute(nested++, "ActiveIntent", _activeExecutionIntent);
+                groupBuilder.AddAttribute(nested++, "CurrentFilter", _filter);
+                groupBuilder.AddAttribute(nested++, "ProjectContext", projectContext);
+                groupBuilder.AddAttribute(nested++, "Team", highlightedTeam);
+                groupBuilder.AddAttribute(nested++, "Pipeline", highlightedPipeline);
+                groupBuilder.AddAttribute(nested++, "Root", highlightedRoot);
+                groupBuilder.AddAttribute(nested++, "OnCompleted", EventCallback.Factory.Create<OnboardingExecutionResult>(this, OnMutationCompletedAsync));
+                groupBuilder.CloseComponent();
+            }));
+            builder.CloseComponent();
+        }
+    }
+
+    private void RenderEmptyState(RenderTreeBuilder builder, string message)
+    {
+        builder.OpenComponent<MudAlert>(0);
+        builder.AddAttribute(1, "Severity", Severity.Info);
+        builder.AddAttribute(2, "Variant", Variant.Outlined);
+        builder.AddAttribute(3, "ChildContent", (RenderFragment)(contentBuilder => contentBuilder.AddContent(4, message)));
+        builder.CloseComponent();
+    }
+
+    private void RenderProjectScopedEmptyActionZone(RenderTreeBuilder builder, int index, OnboardingGraphSection section)
+    {
+        var project = _viewModel.Projects.FirstOrDefault(item => item.Id == (_activeExecutionIntent?.ProjectId ?? _filter.ProjectId));
+        builder.OpenComponent<OnboardingMutationActionZone>(index);
+        builder.AddAttribute(index + 1, "Section", section);
+        builder.AddAttribute(index + 2, "ActiveIntent", _activeExecutionIntent);
+        builder.AddAttribute(index + 3, "CurrentFilter", _filter);
+        builder.AddAttribute(index + 4, "ProjectContext", project is null ? null : new OnboardingProjectContextViewModel(project.Id, project.ProjectExternalId, project.Snapshot.Name));
+        builder.AddAttribute(index + 5, "Project", section == OnboardingGraphSection.Projects ? project : null);
+        builder.AddAttribute(index + 6, "OnCompleted", EventCallback.Factory.Create<OnboardingExecutionResult>(this, OnMutationCompletedAsync));
+        builder.CloseComponent();
+    }
+
+    private void RenderBindingScopedEmptyActionZone(RenderTreeBuilder builder, int index)
+    {
+        var root = _viewModel.ProductRootGroups
+            .SelectMany(group => group.Items)
+            .FirstOrDefault(item => item.Id == (_activeExecutionIntent?.RootId ?? _filter.ProductRootId));
+        var project = root is null
+            ? null
+            : _viewModel.Projects.FirstOrDefault(item => item.Id == root.ProjectSourceId);
+
+        builder.OpenComponent<OnboardingMutationActionZone>(index);
+        builder.AddAttribute(index + 1, "Section", OnboardingGraphSection.Bindings);
+        builder.AddAttribute(index + 2, "ActiveIntent", _activeExecutionIntent);
+        builder.AddAttribute(index + 3, "CurrentFilter", _filter);
+        builder.AddAttribute(index + 4, "Root", root);
+        builder.AddAttribute(index + 5, "ProjectContext", project is null ? null : new OnboardingProjectContextViewModel(project.Id, project.ProjectExternalId, project.Snapshot.Name));
+        builder.AddAttribute(index + 6, "AvailableTeams", project is null ? Array.Empty<OnboardingTeamSourceDto>() : GetAvailableTeams(project.Id));
+        builder.AddAttribute(index + 7, "AvailablePipelines", project is null ? Array.Empty<OnboardingPipelineSourceDto>() : GetAvailablePipelines(project.Id));
+        builder.AddAttribute(index + 8, "OnCompleted", EventCallback.Factory.Create<OnboardingExecutionResult>(this, OnMutationCompletedAsync));
+        builder.CloseComponent();
+    }
+
+    private string? GetSuggestedAction(string targetElementId)
+        => GetPrimaryProblemForTarget(targetElementId)?.SuggestedAction;
+
+    private ExecutionIntentViewModel? GetExecutionIntent(string targetElementId)
+        => GetPrimaryProblemForTarget(targetElementId)?.ExecutionIntent;
+
+    private OnboardingExecutionConfidenceLevel? GetConfidenceLevel(string targetElementId)
+        => GetExecutionIntent(targetElementId)?.ConfidenceLevel;
+
+    private string? GetRootCauseHint(string targetElementId)
+    {
+        var problem = GetPrimaryProblemForTarget(targetElementId);
+        return problem is null || problem.RootCauseTargetElementId == targetElementId
+            ? null
+            : $"Part of root cause: {problem.RootCauseEntity}";
+    }
+
+    private bool IsHighlighted(string targetElementId)
+        => string.Equals(_highlightedTargetElementId, targetElementId, StringComparison.Ordinal);
+
+    private ActionableProblemViewModel? GetPrimaryProblemForTarget(string targetElementId)
+        => _viewModel.ProblemGroups
+            .SelectMany(group => group.Items)
+            .Where(problem => problem.TargetElementId == targetElementId)
+            .OrderBy(problem => problem.Severity)
+            .ThenByDescending(problem => problem.ImpactedChildrenCount)
+            .ThenBy(problem => problem.Title, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+    private ExecutionIntentViewModel? FindExecutionIntent(string targetElementId, string? intentType)
+    {
+        var problemIntent = _viewModel.ProblemGroups
+            .SelectMany(group => group.Items)
+            .Where(problem => problem.TargetElementId == targetElementId
+                && (string.IsNullOrWhiteSpace(intentType) || string.Equals(problem.ExecutionIntent.IntentType, intentType, StringComparison.Ordinal)))
+            .OrderBy(problem => problem.Severity)
+            .ThenByDescending(problem => problem.ImpactedChildrenCount)
+            .Select(problem => problem.ExecutionIntent)
+            .FirstOrDefault();
+
+        return problemIntent
+            ?? _viewModel.RootCauseGroups
+                .Where(group => group.TargetElementId == targetElementId
+                    && (string.IsNullOrWhiteSpace(intentType) || string.Equals(group.ExecutionIntent.IntentType, intentType, StringComparison.Ordinal)))
+                .Select(group => group.ExecutionIntent)
+                .FirstOrDefault();
+    }
+
+    private OnboardingTfsConnectionDto? GetHighlightedConnection()
+        => _viewModel.Connections.FirstOrDefault(item => IsHighlighted($"connection-{item.Id}"));
+
+    private OnboardingProjectSourceDto? GetHighlightedProject()
+        => _viewModel.Projects.FirstOrDefault(item => IsHighlighted($"project-{item.Id}"));
+
+    private OnboardingTeamSourceDto? GetHighlightedTeam(int projectId)
+        => _viewModel.TeamGroups
+            .Where(group => group.Project.ProjectId == projectId)
+            .SelectMany(group => group.Items)
+            .FirstOrDefault(item => IsHighlighted($"team-{item.Id}"));
+
+    private OnboardingPipelineSourceDto? GetHighlightedPipeline(int projectId)
+        => _viewModel.PipelineGroups
+            .Where(group => group.Project.ProjectId == projectId)
+            .SelectMany(group => group.Items)
+            .FirstOrDefault(item => IsHighlighted($"pipeline-{item.Id}"));
+
+    private OnboardingProductRootDto? GetHighlightedRoot(int projectId)
+        => _viewModel.ProductRootGroups
+            .Where(group => group.Project.ProjectId == projectId)
+            .SelectMany(group => group.Items)
+            .FirstOrDefault(item => IsHighlighted($"root-{item.Id}"));
+
+    private OnboardingProductSourceBindingDto? GetHighlightedBinding(int rootId)
+        => _viewModel.BindingGroups
+            .Where(group => group.Root.RootId == rootId)
+            .SelectMany(group => group.Bindings)
+            .FirstOrDefault(item => IsHighlighted($"binding-{item.Id}"));
+
+    private IReadOnlyList<OnboardingTeamSourceDto> GetAvailableTeams(int projectId)
+        => _viewModel.TeamGroups
+            .Where(group => group.Project.ProjectId == projectId)
+            .SelectMany(group => group.Items)
+            .ToList();
+
+    private IReadOnlyList<OnboardingPipelineSourceDto> GetAvailablePipelines(int projectId)
+        => _viewModel.PipelineGroups
+            .Where(group => group.Project.ProjectId == projectId)
+            .SelectMany(group => group.Items)
+            .ToList();
+
+    private static Severity ResolveExecutionFeedbackSeverity(OnboardingExecutionFeedbackKind kind)
+        => kind switch
+        {
+            OnboardingExecutionFeedbackKind.Success => Severity.Success,
+            OnboardingExecutionFeedbackKind.Warning => Severity.Warning,
+            _ => Severity.Error
+        };
+
+    private string GetSectionDisplayTitle(OnboardingGraphSection section)
+    {
+        var state = GetSectionState(section);
+        if (state.BlockingCount == 0 && state.WarningCount == 0)
+        {
+            return state.Title;
+        }
+
+        return $"{state.Title} — {state.BlockingCount} blocker(s), {state.WarningCount} warning(s)";
+    }
+
+    private OnboardingGraphSectionStateViewModel GetSectionState(OnboardingGraphSection section)
+        => _viewModel.GraphSections.FirstOrDefault(item => item.Section == section)
+           ?? new OnboardingGraphSectionStateViewModel(section, section.ToString(), $"section-{section}", 0, 0, false);
+
+    private sealed record PendingExecutionNavigation(
+        string TargetElementId,
+        IReadOnlyList<OnboardingGraphSection> ExpandedSections,
+        string? IntentType);
+
+    private sealed record ParsedExecutionNavigationContext(
+        int? ConnectionId,
+        int? ProjectId,
+        int? RootId,
+        OnboardingGraphSection Section,
+        string TargetElementId,
+        string? IntentType);
+}

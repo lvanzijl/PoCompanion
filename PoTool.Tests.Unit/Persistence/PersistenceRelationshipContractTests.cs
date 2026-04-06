@@ -17,8 +17,22 @@ public sealed class PersistenceRelationshipContractTests
             ["CachedPipelineRunEntity:ProductOwnerId->ProfileEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["CoverageEntity:BuildId->CachedPipelineRunEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["EpicPlacementEntity:LaneId->LaneEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
+            ["MigrationIssue:MigrationRunId->MigrationRun"] = [nameof(OnboardingMigrationInfrastructurePersistenceTests.InsertValidMigrationGraph_Succeeds)],
+            ["MigrationUnit:MigrationRunId->MigrationRun"] = [nameof(OnboardingMigrationInfrastructurePersistenceTests.InsertValidMigrationGraph_Succeeds)],
+            ["OnboardingSnapshotMetadata:PipelineSnapshotPipelineSourceId->PipelineSnapshot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["OnboardingSnapshotMetadata:ProductRootSnapshotProductRootId->ProductRootSnapshot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["OnboardingSnapshotMetadata:ProjectSnapshotProjectSourceId->ProjectSnapshot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["OnboardingSnapshotMetadata:TeamSnapshotTeamSourceId->TeamSnapshot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["OnboardingValidationState:PipelineSourceId->PipelineSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["OnboardingValidationState:ProductRootId->ProductRoot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["OnboardingValidationState:ProductSourceBindingId->ProductSourceBinding"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["OnboardingValidationState:ProjectSourceId->ProjectSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["OnboardingValidationState:TeamSourceId->TeamSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["OnboardingValidationState:TfsConnectionId->TfsConnection"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
             ["PipelineDefinitionEntity:ProductId->ProductEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["PipelineDefinitionEntity:RepositoryId->RepositoryEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
+            ["PipelineSnapshot:PipelineSourceId->PipelineSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["PipelineSource:ProjectSourceId->ProjectSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
             ["PlanningBoardSettingsEntity:ProductOwnerId->ProfileEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["PlanningEpicPlacementEntity:ProductId->ProductEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["PlanningEpicPlacementEntity:RowId->BoardRowEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
@@ -29,13 +43,21 @@ public sealed class PersistenceRelationshipContractTests
             ["ProductBacklogRootEntity:ProductId->ProductEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["ProductEntity:ProjectId->ProjectEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["ProductOwnerCacheStateEntity:ProductOwnerId->ProfileEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
+            ["ProductRoot:ProjectSourceId->ProjectSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["ProductRootSnapshot:ProductRootId->ProductRoot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["ProductSourceBinding:ProductRootId->ProductRoot"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["ProductSourceBinding:ProjectSourceId->ProjectSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
             ["ProductTeamLinkEntity:ProductId->ProductEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["ProductTeamLinkEntity:TeamId->TeamEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
+            ["ProjectSnapshot:ProjectSourceId->ProjectSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["ProjectSource:TfsConnectionId->TfsConnection"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
             ["RepositoryEntity:ProductId->ProductEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["RoadmapSnapshotItemEntity:SnapshotId->RoadmapSnapshotEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["SprintEntity:TeamId->TeamEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["SprintMetricsProjectionEntity:ProductId->ProductEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["SprintMetricsProjectionEntity:SprintId->SprintEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
+            ["TeamSnapshot:TeamSourceId->TeamSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds)],
+            ["TeamSource:ProjectSourceId->ProjectSource"] = [nameof(OnboardingPersistenceFoundationTests.InsertValidOnboardingGraph_Succeeds), nameof(OnboardingPersistenceFoundationTests.MissingRequiredParentReference_IsRejected)],
             ["TestRunEntity:BuildId->CachedPipelineRunEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)]
         };
 
@@ -334,6 +356,7 @@ public sealed class PersistenceRelationshipContractTests
             .SelectMany(entityType => entityType.GetForeignKeys()
                 .Where(foreignKey => foreignKey.Properties.All(property => !property.IsNullable))
                 .Select(foreignKey => BuildRelationshipSignature(entityType, foreignKey)))
+            .Distinct(StringComparer.Ordinal)
             .OrderBy(signature => signature, StringComparer.Ordinal)
             .ToArray();
 
@@ -342,8 +365,10 @@ public sealed class PersistenceRelationshipContractTests
             RequiredForeignKeyCoverageManifest.Keys.ToArray(),
             "Every required FK in the EF model must be mapped to at least one persistence/seeding coverage test.");
 
-        var testMethods = typeof(PersistenceRelationshipContractTests)
-            .GetMethods()
+        var testMethods = typeof(PersistenceRelationshipContractTests).Assembly
+            .GetTypes()
+            .Where(type => type.Namespace == typeof(PersistenceRelationshipContractTests).Namespace)
+            .SelectMany(type => type.GetMethods())
             .Select(method => method.Name)
             .ToHashSet(StringComparer.Ordinal);
 

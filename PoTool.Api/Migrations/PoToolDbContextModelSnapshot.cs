@@ -457,6 +457,544 @@ namespace PoTool.Api.Migrations
                     b.ToTable("MilestoneLines");
                 });
 
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.MigrationIssue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsBlocking")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("IssueCategory")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("IssueIdentifier")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("IssueType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MigrationRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MigrationUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SanitizedDetails")
+                        .HasMaxLength(4096)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SanitizedMessage")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceLegacyReference")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetEntityType")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TargetExternalIdentity")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IssueIdentifier")
+                        .IsUnique();
+
+                    b.HasIndex("MigrationUnitId");
+
+                    b.HasIndex("MigrationRunId", "Severity", "IssueCategory");
+
+                    b.ToTable("OnboardingMigrationIssues", (string)null);
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.MigrationRun", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BlockingIssueCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnvironmentRing")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExecutionMode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("FailedEntityCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FailedUnitCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("FinishedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("IssueCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("MigrationVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProcessedEntityCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("RunIdentifier")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SkippedEntityCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SkippedUnitCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceFingerprint")
+                        .HasMaxLength(256)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SucceededEntityCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SucceededUnitCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalUnitCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TriggerType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunIdentifier")
+                        .IsUnique();
+
+                    b.HasIndex("MigrationVersion", "EnvironmentRing", "ExecutionMode");
+
+                    b.ToTable("OnboardingMigrationRuns", (string)null);
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.MigrationUnit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ExecutionOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("FailedEntityCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("FinishedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MigrationRunId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProcessedEntityCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SkippedEntityCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("StartedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SucceededEntityCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UnitIdentifier")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UnitName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UnitType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UnitIdentifier")
+                        .IsUnique();
+
+                    b.HasIndex("MigrationRunId", "ExecutionOrder")
+                        .IsUnique();
+
+                    b.ToTable("OnboardingMigrationUnits", (string)null);
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.PipelineSource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletionReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PipelineExternalId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProjectSourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ProjectSourceId", "PipelineExternalId")
+                        .IsUnique();
+
+                    b.ToTable("OnboardingPipelineSources", (string)null);
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.ProductRoot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletionReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProjectSourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("WorkItemExternalId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ProjectSourceId", "WorkItemExternalId")
+                        .IsUnique();
+
+                    b.ToTable("OnboardingProductRoots", (string)null);
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.ProductSourceBinding", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletionReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PipelineSourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProductRootId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProjectSourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SourceExternalId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TeamSourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("PipelineSourceId");
+
+                    b.HasIndex("ProjectSourceId");
+
+                    b.HasIndex("TeamSourceId");
+
+                    b.HasIndex("ProductRootId", "SourceType", "SourceExternalId")
+                        .IsUnique();
+
+                    b.ToTable("OnboardingProductSourceBindings", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_OnboardingProductSourceBindings_SourceReference", "(\"SourceType\" = 'Project' AND \"TeamSourceId\" IS NULL AND \"PipelineSourceId\" IS NULL) OR\n(\"SourceType\" = 'Team' AND \"TeamSourceId\" IS NOT NULL AND \"PipelineSourceId\" IS NULL) OR\n(\"SourceType\" = 'Pipeline' AND \"PipelineSourceId\" IS NOT NULL AND \"TeamSourceId\" IS NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.ProjectSource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletionReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ProjectExternalId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TfsConnectionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("TfsConnectionId", "ProjectExternalId")
+                        .IsUnique();
+
+                    b.ToTable("OnboardingProjectSources", (string)null);
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.TeamSource", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletionReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProjectSourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TeamExternalId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("ProjectSourceId", "TeamExternalId")
+                        .IsUnique();
+
+                    b.ToTable("OnboardingTeamSources", (string)null);
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.TfsConnection", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApiVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AuthenticationMode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ConnectionKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeletionReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("LastAttemptedValidationAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastSuccessfulValidationAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("LastVerifiedCapabilitiesSummary")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("OrganizationUrl")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TimeoutSeconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ValidationFailureReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionKey")
+                        .IsUnique();
+
+                    b.HasIndex("IsDeleted");
+
+                    b.HasIndex("OrganizationUrl");
+
+                    b.ToTable("OnboardingTfsConnections", (string)null);
+                });
+
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.PipelineDefinitionEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -1865,6 +2403,686 @@ namespace PoTool.Api.Migrations
                     b.Navigation("Lane");
                 });
 
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.MigrationIssue", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.MigrationRun", "MigrationRun")
+                        .WithMany("Issues")
+                        .HasForeignKey("MigrationRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.MigrationUnit", "MigrationUnit")
+                        .WithMany("Issues")
+                        .HasForeignKey("MigrationUnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("MigrationRun");
+
+                    b.Navigation("MigrationUnit");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.MigrationUnit", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.MigrationRun", "MigrationRun")
+                        .WithMany("Units")
+                        .HasForeignKey("MigrationRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MigrationRun");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.PipelineSource", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.ProjectSource", "ProjectSource")
+                        .WithMany("PipelineSources")
+                        .HasForeignKey("ProjectSourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.PipelineSnapshot", "Snapshot", b1 =>
+                        {
+                            b1.Property<int>("PipelineSourceId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Folder")
+                                .HasMaxLength(512)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(256)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("PipelineExternalId")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("ProjectExternalId")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("RepositoryExternalId")
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("RepositoryName")
+                                .HasMaxLength(256)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("YamlPath")
+                                .HasMaxLength(1024)
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("PipelineSourceId");
+
+                            b1.ToTable("OnboardingPipelineSources");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PipelineSourceId");
+
+                            b1.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingSnapshotMetadata", "Metadata", b2 =>
+                                {
+                                    b2.Property<int>("PipelineSnapshotPipelineSourceId")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<DateTime>("ConfirmedAtUtc")
+                                        .HasColumnType("TEXT");
+
+                                    b2.Property<bool>("IsCurrent")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<DateTime>("LastSeenAtUtc")
+                                        .HasColumnType("TEXT");
+
+                                    b2.Property<bool>("RenameDetected")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<string>("StaleReason")
+                                        .HasMaxLength(512)
+                                        .HasColumnType("TEXT");
+
+                                    b2.HasKey("PipelineSnapshotPipelineSourceId");
+
+                                    b2.ToTable("OnboardingPipelineSources");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("PipelineSnapshotPipelineSourceId");
+                                });
+
+                            b1.Navigation("Metadata")
+                                .IsRequired();
+                        });
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingValidationState", "ValidationState", b1 =>
+                        {
+                            b1.Property<int>("PipelineSourceId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("ErrorCode")
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<bool>("IsRetryable")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Message")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Status")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<DateTime>("ValidatedAtUtc")
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("PipelineSourceId");
+
+                            b1.ToTable("OnboardingPipelineSources");
+
+                            b1.WithOwner()
+                                .HasForeignKey("PipelineSourceId");
+                        });
+
+                    b.Navigation("ProjectSource");
+
+                    b.Navigation("Snapshot")
+                        .IsRequired();
+
+                    b.Navigation("ValidationState")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.ProductRoot", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.ProjectSource", "ProjectSource")
+                        .WithMany("ProductRoots")
+                        .HasForeignKey("ProjectSourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingValidationState", "ValidationState", b1 =>
+                        {
+                            b1.Property<int>("ProductRootId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("ErrorCode")
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<bool>("IsRetryable")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Message")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Status")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<DateTime>("ValidatedAtUtc")
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("ProductRootId");
+
+                            b1.ToTable("OnboardingProductRoots");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductRootId");
+                        });
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.ProductRootSnapshot", "Snapshot", b1 =>
+                        {
+                            b1.Property<int>("ProductRootId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("AreaPath")
+                                .IsRequired()
+                                .HasMaxLength(512)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("ProjectExternalId")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("State")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Title")
+                                .IsRequired()
+                                .HasMaxLength(512)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("WorkItemExternalId")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("WorkItemType")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("ProductRootId");
+
+                            b1.ToTable("OnboardingProductRoots");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductRootId");
+
+                            b1.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingSnapshotMetadata", "Metadata", b2 =>
+                                {
+                                    b2.Property<int>("ProductRootSnapshotProductRootId")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<DateTime>("ConfirmedAtUtc")
+                                        .HasColumnType("TEXT");
+
+                                    b2.Property<bool>("IsCurrent")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<DateTime>("LastSeenAtUtc")
+                                        .HasColumnType("TEXT");
+
+                                    b2.Property<bool>("RenameDetected")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<string>("StaleReason")
+                                        .HasMaxLength(512)
+                                        .HasColumnType("TEXT");
+
+                                    b2.HasKey("ProductRootSnapshotProductRootId");
+
+                                    b2.ToTable("OnboardingProductRoots");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("ProductRootSnapshotProductRootId");
+                                });
+
+                            b1.Navigation("Metadata")
+                                .IsRequired();
+                        });
+
+                    b.Navigation("ProjectSource");
+
+                    b.Navigation("Snapshot")
+                        .IsRequired();
+
+                    b.Navigation("ValidationState")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.ProductSourceBinding", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.PipelineSource", "PipelineSource")
+                        .WithMany("ProductSourceBindings")
+                        .HasForeignKey("PipelineSourceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.ProductRoot", "ProductRoot")
+                        .WithMany("ProductSourceBindings")
+                        .HasForeignKey("ProductRootId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.ProjectSource", "ProjectSource")
+                        .WithMany("ProductSourceBindings")
+                        .HasForeignKey("ProjectSourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.TeamSource", "TeamSource")
+                        .WithMany("ProductSourceBindings")
+                        .HasForeignKey("TeamSourceId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingValidationState", "ValidationState", b1 =>
+                        {
+                            b1.Property<int>("ProductSourceBindingId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("ErrorCode")
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<bool>("IsRetryable")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Message")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Status")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<DateTime>("ValidatedAtUtc")
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("ProductSourceBindingId");
+
+                            b1.ToTable("OnboardingProductSourceBindings");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProductSourceBindingId");
+                        });
+
+                    b.Navigation("PipelineSource");
+
+                    b.Navigation("ProductRoot");
+
+                    b.Navigation("ProjectSource");
+
+                    b.Navigation("TeamSource");
+
+                    b.Navigation("ValidationState")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.ProjectSource", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.TfsConnection", "TfsConnection")
+                        .WithMany("ProjectSources")
+                        .HasForeignKey("TfsConnectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.ProjectSnapshot", "Snapshot", b1 =>
+                        {
+                            b1.Property<int>("ProjectSourceId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Description")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(256)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("ProjectExternalId")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("ProjectSourceId");
+
+                            b1.ToTable("OnboardingProjectSources");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProjectSourceId");
+
+                            b1.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingSnapshotMetadata", "Metadata", b2 =>
+                                {
+                                    b2.Property<int>("ProjectSnapshotProjectSourceId")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<DateTime>("ConfirmedAtUtc")
+                                        .HasColumnType("TEXT");
+
+                                    b2.Property<bool>("IsCurrent")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<DateTime>("LastSeenAtUtc")
+                                        .HasColumnType("TEXT");
+
+                                    b2.Property<bool>("RenameDetected")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<string>("StaleReason")
+                                        .HasMaxLength(512)
+                                        .HasColumnType("TEXT");
+
+                                    b2.HasKey("ProjectSnapshotProjectSourceId");
+
+                                    b2.ToTable("OnboardingProjectSources");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("ProjectSnapshotProjectSourceId");
+                                });
+
+                            b1.Navigation("Metadata")
+                                .IsRequired();
+                        });
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingValidationState", "ValidationState", b1 =>
+                        {
+                            b1.Property<int>("ProjectSourceId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("ErrorCode")
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<bool>("IsRetryable")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Message")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Status")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<DateTime>("ValidatedAtUtc")
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("ProjectSourceId");
+
+                            b1.ToTable("OnboardingProjectSources");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProjectSourceId");
+                        });
+
+                    b.Navigation("Snapshot")
+                        .IsRequired();
+
+                    b.Navigation("TfsConnection");
+
+                    b.Navigation("ValidationState")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.TeamSource", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.Onboarding.ProjectSource", "ProjectSource")
+                        .WithMany("TeamSources")
+                        .HasForeignKey("ProjectSourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.TeamSnapshot", "Snapshot", b1 =>
+                        {
+                            b1.Property<int>("TeamSourceId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("DefaultAreaPath")
+                                .IsRequired()
+                                .HasMaxLength(512)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Description")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasMaxLength(256)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("ProjectExternalId")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("TeamExternalId")
+                                .IsRequired()
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("TeamSourceId");
+
+                            b1.ToTable("OnboardingTeamSources");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TeamSourceId");
+
+                            b1.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingSnapshotMetadata", "Metadata", b2 =>
+                                {
+                                    b2.Property<int>("TeamSnapshotTeamSourceId")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<DateTime>("ConfirmedAtUtc")
+                                        .HasColumnType("TEXT");
+
+                                    b2.Property<bool>("IsCurrent")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<DateTime>("LastSeenAtUtc")
+                                        .HasColumnType("TEXT");
+
+                                    b2.Property<bool>("RenameDetected")
+                                        .HasColumnType("INTEGER");
+
+                                    b2.Property<string>("StaleReason")
+                                        .HasMaxLength(512)
+                                        .HasColumnType("TEXT");
+
+                                    b2.HasKey("TeamSnapshotTeamSourceId");
+
+                                    b2.ToTable("OnboardingTeamSources");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("TeamSnapshotTeamSourceId");
+                                });
+
+                            b1.Navigation("Metadata")
+                                .IsRequired();
+                        });
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingValidationState", "ValidationState", b1 =>
+                        {
+                            b1.Property<int>("TeamSourceId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("ErrorCode")
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<bool>("IsRetryable")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Message")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Status")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<DateTime>("ValidatedAtUtc")
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("TeamSourceId");
+
+                            b1.ToTable("OnboardingTeamSources");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TeamSourceId");
+                        });
+
+                    b.Navigation("ProjectSource");
+
+                    b.Navigation("Snapshot")
+                        .IsRequired();
+
+                    b.Navigation("ValidationState")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.TfsConnection", b =>
+                {
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingValidationState", "AvailabilityValidationState", b1 =>
+                        {
+                            b1.Property<int>("TfsConnectionId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("ErrorCode")
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<bool>("IsRetryable")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Message")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Status")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<DateTime>("ValidatedAtUtc")
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("TfsConnectionId");
+
+                            b1.ToTable("OnboardingTfsConnections");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TfsConnectionId");
+                        });
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingValidationState", "CapabilityValidationState", b1 =>
+                        {
+                            b1.Property<int>("TfsConnectionId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("ErrorCode")
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<bool>("IsRetryable")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Message")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Status")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<DateTime>("ValidatedAtUtc")
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("TfsConnectionId");
+
+                            b1.ToTable("OnboardingTfsConnections");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TfsConnectionId");
+                        });
+
+                    b.OwnsOne("PoTool.Api.Persistence.Entities.Onboarding.OnboardingValidationState", "PermissionValidationState", b1 =>
+                        {
+                            b1.Property<int>("TfsConnectionId")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("ErrorCode")
+                                .HasMaxLength(128)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<bool>("IsRetryable")
+                                .HasColumnType("INTEGER");
+
+                            b1.Property<string>("Message")
+                                .HasMaxLength(2048)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<string>("Status")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .HasColumnType("TEXT");
+
+                            b1.Property<DateTime>("ValidatedAtUtc")
+                                .HasColumnType("TEXT");
+
+                            b1.HasKey("TfsConnectionId");
+
+                            b1.ToTable("OnboardingTfsConnections");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TfsConnectionId");
+                        });
+
+                    b.Navigation("AvailabilityValidationState")
+                        .IsRequired();
+
+                    b.Navigation("CapabilityValidationState")
+                        .IsRequired();
+
+                    b.Navigation("PermissionValidationState")
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.PipelineDefinitionEntity", b =>
                 {
                     b.HasOne("PoTool.Api.Persistence.Entities.ProductEntity", "Product")
@@ -2095,6 +3313,49 @@ namespace PoTool.Api.Migrations
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.LaneEntity", b =>
                 {
                     b.Navigation("Placements");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.MigrationRun", b =>
+                {
+                    b.Navigation("Issues");
+
+                    b.Navigation("Units");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.MigrationUnit", b =>
+                {
+                    b.Navigation("Issues");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.PipelineSource", b =>
+                {
+                    b.Navigation("ProductSourceBindings");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.ProductRoot", b =>
+                {
+                    b.Navigation("ProductSourceBindings");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.ProjectSource", b =>
+                {
+                    b.Navigation("PipelineSources");
+
+                    b.Navigation("ProductRoots");
+
+                    b.Navigation("ProductSourceBindings");
+
+                    b.Navigation("TeamSources");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.TeamSource", b =>
+                {
+                    b.Navigation("ProductSourceBindings");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.Onboarding.TfsConnection", b =>
+                {
+                    b.Navigation("ProjectSources");
                 });
 
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.PortfolioSnapshotEntity", b =>

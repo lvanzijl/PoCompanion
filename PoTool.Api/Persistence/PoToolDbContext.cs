@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PoTool.Api.Persistence.Entities;
+using PoTool.Api.Persistence.Entities.Onboarding;
 using PoTool.Api.Persistence.Entities.UiRoadmap;
 
 namespace PoTool.Api.Persistence;
@@ -276,9 +277,56 @@ public class PoToolDbContext : DbContext
     /// </summary>
     public DbSet<RoadmapSnapshotItemEntity> RoadmapSnapshotItems => Set<RoadmapSnapshotItemEntity>();
 
+    /// <summary>
+    /// Persisted onboarding TFS connection authority.
+    /// </summary>
+    public DbSet<TfsConnection> OnboardingTfsConnections => Set<TfsConnection>();
+
+    /// <summary>
+    /// Persisted onboarding project sources.
+    /// </summary>
+    public DbSet<ProjectSource> OnboardingProjectSources => Set<ProjectSource>();
+
+    /// <summary>
+    /// Persisted onboarding team sources.
+    /// </summary>
+    public DbSet<TeamSource> OnboardingTeamSources => Set<TeamSource>();
+
+    /// <summary>
+    /// Persisted onboarding pipeline sources.
+    /// </summary>
+    public DbSet<PipelineSource> OnboardingPipelineSources => Set<PipelineSource>();
+
+    /// <summary>
+    /// Persisted onboarding product roots.
+    /// </summary>
+    public DbSet<ProductRoot> OnboardingProductRoots => Set<ProductRoot>();
+
+    /// <summary>
+    /// Persisted onboarding product-source bindings.
+    /// </summary>
+    public DbSet<ProductSourceBinding> OnboardingProductSourceBindings => Set<ProductSourceBinding>();
+
+    /// <summary>
+    /// Persisted onboarding migration runs.
+    /// </summary>
+    public DbSet<MigrationRun> OnboardingMigrationRuns => Set<MigrationRun>();
+
+    /// <summary>
+    /// Persisted onboarding migration units.
+    /// </summary>
+    public DbSet<MigrationUnit> OnboardingMigrationUnits => Set<MigrationUnit>();
+
+    /// <summary>
+    /// Persisted onboarding migration issues.
+    /// </summary>
+    public DbSet<MigrationIssue> OnboardingMigrationIssues => Set<MigrationIssue>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(PoToolDbContext).Assembly);
 
         modelBuilder.Entity<WorkItemEntity>(entity =>
         {

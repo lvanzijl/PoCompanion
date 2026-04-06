@@ -1,0 +1,28 @@
+@using PoTool.Shared.Onboarding
+
+<MudChip T="string"
+         Label="true"
+         Size="Size.Small"
+         Color="@ResolveColor(Status)">
+    @ResolveLabel(Status)
+</MudChip>
+
+@code {
+    [Parameter, EditorRequired] public OnboardingConfigurationStatus Status { get; set; }
+
+    private static Color ResolveColor(OnboardingConfigurationStatus status)
+        => status switch
+        {
+            OnboardingConfigurationStatus.Complete => Color.Success,
+            OnboardingConfigurationStatus.PartiallyConfigured => Color.Warning,
+            _ => Color.Default
+        };
+
+    private static string ResolveLabel(OnboardingConfigurationStatus status)
+        => status switch
+        {
+            OnboardingConfigurationStatus.NotConfigured => "Not configured",
+            OnboardingConfigurationStatus.PartiallyConfigured => "Partial",
+            _ => "Complete"
+        };
+}

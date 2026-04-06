@@ -145,3 +145,21 @@ public partial class BugTriageClient
     static partial void UpdateJsonSerializerSettings(JsonSerializerOptions settings)
         => ApiClientJsonSettings.Configure(settings);
 }
+
+public partial class OnboardingCrudClient
+{
+    static partial void UpdateJsonSerializerSettings(JsonSerializerOptions settings)
+        => ApiClientJsonSettings.Configure(settings);
+}
+
+public partial class OnboardingLookupClient
+{
+    static partial void UpdateJsonSerializerSettings(JsonSerializerOptions settings)
+        => ApiClientJsonSettings.Configure(settings);
+}
+
+public partial class OnboardingStatusClient
+{
+    static partial void UpdateJsonSerializerSettings(JsonSerializerOptions settings)
+        => ApiClientJsonSettings.Configure(settings);
+}

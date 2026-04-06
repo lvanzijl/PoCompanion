@@ -1,0 +1,79 @@
+@using PoTool.Client.Models
+
+<MudPaper Elevation="1" Class="pa-3" Style="@ResolvedStyle">
+    <MudStack Spacing="1">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.subtitle1">@RootCause.Title</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@RootCause.RootCauseEntity</MudText>
+            </MudStack>
+
+            <MudStack Row="true" Spacing="1">
+                @if (RootCause.FixFirst)
+                {
+                    <MudChip T="string" Label="true" Size="Size.Small" Color="Color.Error">Fix first</MudChip>
+                }
+                <MudChip T="string" Label="true" Size="Size.Small" Color="@ResolveColor()">@RootCause.Severity</MudChip>
+            </MudStack>
+        </MudStack>
+
+        <MudText Typo="Typo.body2">Why: @RootCause.PrimaryProblem.Reason</MudText>
+        <MudText Typo="Typo.body2">Next: @RootCause.SuggestedAction</MudText>
+        <MudChip T="string" Label="true" Size="Size.Small" Color="@ResolveConfidenceColor()">
+            Confidence: @RootCause.ExecutionIntent.ConfidenceLevel
+        </MudChip>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Impact: @RootCause.ExpectedImpact</MudText>
+
+        @if (RootCause.DerivedIssueCount > 0)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Info">
+                Groups @RootCause.VisibleIssueCount visible issue(s) under the same root cause.
+            </MudText>
+        }
+
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                Scope: @ScopeLabel
+            </MudText>
+
+            <CompactButton ButtonRole="ButtonRole.Utility"
+                           Icon="@Icons.Material.Filled.OpenInNew"
+                           OnClick="@(() => OnNavigate.InvokeAsync(RootCause.ExecutionIntent))">
+                Go to fix location
+            </CompactButton>
+        </MudStack>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public OnboardingRootCauseGroupViewModel RootCause { get; set; } = default!;
+    [Parameter] public EventCallback<ExecutionIntentViewModel> OnNavigate { get; set; }
+
+    private string ScopeLabel => RootCause.Scope switch
+    {
+        OnboardingProblemScope.Global => "Global / connection",
+        OnboardingProblemScope.Project => "Project",
+        OnboardingProblemScope.Root => "Product root",
+        OnboardingProblemScope.Binding => "Binding",
+        _ => RootCause.Scope.ToString()
+    };
+
+    private string ResolvedStyle => RootCause.Severity switch
+    {
+        OnboardingProblemSeverity.Blocking => "border-left: 4px solid var(--mud-palette-error);",
+        _ => "border-left: 4px solid var(--mud-palette-warning);"
+    };
+
+    private Color ResolveColor()
+        => RootCause.Severity == OnboardingProblemSeverity.Blocking
+            ? Color.Error
+            : Color.Warning;
+
+    private Color ResolveConfidenceColor()
+        => RootCause.ExecutionIntent.ConfidenceLevel switch
+        {
+            OnboardingExecutionConfidenceLevel.High => Color.Success,
+            OnboardingExecutionConfidenceLevel.Medium => Color.Warning,
+            _ => Color.Default
+        };
+}
