@@ -6,8 +6,8 @@
 | --- | --- | --- |
 | happy-binding-chain | Pass | Browser verification completed project link → root create → project binding create. Summary reached `Complete` with `Projects 1/1`, `Roots 1/1`, and `Bindings 1/1`, and blockers cleared. |
 | missing-root | Pass | Browser verification kept the user in context, surfaced explicit `Work item '1001' was not found.`, and left counts unchanged (`Roots 0/0`, `Bindings 0/0`). |
-| team-assignment | Fail | Browser verification surfaced the invalid team binding blocker, but the binding action zone still opened as a create-binding surface with no replacement team selector, so the blocker could not be resolved end-to-end. The deterministic scenario test `TeamAssignmentScenario_CanReplaceInvalidBindingAndClearBlocker` also failed with `InvalidOperationException: Sequence contains no elements.` |
-| pipeline-assignment | Fail | Browser verification surfaced the invalid pipeline binding blocker, but the binding correction path still did not expose a replacement pipeline selector and continued to route toward create-binding behavior. The deterministic scenario test `PipelineAssignmentScenario_CanReplaceInvalidBindingAndClearBlocker` also failed with `InvalidOperationException: Sequence contains no elements.` |
+| team-assignment | Fail | Final-gate rerun on the current branch, after the assignment-correction implementation, still surfaced the invalid team binding blocker but opened the binding action zone as a create-binding surface with no replacement team selector, so the blocker could not be resolved end-to-end. The deterministic scenario test `TeamAssignmentScenario_CanReplaceInvalidBindingAndClearBlocker` also failed with `InvalidOperationException: Sequence contains no elements.` |
+| pipeline-assignment | Fail | Final-gate rerun on the current branch, after the assignment-correction implementation, still surfaced the invalid pipeline binding blocker but did not expose a replacement pipeline selector and continued to route toward create-binding behavior. The deterministic scenario test `PipelineAssignmentScenario_CanReplaceInvalidBindingAndClearBlocker` also failed with `InvalidOperationException: Sequence contains no elements.` |
 | permission-denied | Pass | Browser verification returned explicit `TFS denied the requested lookup.` feedback on project link with HTTP 403 behavior, no false success, and no graph/count mutation. |
 | stale-project | Pass | Deterministic scenario test `StaleProjectScenario_IsReproducible` passed and reproduced the intended stale/not-found outcome for the seeded project. |
 | tfs-unavailable | Pass | Browser verification returned explicit `TFS is currently unavailable.` feedback on project link with HTTP 503 behavior, no false success, and no graph/count mutation. |
@@ -24,7 +24,7 @@ Passing paths verified:
 - successful mutations refresh summary, graph, and counts authoritatively
 - failing mutations do not report false success
 
-Failing paths verified:
+Failing paths verified on the current branch after the latest assignment-correction changes:
 
 - team assignment cannot be completed end-to-end
 - pipeline assignment cannot be completed end-to-end
