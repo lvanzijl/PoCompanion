@@ -426,8 +426,27 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
         {
             processed++;
 
-            if (!state.ResolvedWorkItemsByExternalId.TryGetValue(productRoot.WorkItemExternalId, out var resolvedWorkItem)
-                || !state.ProjectsByExternalId.TryGetValue(resolvedWorkItem.ProjectExternalId, out var projectSource))
+            if (!state.ResolvedWorkItemsByExternalId.TryGetValue(productRoot.WorkItemExternalId, out var resolvedWorkItem))
+            {
+                var workItemLookup = await _lookupClient.GetWorkItemAsync(state.Connection!, productRoot.WorkItemExternalId, cancellationToken);
+                if (!workItemLookup.Succeeded)
+                {
+                    failed++;
+                    hasBlockingIssue = true;
+                    await RecordValidationIssueAsync(
+                        state.RunIdentifier,
+                        unit.UnitIdentifier,
+                        new OnboardingMigrationMappingContext(productRoot.SourceLegacyReference, nameof(ProductRoot), productRoot.WorkItemExternalId),
+                        workItemLookup.Error!,
+                        cancellationToken);
+                    continue;
+                }
+
+                resolvedWorkItem = workItemLookup.Data!;
+                state.ResolvedWorkItemsByExternalId[productRoot.WorkItemExternalId] = resolvedWorkItem;
+            }
+
+            if (!state.ProjectsByExternalId.TryGetValue(resolvedWorkItem.ProjectExternalId, out var projectSource))
             {
                 failed++;
                 hasBlockingIssue = true;
@@ -440,7 +459,7 @@ public sealed class OnboardingMigrationExecutionService : IOnboardingMigrationEx
                     nameof(ProductRoot),
                     productRoot.WorkItemExternalId,
                     "A migrated project source is required before the product root can be migrated.",
-                    null,
+                    resolvedWorkItem.ProjectExternalId,
                     cancellationToken);
                 continue;
             }
