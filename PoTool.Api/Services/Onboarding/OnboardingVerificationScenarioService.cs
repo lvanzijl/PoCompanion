@@ -355,7 +355,7 @@ public sealed class OnboardingVerificationScenarioService : IOnboardingVerificat
                 new OnboardingVerificationSeed(
                     IncludeConnection: true,
                     ProjectExternalIds: [ProjectExternalId],
-                    TeamExternalIds: Array.Empty<string>(),
+                    TeamExternalIds: [TeamBravoExternalId],
                     InvalidTeamExternalIds: [TeamAlphaExternalId],
                     PipelineExternalIds: Array.Empty<string>(),
                     InvalidPipelineExternalIds: Array.Empty<string>(),
@@ -375,7 +375,7 @@ public sealed class OnboardingVerificationScenarioService : IOnboardingVerificat
                     ProjectExternalIds: [ProjectExternalId],
                     TeamExternalIds: Array.Empty<string>(),
                     InvalidTeamExternalIds: Array.Empty<string>(),
-                    PipelineExternalIds: Array.Empty<string>(),
+                    PipelineExternalIds: [PipelineBravoExternalId],
                     InvalidPipelineExternalIds: [PipelineAlphaExternalId],
                     ProductRootExternalIds: [RootIncidentExternalId],
                     Bindings:

@@ -249,6 +249,7 @@ builder.Services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 builder.Services.AddScoped<IOnboardingService, OnboardingService>();
 builder.Services.AddScoped<IOnboardingWizardState, OnboardingWizardState>();
 builder.Services.AddScoped<IOnboardingWorkspaceService, OnboardingWorkspaceService>();
+builder.Services.AddScoped<IOnboardingBindingReplacementLookupService, OnboardingBindingReplacementLookupService>();
 builder.Services.AddScoped<OnboardingExecutionService>();
 builder.Services.AddScoped<OnboardingWorkspaceViewModelFactory>();
 builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorService>();

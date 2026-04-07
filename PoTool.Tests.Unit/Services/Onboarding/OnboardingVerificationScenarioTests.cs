@@ -106,6 +106,60 @@ public sealed class OnboardingVerificationScenarioTests
     }
 
     [TestMethod]
+    public async Task TeamAssignmentScenario_CanReplaceInvalidBindingAndClearBlocker()
+    {
+        await using var provider = await CreateSqliteServiceProviderAsync(OnboardingVerificationScenarioNames.TeamAssignment);
+        var seedService = provider.GetRequiredService<MockConfigurationSeedHostedService>();
+        await seedService.StartAsync(CancellationToken.None);
+
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var scenarioService = scope.ServiceProvider.GetRequiredService<IOnboardingVerificationScenarioService>();
+        var crudService = CreateCrudService(context, scenarioService);
+        var statusService = new OnboardingStatusService(context, Mock.Of<IOnboardingObservability>());
+
+        var binding = await context.OnboardingProductSourceBindings.SingleAsync(item => item.SourceType == ProductSourceType.Team);
+        var replacementTeam = await context.OnboardingTeamSources.SingleAsync(item => item.TeamExternalId != binding.SourceExternalId);
+
+        var update = await crudService.UpdateBindingAsync(
+            binding.Id,
+            new UpdateProductSourceBindingRequest(true, null, null, replacementTeam.Id, null, null, null),
+            CancellationToken.None);
+        var status = await statusService.GetStatusAsync(CancellationToken.None);
+
+        Assert.IsTrue(update.Succeeded);
+        Assert.AreEqual(replacementTeam.TeamExternalId, update.Data!.SourceExternalId);
+        CollectionAssert.DoesNotContain(status.Data!.BlockingReasons.Select(issue => issue.Code).ToList(), "TEAM_BINDING_SOURCE_INVALID");
+    }
+
+    [TestMethod]
+    public async Task PipelineAssignmentScenario_CanReplaceInvalidBindingAndClearBlocker()
+    {
+        await using var provider = await CreateSqliteServiceProviderAsync(OnboardingVerificationScenarioNames.PipelineAssignment);
+        var seedService = provider.GetRequiredService<MockConfigurationSeedHostedService>();
+        await seedService.StartAsync(CancellationToken.None);
+
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var scenarioService = scope.ServiceProvider.GetRequiredService<IOnboardingVerificationScenarioService>();
+        var crudService = CreateCrudService(context, scenarioService);
+        var statusService = new OnboardingStatusService(context, Mock.Of<IOnboardingObservability>());
+
+        var binding = await context.OnboardingProductSourceBindings.SingleAsync(item => item.SourceType == ProductSourceType.Pipeline);
+        var replacementPipeline = await context.OnboardingPipelineSources.SingleAsync(item => item.PipelineExternalId != binding.SourceExternalId);
+
+        var update = await crudService.UpdateBindingAsync(
+            binding.Id,
+            new UpdateProductSourceBindingRequest(true, null, null, null, replacementPipeline.Id, null, null),
+            CancellationToken.None);
+        var status = await statusService.GetStatusAsync(CancellationToken.None);
+
+        Assert.IsTrue(update.Succeeded);
+        Assert.AreEqual(replacementPipeline.PipelineExternalId, update.Data!.SourceExternalId);
+        CollectionAssert.DoesNotContain(status.Data!.BlockingReasons.Select(issue => issue.Code).ToList(), "PIPELINE_BINDING_SOURCE_INVALID");
+    }
+
+    [TestMethod]
     public async Task PipelineAndRootLookups_ReturnValidCandidates()
     {
         var lookupClient = CreateLookupClient(OnboardingVerificationScenarioNames.HappyBindingChain);

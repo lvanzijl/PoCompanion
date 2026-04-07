@@ -26,6 +26,7 @@ public sealed class OnboardingExecutionIntentService
             visibleTeamCount,
             visiblePipelineCount);
         var navigationSection = ResolveNavigationSection(intentType, section);
+        var navigationTargetElementId = ResolveTargetElementId(intentType, bindingId, targetElementId);
 
         var expandedSections = ResolveExpandedSections(intentType, navigationSection);
         var route = WorkspaceQueryContextHelper.BuildRoute(
@@ -38,7 +39,7 @@ public sealed class OnboardingExecutionIntentService
                 rootId,
                 bindingId,
                 navigationSection,
-                targetElementId));
+                navigationTargetElementId));
 
         return new ExecutionIntentViewModel(
             intentType,
@@ -53,7 +54,7 @@ public sealed class OnboardingExecutionIntentService
                 route,
                 anchorId,
                 navigationSection,
-                targetElementId,
+                navigationTargetElementId,
                 expandedSections));
     }
 
@@ -65,9 +66,9 @@ public sealed class OnboardingExecutionIntentService
             "Resolve the missing read permissions" => "configure-connection",
             "Enable the required connection capabilities" => "configure-connection",
             "Link project to connection" => "link-project",
-            "Assign pipeline to project" when bindingId.HasValue => "create-binding",
+            "Assign pipeline to project" when bindingId.HasValue => "replace-binding-source",
             "Assign pipeline to project" => "assign-pipeline",
-            "Assign team to project" when bindingId.HasValue => "create-binding",
+            "Assign team to project" when bindingId.HasValue => "replace-binding-source",
             "Assign team to project" => "assign-team",
             "Create binding for product root" => "create-binding",
             "Resolve product root validation issue" => "resolve-root-validation",
@@ -110,6 +111,7 @@ public sealed class OnboardingExecutionIntentService
                 sections.Add(OnboardingGraphSection.Teams);
                 break;
             case "create-binding":
+            case "replace-binding-source":
                 sections.Add(OnboardingGraphSection.ProductRoots);
                 sections.Add(OnboardingGraphSection.Bindings);
                 break;
@@ -127,6 +129,7 @@ public sealed class OnboardingExecutionIntentService
             "configure-connection" => OnboardingGraphSection.Connections,
             "link-project" => OnboardingGraphSection.Projects,
             "create-binding" => OnboardingGraphSection.Bindings,
+            "replace-binding-source" => OnboardingGraphSection.Bindings,
             "resolve-root-validation" => OnboardingGraphSection.ProductRoots,
             _ => fallbackSection
         };
@@ -169,4 +172,9 @@ public sealed class OnboardingExecutionIntentService
 
         return string.Join("&", parameters);
     }
+
+    private static string ResolveTargetElementId(string intentType, int? bindingId, string targetElementId)
+        => intentType == "replace-binding-source" && bindingId.HasValue
+            ? $"binding-{bindingId.Value}"
+            : targetElementId;
 }

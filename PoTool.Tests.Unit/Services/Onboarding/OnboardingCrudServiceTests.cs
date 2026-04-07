@@ -222,6 +222,132 @@ public sealed class OnboardingCrudServiceTests
     }
 
     [TestMethod]
+    public async Task UpdateBindingAsync_AllowsReplacingTeamBindingSourceAndRevalidates()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var project = CreateProject(connection.Id, "project-1");
+        dbContext.OnboardingProjectSources.Add(project);
+        await dbContext.SaveChangesAsync();
+
+        var root = CreateRoot(project.Id, "project-1", "root-1");
+        var originalTeam = CreateTeam(project.Id, "project-1", "team-stale");
+        var replacementTeam = CreateTeam(project.Id, "project-1", "team-valid");
+        dbContext.OnboardingProductRoots.Add(root);
+        dbContext.OnboardingTeamSources.AddRange(originalTeam, replacementTeam);
+        await dbContext.SaveChangesAsync();
+
+        var binding = CreateTeamBindingEntity(root.Id, project.Id, originalTeam.Id, originalTeam.TeamExternalId);
+        dbContext.OnboardingProductSourceBindings.Add(binding);
+        await dbContext.SaveChangesAsync();
+
+        _validationService
+            .Setup(service => service.ValidateProductSourceBindingAsync(
+                It.IsAny<TfsConnection>(),
+                It.Is<ProjectSource>(item => item.Id == project.Id),
+                It.Is<ProductRoot>(item => item.Id == root.Id),
+                It.Is<ProductSourceBinding>(item => item.Id == binding.Id && item.TeamSourceId == replacementTeam.Id && item.SourceExternalId == replacementTeam.TeamExternalId),
+                It.Is<TeamSource>(item => item.Id == replacementTeam.Id),
+                null,
+                It.IsAny<CancellationToken>(),
+                null,
+                null,
+                null,
+                null))
+            .ReturnsAsync(OnboardingOperationResult<ProductSourceBindingValidationResultDto>.Success(CreateBindingValidation(root.WorkItemExternalId, OnboardingProductSourceTypeDto.Team, replacementTeam.TeamExternalId, project.ProjectExternalId)));
+
+        var service = CreateService(dbContext);
+        var result = await service.UpdateBindingAsync(binding.Id, new UpdateProductSourceBindingRequest(true, null, null, replacementTeam.Id, null, null, null), CancellationToken.None);
+
+        Assert.IsTrue(result.Succeeded);
+        var persisted = await dbContext.OnboardingProductSourceBindings.SingleAsync();
+        Assert.AreEqual(replacementTeam.Id, persisted.TeamSourceId);
+        Assert.AreEqual(replacementTeam.TeamExternalId, persisted.SourceExternalId);
+    }
+
+    [TestMethod]
+    public async Task UpdateBindingAsync_AllowsReplacingPipelineBindingSourceAndRevalidates()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var project = CreateProject(connection.Id, "project-1");
+        dbContext.OnboardingProjectSources.Add(project);
+        await dbContext.SaveChangesAsync();
+
+        var root = CreateRoot(project.Id, "project-1", "root-1");
+        var originalPipeline = CreatePipeline(project.Id, "project-1", "pipeline-stale");
+        var replacementPipeline = CreatePipeline(project.Id, "project-1", "pipeline-valid");
+        dbContext.OnboardingProductRoots.Add(root);
+        dbContext.OnboardingPipelineSources.AddRange(originalPipeline, replacementPipeline);
+        await dbContext.SaveChangesAsync();
+
+        var projectBinding = CreateProjectBindingEntity(root.Id, project.Id, project.ProjectExternalId);
+        var binding = CreatePipelineBindingEntity(root.Id, project.Id, originalPipeline.Id, originalPipeline.PipelineExternalId);
+        dbContext.OnboardingProductSourceBindings.AddRange(projectBinding, binding);
+        await dbContext.SaveChangesAsync();
+
+        _validationService
+            .Setup(service => service.ValidateProductSourceBindingAsync(
+                It.IsAny<TfsConnection>(),
+                It.Is<ProjectSource>(item => item.Id == project.Id),
+                It.Is<ProductRoot>(item => item.Id == root.Id),
+                It.Is<ProductSourceBinding>(item => item.Id == binding.Id && item.PipelineSourceId == replacementPipeline.Id && item.SourceExternalId == replacementPipeline.PipelineExternalId),
+                null,
+                It.Is<PipelineSource>(item => item.Id == replacementPipeline.Id),
+                It.IsAny<CancellationToken>(),
+                null,
+                null,
+                null,
+                null))
+            .ReturnsAsync(OnboardingOperationResult<ProductSourceBindingValidationResultDto>.Success(CreateBindingValidation(root.WorkItemExternalId, OnboardingProductSourceTypeDto.Pipeline, replacementPipeline.PipelineExternalId, project.ProjectExternalId)));
+
+        var service = CreateService(dbContext);
+        var result = await service.UpdateBindingAsync(binding.Id, new UpdateProductSourceBindingRequest(true, null, null, null, replacementPipeline.Id, null, null), CancellationToken.None);
+
+        Assert.IsTrue(result.Succeeded);
+        var persisted = await dbContext.OnboardingProductSourceBindings.SingleAsync(item => item.Id == binding.Id);
+        Assert.AreEqual(replacementPipeline.Id, persisted.PipelineSourceId);
+        Assert.AreEqual(replacementPipeline.PipelineExternalId, persisted.SourceExternalId);
+    }
+
+    [TestMethod]
+    public async Task UpdateBindingAsync_RejectsReplacementOutsideBindingProjectScope()
+    {
+        await using var dbContext = CreateDbContext();
+        var connection = CreateConnection();
+        dbContext.OnboardingTfsConnections.Add(connection);
+        await dbContext.SaveChangesAsync();
+
+        var projectOne = CreateProject(connection.Id, "project-1");
+        var projectTwo = CreateProject(connection.Id, "project-2");
+        dbContext.OnboardingProjectSources.AddRange(projectOne, projectTwo);
+        await dbContext.SaveChangesAsync();
+
+        var root = CreateRoot(projectOne.Id, "project-1", "root-1");
+        var team = CreateTeam(projectOne.Id, "project-1", "team-1");
+        var foreignTeam = CreateTeam(projectTwo.Id, "project-2", "team-2");
+        dbContext.OnboardingProductRoots.Add(root);
+        dbContext.OnboardingTeamSources.AddRange(team, foreignTeam);
+        await dbContext.SaveChangesAsync();
+
+        var binding = CreateTeamBindingEntity(root.Id, projectOne.Id, team.Id, team.TeamExternalId);
+        dbContext.OnboardingProductSourceBindings.Add(binding);
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.UpdateBindingAsync(binding.Id, new UpdateProductSourceBindingRequest(true, null, null, foreignTeam.Id, null, null, null), CancellationToken.None);
+
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual(OnboardingErrorCode.ValidationFailed, result.Error!.Code);
+    }
+
+    [TestMethod]
     public async Task DeleteBindingAsync_SoftDeletesAndRecordsReason()
     {
         await using var dbContext = CreateDbContext();
@@ -526,6 +652,18 @@ public sealed class OnboardingCrudServiceTests
             ValidationState = CreateValidationState()
         };
 
+    private static ProductSourceBinding CreatePipelineBindingEntity(int rootId, int projectId, int pipelineId, string sourceExternalId)
+        => new()
+        {
+            ProductRootId = rootId,
+            ProjectSourceId = projectId,
+            PipelineSourceId = pipelineId,
+            SourceType = ProductSourceType.Pipeline,
+            SourceExternalId = sourceExternalId,
+            Enabled = true,
+            ValidationState = CreateValidationState()
+        };
+
     private static ProductSourceBinding CreateBinding()
         => new()
         {
@@ -555,4 +693,23 @@ public sealed class OnboardingCrudServiceTests
 
     private static ProjectSourceValidationResultDto CreateProjectValidation(string projectExternalId, string name, string? description, OnboardingValidationStatus status = OnboardingValidationStatus.Valid)
         => new(projectExternalId, new ProjectSnapshotDto(projectExternalId, name, description, new SnapshotMetadataDto(DateTime.UtcNow, DateTime.UtcNow, true, false, null)), new OnboardingValidationStateDto(status, DateTime.UtcNow, OnboardingValidationSource.Live, null, null, Array.Empty<string>(), null, null, null));
+
+    private static PipelineSource CreatePipeline(int projectId, string projectExternalId, string pipelineExternalId)
+        => new()
+        {
+            ProjectSourceId = projectId,
+            PipelineExternalId = pipelineExternalId,
+            Enabled = true,
+            Snapshot = new PipelineSnapshot
+            {
+                PipelineExternalId = pipelineExternalId,
+                ProjectExternalId = projectExternalId,
+                Name = pipelineExternalId,
+                Metadata = CreateMetadata()
+            },
+            ValidationState = CreateValidationState()
+        };
+
+    private static ProductSourceBindingValidationResultDto CreateBindingValidation(string workItemExternalId, OnboardingProductSourceTypeDto sourceType, string sourceExternalId, string projectExternalId)
+        => new(workItemExternalId, sourceType, sourceExternalId, projectExternalId, new OnboardingValidationStateDto(OnboardingValidationStatus.Valid, DateTime.UtcNow, OnboardingValidationSource.Live, null, null, Array.Empty<string>(), null, null, null));
 }

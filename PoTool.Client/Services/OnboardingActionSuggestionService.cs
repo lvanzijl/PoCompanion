@@ -35,7 +35,7 @@ public sealed class OnboardingActionSuggestionService
             return "Link project to connection";
         }
 
-        if (ContainsAny(normalized, "pipeline not associated", "missing pipeline", "pipeline requires attention"))
+        if (ContainsAny(normalized, "pipeline not associated", "missing pipeline", "pipeline requires attention", "pipeline source"))
         {
             return "Assign pipeline to project";
         }

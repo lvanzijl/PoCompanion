@@ -792,7 +792,7 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
 
     public async Task<OnboardingOperationResult<OnboardingProductSourceBindingDto>> UpdateBindingAsync(int id, UpdateProductSourceBindingRequest request, CancellationToken cancellationToken)
     {
-        var forbiddenError = ValidateBindingIdentityMutation(request);
+        var forbiddenError = ValidateBindingImmutableFields(request);
         if (forbiddenError is not null)
         {
             return Failure<OnboardingProductSourceBindingDto>(forbiddenError.Value.Code, forbiddenError.Value.Message, forbiddenError.Value.Details);
@@ -807,6 +807,12 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
         if (request.Enabled.HasValue)
         {
             binding.Enabled = request.Enabled.Value;
+        }
+
+        var replacementError = await ApplyBindingSourceReplacementAsync(binding, request, cancellationToken);
+        if (replacementError is not null)
+        {
+            return Failure<OnboardingProductSourceBindingDto>(replacementError.Value.Code, replacementError.Value.Message, replacementError.Value.Details);
         }
 
         var root = await FindRootAsync(binding.ProductRootId, cancellationToken);
@@ -972,8 +978,119 @@ public sealed class OnboardingCrudService : IOnboardingCrudService
     private static (OnboardingErrorCode Code, string Message, string? Details)? ValidateRootIdentityMutation(UpdateProductRootRequest request)
         => request.WorkItemExternalId is not null || request.ProjectSourceId.HasValue ? (OnboardingErrorCode.ValidationFailed, "Product root identity fields cannot be updated.", "WorkItemExternalId, ProjectSourceId") : null;
 
-    private static (OnboardingErrorCode Code, string Message, string? Details)? ValidateBindingIdentityMutation(UpdateProductSourceBindingRequest request)
-        => request.ProductRootId.HasValue || request.ProjectSourceId.HasValue || request.TeamSourceId.HasValue || request.PipelineSourceId.HasValue || request.SourceType.HasValue || request.SourceExternalId is not null ? (OnboardingErrorCode.ValidationFailed, "Binding identity fields cannot be updated.", "ProductRootId, ProjectSourceId, TeamSourceId, PipelineSourceId, SourceType, SourceExternalId") : null;
+    private static (OnboardingErrorCode Code, string Message, string? Details)? ValidateBindingImmutableFields(UpdateProductSourceBindingRequest request)
+        => request.ProductRootId.HasValue || request.ProjectSourceId.HasValue || request.SourceType.HasValue || request.SourceExternalId is not null
+            ? (OnboardingErrorCode.ValidationFailed, "Binding identity fields cannot be updated.", "ProductRootId, ProjectSourceId, SourceType, SourceExternalId")
+            : null;
+
+    private async Task<(OnboardingErrorCode Code, string Message, string? Details)?> ApplyBindingSourceReplacementAsync(
+        ProductSourceBinding binding,
+        UpdateProductSourceBindingRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.TeamSourceId.HasValue && request.PipelineSourceId.HasValue)
+        {
+            return (OnboardingErrorCode.ValidationFailed, "Binding replacement must select exactly one replacement source.", "TeamSourceId, PipelineSourceId");
+        }
+
+        return binding.SourceType switch
+        {
+            ProductSourceType.Project when request.TeamSourceId.HasValue || request.PipelineSourceId.HasValue
+                => (OnboardingErrorCode.ValidationFailed, "Project bindings do not support assignment correction.", "SourceType=Project"),
+            ProductSourceType.Project => null,
+            ProductSourceType.Team => await ApplyTeamBindingReplacementAsync(binding, request.TeamSourceId, request.PipelineSourceId, cancellationToken),
+            ProductSourceType.Pipeline => await ApplyPipelineBindingReplacementAsync(binding, request.TeamSourceId, request.PipelineSourceId, cancellationToken),
+            _ => (OnboardingErrorCode.ValidationFailed, "Unsupported binding source type.", binding.SourceType.ToString())
+        };
+    }
+
+    private async Task<(OnboardingErrorCode Code, string Message, string? Details)?> ApplyTeamBindingReplacementAsync(
+        ProductSourceBinding binding,
+        int? teamSourceId,
+        int? pipelineSourceId,
+        CancellationToken cancellationToken)
+    {
+        if (pipelineSourceId.HasValue)
+        {
+            return (OnboardingErrorCode.ValidationFailed, "Team bindings cannot replace their source with a pipeline.", "PipelineSourceId");
+        }
+
+        if (!teamSourceId.HasValue)
+        {
+            return null;
+        }
+
+        var team = await FindTeamAsync(teamSourceId.Value, cancellationToken);
+        if (team is null)
+        {
+            return (OnboardingErrorCode.DependencyViolation, "Binding requires an active team source.", $"teamId={teamSourceId.Value}");
+        }
+
+        if (team.ProjectSourceId != binding.ProjectSourceId)
+        {
+            return (OnboardingErrorCode.ValidationFailed, "Team binding project scope does not match the product root project.", $"teamProjectId={team.ProjectSourceId}; rootProjectId={binding.ProjectSourceId}");
+        }
+
+        if (await _dbContext.OnboardingProductSourceBindings.AnyAsync(
+                item => item.Id != binding.Id
+                    && !item.IsDeleted
+                    && item.ProductRootId == binding.ProductRootId
+                    && item.SourceType == ProductSourceType.Team
+                    && item.SourceExternalId == team.TeamExternalId,
+                cancellationToken))
+        {
+            return (OnboardingErrorCode.Conflict, "A product source binding with the same source already exists.", team.TeamExternalId);
+        }
+
+        binding.TeamSourceId = team.Id;
+        binding.PipelineSourceId = null;
+        binding.SourceExternalId = team.TeamExternalId;
+        return null;
+    }
+
+    private async Task<(OnboardingErrorCode Code, string Message, string? Details)?> ApplyPipelineBindingReplacementAsync(
+        ProductSourceBinding binding,
+        int? teamSourceId,
+        int? pipelineSourceId,
+        CancellationToken cancellationToken)
+    {
+        if (teamSourceId.HasValue)
+        {
+            return (OnboardingErrorCode.ValidationFailed, "Pipeline bindings cannot replace their source with a team.", "TeamSourceId");
+        }
+
+        if (!pipelineSourceId.HasValue)
+        {
+            return null;
+        }
+
+        var pipeline = await FindPipelineAsync(pipelineSourceId.Value, cancellationToken);
+        if (pipeline is null)
+        {
+            return (OnboardingErrorCode.DependencyViolation, "Binding requires an active pipeline source.", $"pipelineId={pipelineSourceId.Value}");
+        }
+
+        if (pipeline.ProjectSourceId != binding.ProjectSourceId)
+        {
+            return (OnboardingErrorCode.ValidationFailed, "Pipeline binding project scope does not match the product root project.", $"pipelineProjectId={pipeline.ProjectSourceId}; rootProjectId={binding.ProjectSourceId}");
+        }
+
+        if (await _dbContext.OnboardingProductSourceBindings.AnyAsync(
+                item => item.Id != binding.Id
+                    && !item.IsDeleted
+                    && item.ProductRootId == binding.ProductRootId
+                    && item.SourceType == ProductSourceType.Pipeline
+                    && item.SourceExternalId == pipeline.PipelineExternalId,
+                cancellationToken))
+        {
+            return (OnboardingErrorCode.Conflict, "A product source binding with the same source already exists.", pipeline.PipelineExternalId);
+        }
+
+        binding.TeamSourceId = null;
+        binding.PipelineSourceId = pipeline.Id;
+        binding.SourceExternalId = pipeline.PipelineExternalId;
+        return null;
+    }
 
     private Task<TfsConnection?> FindConnectionAsync(int id, CancellationToken cancellationToken)
         => OnboardingReadQueries.ActiveConnections(_dbContext).SingleOrDefaultAsync(item => item.Id == id, cancellationToken);

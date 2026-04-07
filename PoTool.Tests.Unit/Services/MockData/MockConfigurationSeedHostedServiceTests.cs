@@ -152,7 +152,7 @@ public sealed class MockConfigurationSeedHostedServiceTests
         Assert.AreEqual(1, await context.OnboardingProjectSources.CountAsync());
         Assert.AreEqual(1, await context.OnboardingProductRoots.CountAsync());
         Assert.AreEqual(2, await context.OnboardingProductSourceBindings.CountAsync());
-        Assert.AreEqual(1, await context.OnboardingTeamSources.CountAsync(), "Assignment blocker should persist through an invalid seeded team source.");
+        Assert.AreEqual(2, await context.OnboardingTeamSources.CountAsync(), "Team-assignment verification should seed the invalid source plus one reachable replacement candidate.");
 
         var statusService = new OnboardingStatusService(context, Mock.Of<IOnboardingObservability>());
         var status = await statusService.GetStatusAsync(CancellationToken.None);

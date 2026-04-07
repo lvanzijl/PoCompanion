@@ -33,6 +33,30 @@ public class OnboardingActionSuggestionServiceTests
     }
 
     [TestMethod]
+    public void GetSuggestedAction_ReturnsPipelineReplacementSuggestion_ForInvalidPipelineBinding()
+    {
+        var result = _service.GetSuggestedAction(
+            OnboardingProblemScope.Binding,
+            "The pipeline binding references a pipeline source that is not enabled and valid.",
+            "The pipeline binding references a pipeline source that is not enabled and valid.",
+            "Pipeline binding");
+
+        Assert.AreEqual("Assign pipeline to project", result);
+    }
+
+    [TestMethod]
+    public void GetSuggestedAction_KeepsTeamReplacementSuggestion_ForInvalidTeamBinding()
+    {
+        var result = _service.GetSuggestedAction(
+            OnboardingProblemScope.Binding,
+            "The team binding references a team source that is not enabled and valid.",
+            "The team binding references a team source that is not enabled and valid.",
+            "Team binding");
+
+        Assert.AreEqual("Assign team to project", result);
+    }
+
+    [TestMethod]
     public void GetSuggestedAction_ReturnsFallbackSuggestion_WhenReasonIsUnknown()
     {
         var result = _service.GetSuggestedAction(
