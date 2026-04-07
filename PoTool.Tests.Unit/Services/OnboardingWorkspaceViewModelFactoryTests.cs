@@ -424,12 +424,73 @@ public class OnboardingWorkspaceViewModelFactoryTests
             .Items
             .Single();
 
+        Assert.AreEqual("Assign team to project", problem.SuggestedAction);
         Assert.AreEqual("replace-binding-source", problem.ExecutionIntent.IntentType);
         Assert.AreEqual(OnboardingGraphSection.Bindings, problem.ExecutionIntent.NavigationTarget.Section);
         Assert.AreEqual("binding-14", problem.ExecutionIntent.NavigationTarget.TargetElementId);
         StringAssert.Contains(problem.ExecutionIntent.NavigationTarget.Route, "onboardingTarget=binding-14");
+        Assert.AreEqual("Assign team to project", result.RootCauseGroups[0].SuggestedAction);
         Assert.AreEqual(problem.ExecutionIntent.IntentType, result.RootCauseGroups[0].ExecutionIntent.IntentType);
         Assert.AreEqual(problem.ExecutionIntent.NavigationTarget.TargetElementId, result.RootCauseGroups[0].ExecutionIntent.NavigationTarget.TargetElementId);
+    }
+
+    [TestMethod]
+    public void Create_PipelineBindingAssignmentProblemsRouteToReplacementIntentWithReplacementLabels()
+    {
+        var project = CreateProject();
+        var root = CreateRoot(project.Id);
+        var pipeline = CreatePipeline(project.Id);
+        var binding = CreateBinding(
+            root.Id,
+            project.Id,
+            sourceType: OnboardingProductSourceTypeDto.Pipeline,
+            sourceExternalId: "pipeline-incident-response",
+            pipelineSourceId: pipeline.Id,
+            status: new OnboardingEntityStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [new OnboardingStatusIssueDto("PIPELINE_BINDING_SOURCE_INVALID", "The pipeline binding references a pipeline source that is not enabled and valid.", null, null)],
+                []));
+
+        var result = _factory.Create(CreateWorkspaceData(
+            new OnboardingStatusDto(
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.Complete,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                OnboardingConfigurationStatus.PartiallyConfigured,
+                [],
+                [],
+                new OnboardingStatusCountsDto(0, 0, 1, 1, 1, 0, 1, 1, 1, 1)),
+            [CreateConnection()],
+            [project],
+            [],
+            [pipeline],
+            [root],
+            [binding]));
+
+        var problem = result.ProblemGroups
+            .Single(group => group.Scope == OnboardingProblemScope.Binding)
+            .Items
+            .Single();
+        var rootCause = result.RootCauseGroups.Single();
+        var topBlocker = result.ProblemSummary!.TopBlockers.Single();
+
+        Assert.AreEqual("Assign pipeline to project", problem.SuggestedAction);
+        Assert.AreEqual("replace-binding-source", problem.ExecutionIntent.IntentType);
+        Assert.AreEqual(OnboardingGraphSection.Bindings, problem.ExecutionIntent.NavigationTarget.Section);
+        Assert.AreEqual("binding-14", problem.ExecutionIntent.NavigationTarget.TargetElementId);
+        StringAssert.Contains(problem.ExecutionIntent.NavigationTarget.Route, "onboardingTarget=binding-14");
+
+        Assert.AreEqual("Assign pipeline to project", rootCause.SuggestedAction);
+        Assert.AreEqual("replace-binding-source", rootCause.ExecutionIntent.IntentType);
+        Assert.AreEqual("binding-14", rootCause.ExecutionIntent.NavigationTarget.TargetElementId);
+
+        Assert.AreEqual("Assign pipeline to project", topBlocker.SuggestedAction);
+        Assert.AreEqual("replace-binding-source", topBlocker.ExecutionIntent.IntentType);
+        Assert.AreEqual("binding-14", topBlocker.ExecutionIntent.NavigationTarget.TargetElementId);
+
+        CollectionAssert.DoesNotContain(
+            new[] { problem.SuggestedAction, rootCause.SuggestedAction, topBlocker.SuggestedAction },
+            "Create binding for product root");
     }
 
     private static OnboardingWorkspaceData CreateWorkspaceData(
