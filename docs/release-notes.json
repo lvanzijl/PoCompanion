@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-07",
+    "type": "Fixed",
+    "title": "Onboarding pipeline binding blockers now keep replacement intent across all fix-entry surfaces",
+    "impact": "When the OnboardingWorkspace feature flag is enabled, invalid existing pipeline bindings now show replacement-focused next-step labels on blocker cards, root-cause cards, and top-blocker summaries, and every fix entry path opens the binding replacement flow instead of incorrectly falling back to create-binding mode.",
+    "area": "Home / Onboarding",
+    "link": "/home/onboarding"
+  },
+  {
     "date": "2026-04-06",
     "type": "Fixed",
     "title": "Onboarding assignment fix links now stay in replacement mode for invalid team and pipeline bindings",
