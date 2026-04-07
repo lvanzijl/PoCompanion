@@ -445,7 +445,6 @@ public class OnboardingWorkspaceViewModelFactoryTests
             project.Id,
             sourceType: OnboardingProductSourceTypeDto.Pipeline,
             sourceExternalId: "pipeline-incident-response",
-            pipelineSourceId: pipeline.Id,
             status: new OnboardingEntityStatusDto(
                 OnboardingConfigurationStatus.PartiallyConfigured,
                 [new OnboardingStatusIssueDto("PIPELINE_BINDING_SOURCE_INVALID", "The pipeline binding references a pipeline source that is not enabled and valid.", null, null)],
