@@ -92,24 +92,18 @@ internal partial class RealTfsClient
       var rootIdList = string.Join(",", rootWorkItemIds.Distinct().OrderBy(x => x));
 
       // NOTE: Discovery phase NEVER filters by date/since.
-      var wiql = new
-      {
-         query =
-              "SELECT [System.Id] FROM WorkItemLinks WHERE " +
-              $"([Source].[System.Id] IN ({rootIdList})) AND " +
-              "([System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward') " +
-              "MODE (Recursive)"
-      };
-
       try
       {
-         var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
-         using var content = new StringContent(
-             JsonSerializer.Serialize(wiql),
-             Encoding.UTF8,
-             "application/json");
+         var wiqlQuery = WiqlQueryBuilder.BuildWorkItemLinksQuery(
+             selectFields: ["[System.Id]"],
+             whereClauses:
+             [
+                 $"([Source].[System.Id] IN ({rootIdList}))",
+                 "([System.Links.LinkType] = 'System.LinkTypes.Hierarchy-Forward')"
+             ],
+             modeClause: "MODE (Recursive)");
 
-         var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, content, cancellationToken, handleErrors: false);
+         var wiqlResponse = await ExecuteWiqlQueryAsync(httpClient, config, wiqlQuery, cancellationToken, handleErrors: false);
          UpdateHeartbeat();
          await HandleHttpErrorsAsync(wiqlResponse, cancellationToken);
 

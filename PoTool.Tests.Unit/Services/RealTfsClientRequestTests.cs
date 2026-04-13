@@ -105,6 +105,148 @@ public class RealTfsClientRequestTests
     }
 
     [TestMethod]
+    public async Task GetWorkItemsAsync_RejectsEmptyAreaPathBeforeSendingWiql()
+    {
+        var config = CreateConfig();
+        var requestCount = 0;
+
+        var handler = new CaptureHttpMessageHandler((request, _) =>
+        {
+            requestCount++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"workItems\": []}")
+            });
+        });
+
+        var client = CreateClient(config, handler);
+
+        var ex = await AssertThrowsAsync<InvalidOperationException>(() => client.GetWorkItemsAsync("   "));
+
+        StringAssert.Contains(ex.Message, "area path");
+        Assert.AreEqual(0, requestCount);
+    }
+
+    [TestMethod]
+    public async Task VerifyCapabilitiesAsync_WorkItemFieldValidationUsesHardenedWiqlWithoutTopClause()
+    {
+        var config = CreateConfig();
+        var wiqlBodies = new List<string>();
+
+        var handler = new CaptureHttpMessageHandler(async (request, ct) =>
+        {
+            var uri = request.RequestUri!.AbsoluteUri;
+            if (request.Content != null && uri.Contains("_apis/wit/wiql", StringComparison.OrdinalIgnoreCase))
+            {
+                wiqlBodies.Add(await request.Content.ReadAsStringAsync(ct));
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"workItems\":[{\"id\":101}]}")
+                };
+            }
+
+            if (uri.Contains("_apis/projects/", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"name\":\"TestProject\"}")
+                };
+            }
+
+            if (uri.Contains("_apis/projects", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"value\":[{\"name\":\"TestProject\"}]}")
+                };
+            }
+
+            if (uri.Contains("_apis/wit/fields", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"value\":[" +
+                        "{\"referenceName\":\"System.Id\"}," +
+                        "{\"referenceName\":\"System.WorkItemType\"}," +
+                        "{\"referenceName\":\"System.Title\"}," +
+                        "{\"referenceName\":\"System.State\"}," +
+                        "{\"referenceName\":\"System.AreaPath\"}," +
+                        "{\"referenceName\":\"System.IterationPath\"}," +
+                        "{\"referenceName\":\"System.Description\"}," +
+                        "{\"referenceName\":\"System.CreatedDate\"}," +
+                        "{\"referenceName\":\"System.ChangedDate\"}," +
+                        "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
+                        "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
+                        "{\"referenceName\":\"System.Tags\"}," +
+                        "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +
+                        "{\"referenceName\":\"Microsoft.VSTS.Scheduling.Effort\"}," +
+                        "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StoryPoints\"}," +
+                        "{\"referenceName\":\"Microsoft.VSTS.Common.BacklogPriority\"}," +
+                        "{\"referenceName\":\"Microsoft.VSTS.Common.TimeCriticality\"}," +
+                        "{\"referenceName\":\"Rhodium.Funding.ProjectNumber\"}," +
+                        "{\"referenceName\":\"Rhodium.Funding.ProjectElement\"}" +
+                        "]}")
+                };
+            }
+
+            if (uri.Contains("_apis/wit/workitemsbatch", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"value\":[{\"id\":101,\"fields\":{" +
+                        "\"System.WorkItemType\":\"Feature\"," +
+                        "\"Rhodium.Funding.ProjectNumber\":\"PRJ-1\"," +
+                        "\"Rhodium.Funding.ProjectElement\":\"ELM-1\"," +
+                        "\"Microsoft.VSTS.Common.TimeCriticality\":42.5" +
+                        "}}]}")
+                };
+            }
+
+            if (uri.Contains("_apis/wit/workitems/1/revisions", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"value\":[]}")
+                };
+            }
+
+            if (uri.Contains("_apis/git/repositories", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"value\":[]}")
+                };
+            }
+
+            if (uri.Contains("_apis/build/definitions", StringComparison.OrdinalIgnoreCase) ||
+                uri.Contains("_apis/release/definitions", StringComparison.OrdinalIgnoreCase))
+            {
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"value\":[]}")
+                };
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent("{}")
+            };
+        });
+
+        var client = CreateClient(config, handler);
+
+        var result = await client.VerifyCapabilitiesAsync(includeWriteChecks: false);
+
+        Assert.IsTrue(result.Success, "Verification should succeed for hardened WIQL regression coverage.");
+        AssertCountAtLeast(wiqlBodies.Count, 3, "Expected at least three WIQL queries during capability verification.");
+        Assert.IsTrue(wiqlBodies.All(body => !body.Contains("TOP", StringComparison.OrdinalIgnoreCase)));
+
+        using var fieldValidationDoc = JsonDocument.Parse(wiqlBodies[^1]);
+        var fieldValidationQuery = fieldValidationDoc.RootElement.GetProperty("query").GetString();
+        Assert.AreEqual("SELECT [System.Id] FROM WorkItems ORDER BY [System.Id] DESC", fieldValidationQuery);
+    }
+
+    [TestMethod]
     public async Task GetPullRequestsAsync_UsesUtcForMinAndMaxTime()
     {
         var config = CreateConfig();
@@ -393,6 +535,14 @@ public class RealTfsClientRequestTests
 
         Assert.Fail($"Expected exception of type {typeof(TException).Name}.");
         return null!;
+    }
+
+    private static void AssertCountAtLeast(int actualCount, int minimumCount, string message)
+    {
+        if (actualCount < minimumCount)
+        {
+            Assert.Fail(message);
+        }
     }
 
     private sealed class DelayedHttpMessageHandler : HttpMessageHandler
