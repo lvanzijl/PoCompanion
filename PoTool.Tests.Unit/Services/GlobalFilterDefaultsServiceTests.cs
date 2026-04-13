@@ -83,7 +83,7 @@ public sealed class GlobalFilterDefaultsServiceTests
     [TestMethod]
     public async Task BuildDefaultedUriAsync_UsesHistoricalSprintWhenCurrentSprintIsUnavailable()
     {
-        var store = CreateStore();
+        var store = CreateStore(sprintsClient: new HistoricalOnlySprintsClient());
         await store.TrackNavigationAsync("http://localhost/home/delivery/execution", 42);
 
         var defaultsService = CreateDefaultsService(
@@ -93,6 +93,19 @@ public sealed class GlobalFilterDefaultsServiceTests
         var uri = await defaultsService.BuildDefaultedUriAsync("http://localhost/home/delivery/execution", 42);
 
         Assert.AreEqual("/home/delivery/execution?teamId=7&sprintId=799&timeMode=Sprint", uri);
+    }
+
+    [TestMethod]
+    public async Task BuildDefaultedUriAsync_PortfolioDelivery_UsesResolvedSprintWindow()
+    {
+        var store = CreateStore();
+        await store.TrackNavigationAsync("http://localhost/home/delivery/portfolio", 42);
+
+        var defaultsService = CreateDefaultsService(store);
+
+        var uri = await defaultsService.BuildDefaultedUriAsync("http://localhost/home/delivery/portfolio", 42);
+
+        Assert.AreEqual("/home/delivery/portfolio?teamId=7&fromSprintId=699&toSprintId=701&timeMode=Range", uri);
     }
 
     [TestMethod]
@@ -108,12 +121,19 @@ public sealed class GlobalFilterDefaultsServiceTests
         Assert.IsNull(uri);
     }
 
-    private static GlobalFilterStore CreateStore()
+    private static GlobalFilterStore CreateStore(
+        IProductsClient? productsClient = null,
+        ITeamsClient? teamsClient = null,
+        ISprintsClient? sprintsClient = null)
     {
         var projectService = new ProjectService(new StubProjectsClient());
         var projectIdentityMapper = new ProjectIdentityMapper(projectService);
         var resolver = new FilterStateResolver(projectIdentityMapper);
-        return new GlobalFilterStore(NullLogger<GlobalFilterStore>.Instance, resolver);
+        return new GlobalFilterStore(
+            NullLogger<GlobalFilterStore>.Instance,
+            resolver,
+            CreateAutoResolveService(productsClient, teamsClient, sprintsClient),
+            CreateLabelService(teamsClient, sprintsClient));
     }
 
     private static GlobalFilterDefaultsService CreateDefaultsService(
@@ -124,16 +144,36 @@ public sealed class GlobalFilterDefaultsServiceTests
     {
         var projectService = new ProjectService(new StubProjectsClient());
         var projectIdentityMapper = new ProjectIdentityMapper(projectService);
+        var productsService = new ProductService(productsClient ?? new StubProductsClient());
+        var teamsService = new TeamService(teamsClient ?? new StubTeamsClient());
+        var sprintService = new SprintService(sprintsClient ?? new StubSprintsClient());
 
         return new GlobalFilterDefaultsService(
             store,
             new GlobalFilterRouteService(projectIdentityMapper),
-            new ProductService(productsClient ?? new StubProductsClient()),
-            new TeamService(teamsClient ?? new StubTeamsClient()),
-            new SprintService(sprintsClient ?? new StubSprintsClient()),
-            new GlobalFilterContextResolver(),
+            new GlobalFilterAutoResolveService(
+                productsService,
+                teamsService,
+                sprintService,
+                new GlobalFilterContextResolver()),
             new InMemorySecureStorageService());
     }
+
+    private static GlobalFilterAutoResolveService CreateAutoResolveService(
+        IProductsClient? productsClient = null,
+        ITeamsClient? teamsClient = null,
+        ISprintsClient? sprintsClient = null)
+    {
+        var productsService = new ProductService(productsClient ?? new StubProductsClient());
+        var teamsService = new TeamService(teamsClient ?? new StubTeamsClient());
+        var sprintService = new SprintService(sprintsClient ?? new StubSprintsClient());
+        return new GlobalFilterAutoResolveService(productsService, teamsService, sprintService, new GlobalFilterContextResolver());
+    }
+
+    private static GlobalFilterLabelService CreateLabelService(
+        ITeamsClient? teamsClient = null,
+        ISprintsClient? sprintsClient = null)
+        => new(new TeamService(teamsClient ?? new StubTeamsClient()), new SprintService(sprintsClient ?? new StubSprintsClient()));
 
     private sealed class InMemorySecureStorageService : ISecureStorageService
     {
@@ -249,8 +289,14 @@ public sealed class GlobalFilterDefaultsServiceTests
 
         public Task<TeamDto> CreateTeamAsync(CreateTeamRequest request) => throw new NotSupportedException();
         public Task<TeamDto> CreateTeamAsync(CreateTeamRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task<TeamDto> GetTeamByIdAsync(int id) => throw new NotSupportedException();
-        public Task<TeamDto> GetTeamByIdAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<TeamDto> GetTeamByIdAsync(int id) => GetTeamByIdAsync(id, CancellationToken.None);
+        public Task<TeamDto> GetTeamByIdAsync(int id, CancellationToken cancellationToken)
+            => id switch
+            {
+                7 => Task.FromResult(TeamAlpha),
+                8 => Task.FromResult(TeamBravo),
+                _ => throw new ApiException("Not found", 404, string.Empty, new Dictionary<string, IEnumerable<string>>(), null)
+            };
         public Task<TeamDto> UpdateTeamAsync(int id, UpdateTeamRequest request) => throw new NotSupportedException();
         public Task<TeamDto> UpdateTeamAsync(int id, UpdateTeamRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task DeleteTeamAsync(int id) => throw new NotSupportedException();

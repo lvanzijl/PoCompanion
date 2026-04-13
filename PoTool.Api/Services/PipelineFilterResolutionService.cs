@@ -10,7 +10,9 @@ namespace PoTool.Api.Services;
 public sealed record PipelineFilterResolution(
     PipelineFilterContext RequestedFilter,
     PipelineEffectiveFilter EffectiveFilter,
-    FilterValidationResult Validation);
+    FilterValidationResult Validation,
+    IReadOnlyDictionary<int, string> TeamLabels,
+    IReadOnlyDictionary<int, string> SprintLabels);
 
 public sealed record PipelineFilterBoundaryRequest(
     int? ProductOwnerId = null,
@@ -98,6 +100,14 @@ public sealed class PipelineFilterResolutionService
             sprintId);
 
         var validation = FilterValidationResult.FromIssues(issues);
+        var teamLabels = await CanonicalFilterDisplayLabelLoader.LoadTeamLabelsAsync(
+            _context,
+            CanonicalFilterDisplayLabelLoader.CollectTeamIds(requestedFilter.TeamIds, effectiveFilter.Context.TeamIds),
+            cancellationToken);
+        var sprintLabels = await CanonicalFilterDisplayLabelLoader.LoadSprintLabelsAsync(
+            _context,
+            CanonicalFilterDisplayLabelLoader.CollectSprintIds(requestedFilter.Time, effectiveFilter.Context.Time),
+            cancellationToken);
 
         _logger.LogInformation(
             "Resolved pipeline filter for {Boundary}. RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}; ProductScope: {@ProductScope}; RepositoryScope: {@RepositoryScope}; TimeRange: {RangeStartUtc} - {RangeEndUtc}; BranchScope: {@BranchScope}",
@@ -111,7 +121,7 @@ public sealed class PipelineFilterResolutionService
             effectiveFilter.RangeEndUtc,
             effectiveFilter.BranchScope);
 
-        return new PipelineFilterResolution(requestedFilter, effectiveFilter, validation);
+        return new PipelineFilterResolution(requestedFilter, effectiveFilter, validation, teamLabels, sprintLabels);
     }
 
     public static PipelineQueryResponseDto<T> ToResponse<T>(T data, PipelineFilterResolution resolution)
@@ -130,7 +140,9 @@ public sealed class PipelineFilterResolutionService
                     Field = issue.Field,
                     Message = issue.Message
                 })
-                .ToArray()
+                .ToArray(),
+            TeamLabels = resolution.TeamLabels,
+            SprintLabels = resolution.SprintLabels
         };
     }
 

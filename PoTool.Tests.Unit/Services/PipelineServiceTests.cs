@@ -162,7 +162,9 @@ public class PipelineServiceTests
                 }
             },
             InvalidFields = Array.Empty<string>(),
-            ValidationMessages = Array.Empty<PoTool.Shared.Metrics.FilterValidationIssueDto>()
+            ValidationMessages = Array.Empty<PoTool.Shared.Metrics.FilterValidationIssueDto>(),
+            TeamLabels = new Dictionary<int, string>(),
+            SprintLabels = new Dictionary<int, string>()
         };
 
         _mockClient

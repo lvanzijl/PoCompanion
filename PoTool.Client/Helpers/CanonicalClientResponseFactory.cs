@@ -15,7 +15,9 @@ public static class CanonicalClientResponseFactory
                 response.RequestedFilter,
                 response.EffectiveFilter,
                 response.InvalidFields,
-                response.ValidationMessages));
+                response.ValidationMessages,
+                response.TeamLabels,
+                response.SprintLabels));
 
     public static CanonicalClientResponse<TData> Create<TData>(PipelineQueryResponseDto<TData> response)
         => new(
@@ -25,7 +27,9 @@ public static class CanonicalClientResponseFactory
                 response.RequestedFilter,
                 response.EffectiveFilter,
                 response.InvalidFields,
-                response.ValidationMessages));
+                response.ValidationMessages,
+                response.TeamLabels,
+                response.SprintLabels));
 
     public static CanonicalClientResponse<TData> Create<TData>(DeliveryQueryResponseDto<TData> response)
         => new(
@@ -35,7 +39,9 @@ public static class CanonicalClientResponseFactory
                 response.RequestedFilter,
                 response.EffectiveFilter,
                 response.InvalidFields,
-                response.ValidationMessages));
+                response.ValidationMessages,
+                response.TeamLabels,
+                response.SprintLabels));
 
     public static CanonicalClientResponse<TData> Create<TData>(SprintQueryResponseDto<TData> response)
         => new(
@@ -45,7 +51,9 @@ public static class CanonicalClientResponseFactory
                 response.RequestedFilter,
                 response.EffectiveFilter,
                 response.InvalidFields,
-                response.ValidationMessages));
+                response.ValidationMessages,
+                response.TeamLabels,
+                response.SprintLabels));
 
     public static CanonicalFilterNoticeModel? CreateNotice(CanonicalFilterMetadata? metadata)
     {
@@ -79,12 +87,12 @@ public static class CanonicalClientResponseFactory
         return
         [
             CreateDifference("Products", FormatSelection(requested.ProductIds), FormatSelection(effective.ProductIds)),
-            CreateDifference("Teams", FormatSelection(requested.TeamIds), FormatSelection(effective.TeamIds)),
+            CreateDifference("Teams", FormatSelection(requested.TeamIds, metadata.TeamLabels), FormatSelection(effective.TeamIds, metadata.TeamLabels)),
             CreateDifference("Repositories", FormatSelection(requested.RepositoryNames), FormatSelection(effective.RepositoryNames)),
             CreateDifference("Iterations", FormatSelection(requested.IterationPaths), FormatSelection(effective.IterationPaths)),
             CreateDifference("Authors", FormatSelection(requested.CreatedBys), FormatSelection(effective.CreatedBys)),
             CreateDifference("Statuses", FormatSelection(requested.Statuses), FormatSelection(effective.Statuses)),
-            CreateDifference("Time", FormatTime(requested.Time), FormatTime(effective.Time))
+            CreateDifference("Time", FormatTime(requested.Time, metadata.SprintLabels), FormatTime(effective.Time, metadata.SprintLabels))
         ];
     }
 
@@ -96,9 +104,9 @@ public static class CanonicalClientResponseFactory
         return
         [
             CreateDifference("Products", FormatSelection(requested.ProductIds), FormatSelection(effective.ProductIds)),
-            CreateDifference("Teams", FormatSelection(requested.TeamIds), FormatSelection(effective.TeamIds)),
+            CreateDifference("Teams", FormatSelection(requested.TeamIds, metadata.TeamLabels), FormatSelection(effective.TeamIds, metadata.TeamLabels)),
             CreateDifference("Repositories", FormatSelection(requested.RepositoryIds), FormatSelection(effective.RepositoryIds)),
-            CreateDifference("Time", FormatTime(requested.Time), FormatTime(effective.Time))
+            CreateDifference("Time", FormatTime(requested.Time, metadata.SprintLabels), FormatTime(effective.Time, metadata.SprintLabels))
         ];
     }
 
@@ -110,7 +118,7 @@ public static class CanonicalClientResponseFactory
         return
         [
             CreateDifference("Products", FormatSelection(requested.ProductIds), FormatSelection(effective.ProductIds)),
-            CreateDifference("Time", FormatTime(requested.Time), FormatTime(effective.Time))
+            CreateDifference("Time", FormatTime(requested.Time, metadata.SprintLabels), FormatTime(effective.Time, metadata.SprintLabels))
         ];
     }
 
@@ -122,10 +130,10 @@ public static class CanonicalClientResponseFactory
         return
         [
             CreateDifference("Products", FormatSelection(requested.ProductIds), FormatSelection(effective.ProductIds)),
-            CreateDifference("Teams", FormatSelection(requested.TeamIds), FormatSelection(effective.TeamIds)),
+            CreateDifference("Teams", FormatSelection(requested.TeamIds, metadata.TeamLabels), FormatSelection(effective.TeamIds, metadata.TeamLabels)),
             CreateDifference("Areas", FormatSelection(requested.AreaPaths), FormatSelection(effective.AreaPaths)),
             CreateDifference("Iterations", FormatSelection(requested.IterationPaths), FormatSelection(effective.IterationPaths)),
-            CreateDifference("Time", FormatTime(requested.Time), FormatTime(effective.Time))
+            CreateDifference("Time", FormatTime(requested.Time, metadata.SprintLabels), FormatTime(effective.Time, metadata.SprintLabels))
         ];
     }
 
@@ -153,17 +161,42 @@ public static class CanonicalClientResponseFactory
         return $"{string.Join(", ", formatted.Take(3))} +{formatted.Count - 3} more";
     }
 
-    private static string FormatTime(FilterTimeSelectionDto time)
+    private static string FormatSelection(FilterSelectionDto<int> selection, IReadOnlyDictionary<int, string> labels)
+    {
+        if (selection.IsAll)
+        {
+            return "All";
+        }
+
+        if (selection.Values.Count == 0)
+        {
+            return "None";
+        }
+
+        var formatted = selection.Values
+            .Select(value => labels.TryGetValue(value, out var label) && !string.IsNullOrWhiteSpace(label)
+                ? label
+                : value.ToString())
+            .ToList();
+        if (formatted.Count <= 3)
+        {
+            return string.Join(", ", formatted);
+        }
+
+        return $"{string.Join(", ", formatted.Take(3))} +{formatted.Count - 3} more";
+    }
+
+    private static string FormatTime(FilterTimeSelectionDto time, IReadOnlyDictionary<int, string> sprintLabels)
     {
         return time.Mode switch
         {
             FilterTimeSelectionModeDto.None => "None",
             FilterTimeSelectionModeDto.CurrentSprint => "Current sprint",
-            FilterTimeSelectionModeDto.Sprint => time.SprintId.HasValue ? $"Sprint #{time.SprintId.Value}" : "Sprint",
+            FilterTimeSelectionModeDto.Sprint => time.SprintId.HasValue ? FormatSprint(time.SprintId.Value, sprintLabels) : "Sprint",
             FilterTimeSelectionModeDto.MultiSprint => time.SprintIds.Count switch
             {
                 0 => "No sprints",
-                <= 3 => $"Sprints {string.Join(", ", time.SprintIds)}",
+                <= 3 => string.Join(", ", time.SprintIds.Select(id => FormatSprint(id, sprintLabels))),
                 _ => $"{time.SprintIds.Count} sprints"
             },
             FilterTimeSelectionModeDto.DateRange => $"{FormatDate(time.RangeStartUtc)} → {FormatDate(time.RangeEndUtc)}",
@@ -173,5 +206,10 @@ public static class CanonicalClientResponseFactory
 
     private static string FormatDate(DateTimeOffset? value)
         => value.HasValue ? value.Value.ToString("yyyy-MM-dd") : "Open";
+
+    private static string FormatSprint(int sprintId, IReadOnlyDictionary<int, string> sprintLabels)
+        => sprintLabels.TryGetValue(sprintId, out var label) && !string.IsNullOrWhiteSpace(label)
+            ? label
+            : $"Sprint #{sprintId}";
 
 }

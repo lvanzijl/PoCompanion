@@ -19,7 +19,9 @@ public sealed record CanonicalFilterMetadata(
     object RequestedFilter,
     object EffectiveFilter,
     IReadOnlyList<string> InvalidFields,
-    IReadOnlyList<FilterValidationIssueDto> ValidationMessages)
+    IReadOnlyList<FilterValidationIssueDto> ValidationMessages,
+    IReadOnlyDictionary<int, string> TeamLabels,
+    IReadOnlyDictionary<int, string> SprintLabels)
 {
     public bool HasInvalidFields => InvalidFields.Count > 0;
 }
