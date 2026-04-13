@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-13",
+    "type": "Fixed",
+    "title": "Hosted startup now serves the Blazor WebAssembly client assets correctly",
+    "impact": "The hosted app at / now serves the client index and required _framework startup files from the API host again, so the browser no longer fails on missing blazor.webassembly.js, WebAssembly/PDB startup assets, or the invalid empty preload tag during startup.",
+    "area": "Home",
+    "link": "/"
+  },
+  {
     "date": "2026-04-07",
     "type": "Fixed",
     "title": "Onboarding pipeline binding blockers now keep replacement intent across all fix-entry surfaces",
