@@ -82,7 +82,7 @@ public sealed class GlobalFilterLabelService
     private string FormatSprint(int sprintId)
         => _sprintNames.TryGetValue(sprintId, out var name) && !string.IsNullOrWhiteSpace(name)
             ? name
-            : $"Sprint {sprintId}";
+            : $"Sprint #{sprintId}";
 
     private string FormatBoundary(string label, int? sprintId)
         => sprintId.HasValue ? $"{label} {FormatSprint(sprintId.Value)}" : $"{label} ?";

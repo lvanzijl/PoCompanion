@@ -11,31 +11,31 @@
 
 ### Client shared filter resolution
 
-- Added `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/GlobalFilterAutoResolveService.cs` to normalize unresolved shared filter state into a usable default before pages query data.
-- Updated `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/GlobalFilterStore.cs` to auto-resolve missing team/sprint state during shared route tracking and shared state updates, then warm shared labels before observers render.
-- Updated `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/GlobalFilterDefaultsService.cs` to reuse the same shared auto-resolution path and still push the resolved state back into the URL.
-- Registered the new shared services in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Program.cs`.
+- Added `PoTool.Client/Services/GlobalFilterAutoResolveService.cs` to normalize unresolved shared filter state into a usable default before pages query data.
+- Updated `PoTool.Client/Services/GlobalFilterStore.cs` to auto-resolve missing team/sprint state during shared route tracking and shared state updates, then warm shared labels before observers render.
+- Updated `PoTool.Client/Services/GlobalFilterDefaultsService.cs` to reuse the same shared auto-resolution path and still push the resolved state back into the URL.
+- Registered the new shared services in `PoTool.Client/Program.cs`.
 
 ### Shared display mapping
 
-- Added `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Services/GlobalFilterLabelService.cs` for shared team/sprint label caching used by shared filter summaries.
-- Updated `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Components/Common/FilterSummaryBar.razor` to render readable team and sprint labels from the shared label service.
+- Added `PoTool.Client/Services/GlobalFilterLabelService.cs` for shared team/sprint label caching used by shared filter summaries.
+- Updated `PoTool.Client/Components/Common/FilterSummaryBar.razor` to render readable team and sprint labels from the shared label service.
 - Extended shared canonical filter metadata in:
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Shared/Metrics/SprintFilterDtos.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Shared/Metrics/DeliveryFilterDtos.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Shared/Pipelines/PipelineFilterDtos.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Shared/PullRequests/PullRequestFilterDtos.cs`
-- Updated `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/CanonicalClientResponse.cs` and `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Helpers/CanonicalClientResponseFactory.cs` so shared canonical notices render readable team and sprint names instead of raw IDs.
-- Added `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/ApiClient/Generated/CanonicalFilterLabelExtensions.cs` and updated `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Helpers/GeneratedClientDtoMappings.cs` so generated client envelopes retain the new shared label metadata.
+  - `PoTool.Shared/Metrics/SprintFilterDtos.cs`
+  - `PoTool.Shared/Metrics/DeliveryFilterDtos.cs`
+  - `PoTool.Shared/Pipelines/PipelineFilterDtos.cs`
+  - `PoTool.Shared/PullRequests/PullRequestFilterDtos.cs`
+- Updated `PoTool.Client/Models/CanonicalClientResponse.cs` and `PoTool.Client/Helpers/CanonicalClientResponseFactory.cs` so shared canonical notices render readable team and sprint names instead of raw IDs.
+- Added `PoTool.Client/ApiClient/Generated/CanonicalFilterLabelExtensions.cs` and updated `PoTool.Client/Helpers/GeneratedClientDtoMappings.cs` so generated client envelopes retain the new shared label metadata.
 
 ### Server shared filter metadata
 
-- Added `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Services/CanonicalFilterDisplayLabelLoader.cs`.
+- Added `PoTool.Api/Services/CanonicalFilterDisplayLabelLoader.cs`.
 - Updated:
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Services/SprintFilterResolutionService.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Services/DeliveryFilterResolutionService.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Services/PipelineFilterResolutionService.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Services/PullRequestFilterResolutionService.cs`
+  - `PoTool.Api/Services/SprintFilterResolutionService.cs`
+  - `PoTool.Api/Services/DeliveryFilterResolutionService.cs`
+  - `PoTool.Api/Services/PipelineFilterResolutionService.cs`
+  - `PoTool.Api/Services/PullRequestFilterResolutionService.cs`
 - These shared resolution services now return canonical team/sprint label maps alongside requested/effective filters, invalid fields, and validation messages.
 
 ## Before vs after
@@ -62,5 +62,5 @@
 
 ## Validation
 
-- `dotnet build /home/runner/work/PoCompanion/PoCompanion/PoTool.sln -c Release --nologo`
-- `dotnet test /home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/PoTool.Tests.Unit.csproj -c Release --filter "FullyQualifiedName~GlobalFilterDefaultsServiceTests|FullyQualifiedName~GlobalFilterStoreTests|FullyQualifiedName~CanonicalClientResponseFactoryTests|FullyQualifiedName~GeneratedCacheEnvelopeHelperTests|FullyQualifiedName~SprintFilterResolutionServiceTests|FullyQualifiedName~DeliveryFilterResolutionServiceTests|FullyQualifiedName~PipelineServiceTests" --logger "console;verbosity=minimal"`
+- `dotnet build PoTool.sln -c Release --nologo`
+- `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj -c Release --filter "FullyQualifiedName~GlobalFilterDefaultsServiceTests|FullyQualifiedName~GlobalFilterStoreTests|FullyQualifiedName~CanonicalClientResponseFactoryTests|FullyQualifiedName~GeneratedCacheEnvelopeHelperTests|FullyQualifiedName~SprintFilterResolutionServiceTests|FullyQualifiedName~DeliveryFilterResolutionServiceTests|FullyQualifiedName~PipelineServiceTests" --logger "console;verbosity=minimal"`

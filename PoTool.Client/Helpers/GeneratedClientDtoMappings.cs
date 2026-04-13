@@ -153,6 +153,7 @@ public static class GeneratedClientDtoMappings
         => values is null
             ? new Dictionary<int, string>()
             : values
+                // The API contract treats later duplicates as authoritative, matching query-string style last-write-wins semantics.
                 .GroupBy(pair => pair.Key)
                 .ToDictionary(group => group.Key, group => group.Last().Value);
 }
