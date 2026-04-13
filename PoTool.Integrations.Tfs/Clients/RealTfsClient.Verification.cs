@@ -184,16 +184,11 @@ internal partial class RealTfsClient
             // Use auth-mode-specific HttpClient (requirement #2, #8)
             var httpClient = GetAuthenticatedHttpClient();
 
-            var wiql = new
-            {
-                query = "Select [System.Id] From WorkItems Where [System.WorkItemType] <> ''"
-            };
+            var wiqlQuery = WiqlQueryBuilder.BuildWorkItemsQuery(
+                selectFields: ["[System.Id]"],
+                whereClauses: ["[System.WorkItemType] <> ''"]);
 
-            // WIQL is project-scoped (requirement #1)
-            var url = ProjectUrl(config, "_apis/wit/wiql");
-            using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
-
-            var response = await SendPostAsync(httpClient, config, url, content, cancellationToken, handleErrors: false);
+            var response = await ExecuteWiqlQueryAsync(httpClient, config, wiqlQuery, cancellationToken, handleErrors: false);
 
             if (response.IsSuccessStatusCode)
             {
@@ -237,15 +232,12 @@ internal partial class RealTfsClient
             var httpClient = GetAuthenticatedHttpClient();
 
             // Step 1: Run WIQL query to get a few work items
-            var wiql = new
-            {
-                query = $"Select [System.Id] From WorkItems Where [System.AreaPath] UNDER '{EscapeWiql(config.DefaultAreaPath)}' ORDER BY [System.Id] DESC"
-            };
+            var wiqlQuery = WiqlQueryBuilder.BuildWorkItemsQuery(
+                selectFields: ["[System.Id]"],
+                whereClauses: [BuildAreaPathUnderClause(config.DefaultAreaPath)],
+                orderByClauses: ["[System.Id] DESC"]);
 
-            var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
-            using var wiqlContent = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
-
-            var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, wiqlContent, cancellationToken, handleErrors: false);
+            var wiqlResponse = await ExecuteWiqlQueryAsync(httpClient, config, wiqlQuery, cancellationToken, handleErrors: false);
 
             if (!wiqlResponse.IsSuccessStatusCode)
             {
@@ -455,14 +447,11 @@ internal partial class RealTfsClient
         TfsConfigEntity config,
         CancellationToken cancellationToken)
     {
-        var wiql = new
-        {
-            query = $"Select Top {VerificationSampleWorkItemCount} [System.Id] From WorkItems Order By [System.Id] Desc"
-        };
+        var wiqlQuery = WiqlQueryBuilder.BuildWorkItemsQuery(
+            selectFields: ["[System.Id]"],
+            orderByClauses: ["[System.Id] DESC"]);
 
-        var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
-        using var wiqlContent = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
-        var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, wiqlContent, cancellationToken, handleErrors: false);
+        var wiqlResponse = await ExecuteWiqlQueryAsync(httpClient, config, wiqlQuery, cancellationToken, handleErrors: false);
         if (!wiqlResponse.IsSuccessStatusCode)
         {
             return CreateFailureResult(

@@ -380,22 +380,18 @@ internal partial class RealTfsClient
 
         return await ExecuteWithRetryAsync(async () =>
         {
-            var wiql = new
-            {
-                query =
-                    $"SELECT [System.Id] FROM WorkItems WHERE [System.WorkItemType] = '{EscapeWiql(workItemType)}' " +
-                    $"AND [System.AreaPath] UNDER '{EscapeWiql(areaPath)}' ORDER BY [System.Title]"
-            };
+            var wiqlQuery = WiqlQueryBuilder.BuildWorkItemsQuery(
+                selectFields: ["[System.Id]"],
+                whereClauses:
+                [
+                    BuildWorkItemTypeEqualsClause(workItemType),
+                    BuildAreaPathUnderClause(areaPath)
+                ],
+                orderByClauses: ["[System.Title]"]);
 
-            var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
-            using var wiqlContent = new StringContent(
-                JsonSerializer.Serialize(wiql),
-                System.Text.Encoding.UTF8,
-                "application/json");
+            _logger.LogDebug("Executing WIQL query for work item type {WorkItemType}: {Query}", workItemType, wiqlQuery);
 
-            _logger.LogDebug("Executing WIQL query for work item type {WorkItemType}: {Query}", workItemType, wiql.query);
-
-            var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, wiqlContent, cancellationToken, handleErrors: false);
+            var wiqlResponse = await ExecuteWiqlQueryAsync(httpClient, config, wiqlQuery, cancellationToken, handleErrors: false);
 
             if (!wiqlResponse.IsSuccessStatusCode)
             {
@@ -514,23 +510,21 @@ internal partial class RealTfsClient
             // Use UNDER operator for area path to support deeper hierarchies (requirement #3)
             // Note: WIQL Select only needs System.Id since we fetch full work items in a separate batch call
             // with all RequiredWorkItemFields. The other fields here are for debugging/logging purposes.
-            var dateFilter = since.HasValue
-                ? $" AND [System.ChangedDate] >= '{FormatUtcTimestamp(since.Value)}'"
-                : "";
-
-            var wiql = new
+            var whereClauses = new List<string>
             {
-                query = $"Select [System.Id] From WorkItems Where [System.AreaPath] UNDER '{EscapeWiql(areaPath)}'{dateFilter}"
+                BuildAreaPathUnderClause(areaPath)
             };
 
-            // WIQL is project-scoped (requirement #1)
-            var wiqlUrl = ProjectUrl(config, "_apis/wit/wiql");
-            using var content = new StringContent(JsonSerializer.Serialize(wiql), System.Text.Encoding.UTF8, "application/json");
+            if (since.HasValue)
+            {
+                whereClauses.Add($"[System.ChangedDate] >= '{FormatUtcTimestamp(since.Value)}'");
+            }
 
-            // Phase 4: Enhanced logging
-            _logger.LogDebug("Executing WIQL query: {Query}", wiql.query);
+            var wiqlQuery = WiqlQueryBuilder.BuildWorkItemsQuery(
+                selectFields: ["[System.Id]"],
+                whereClauses: whereClauses);
 
-            var wiqlResponse = await SendPostAsync(httpClient, config, wiqlUrl, content, cancellationToken, handleErrors: false);
+            var wiqlResponse = await ExecuteWiqlQueryAsync(httpClient, config, wiqlQuery, cancellationToken, handleErrors: false);
             await HandleHttpErrorsAsync(wiqlResponse, cancellationToken);
 
             using var stream = await wiqlResponse.Content.ReadAsStreamAsync(cancellationToken);
