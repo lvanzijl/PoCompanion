@@ -2,6 +2,14 @@
   {
     "date": "2026-04-13",
     "type": "Fixed",
+    "title": "Sprint-based pages now open with a valid shared filter state and readable filter labels",
+    "impact": "Sprint Trends, Sprint Delivery, and other shared filter pages now auto-resolve a valid team and sprint window before their first query runs, keep the resolved defaults in the URL, and show readable team and sprint names in shared filter summaries and canonical filter notices instead of raw IDs.",
+    "area": "Delivery / Trends / Pull Requests / Pipelines",
+    "link": "/home/delivery/sprint"
+  },
+  {
+    "date": "2026-04-13",
+    "type": "Fixed",
     "title": "TFS verification now validates analytics fields against recent work item samples",
     "impact": "Settings verification now checks analytics field metadata first and then inspects several recent non-Removed work items instead of relying on a single legacy sample, so fields that exist in TFS no longer fail verification just because they are absent or empty on one older item.",
     "area": "Settings",
