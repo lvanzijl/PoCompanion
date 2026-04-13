@@ -238,7 +238,7 @@ public class RealTfsClientRequestTests
         var result = await client.VerifyCapabilitiesAsync(includeWriteChecks: false);
 
         Assert.IsTrue(result.Success, "Verification should succeed for hardened WIQL regression coverage.");
-        Assert.IsGreaterThanOrEqualTo(3, wiqlBodies.Count);
+        AssertCountAtLeast(wiqlBodies.Count, 3, "Expected at least three WIQL queries during capability verification.");
         Assert.IsTrue(wiqlBodies.All(body => !body.Contains("TOP", StringComparison.OrdinalIgnoreCase)));
 
         using var fieldValidationDoc = JsonDocument.Parse(wiqlBodies[^1]);
@@ -535,6 +535,14 @@ public class RealTfsClientRequestTests
 
         Assert.Fail($"Expected exception of type {typeof(TException).Name}.");
         return null!;
+    }
+
+    private static void AssertCountAtLeast(int actualCount, int minimumCount, string message)
+    {
+        if (actualCount < minimumCount)
+        {
+            Assert.Fail(message);
+        }
     }
 
     private sealed class DelayedHttpMessageHandler : HttpMessageHandler
