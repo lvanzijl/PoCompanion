@@ -11,6 +11,7 @@ The hosted server project was missing a project reference to `/home/runner/work/
 
 ## Files changed
 - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/PoTool.Api.csproj`
+- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/packages.lock.json`
 - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/wwwroot/index.html`
 - `/home/runner/work/PoCompanion/PoCompanion/docs/release-notes.json`
 - `/home/runner/work/PoCompanion/PoCompanion/docs/reports/2026-04-13-blazor-startup-asset-fix-report.md`
