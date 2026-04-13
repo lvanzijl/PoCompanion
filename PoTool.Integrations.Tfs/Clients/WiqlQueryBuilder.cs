@@ -166,8 +166,7 @@ internal static partial class WiqlQueryBuilder
             return null;
         }
 
-        var normalized = NormalizeRequiredSegment(value, segmentName);
-        return normalized.Length == 0 ? null : normalized;
+        return NormalizeRequiredSegment(value, segmentName);
     }
 
     [GeneratedRegex(@"^\s*SELECT\s+(?<select>.+?)\s+FROM\s+(?<source>WorkItems|WorkItemLinks)\b", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
