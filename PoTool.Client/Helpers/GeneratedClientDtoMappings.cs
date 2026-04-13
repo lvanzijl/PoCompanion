@@ -150,10 +150,26 @@ public static class GeneratedClientDtoMappings
         };
 
     private static IReadOnlyDictionary<int, string> ToDictionary(ICollection<KeyValuePair<int, string>>? values)
-        => values is null
-            ? new Dictionary<int, string>()
-            : values
-                // If duplicate labels arrive from the API, keep the last value so the client uses the final authoritative label.
-                .GroupBy(pair => pair.Key)
-                .ToDictionary(group => group.Key, group => group.Last().Value);
+    {
+        if (values is null)
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var grouped = values
+            .GroupBy(pair => pair.Key)
+            .ToList();
+
+        var duplicateKeys = grouped
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .OrderBy(key => key)
+            .ToArray();
+        if (duplicateKeys.Length > 0)
+        {
+            throw new InvalidOperationException($"Duplicate canonical filter labels were returned for keys: {string.Join(", ", duplicateKeys)}.");
+        }
+
+        return grouped.ToDictionary(group => group.Key, group => group.Single().Value);
+    }
 }

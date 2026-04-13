@@ -47,9 +47,11 @@ public sealed class CanonicalClientResponseFactoryTests
 
         var metadata = CanonicalClientResponseFactory.Create(response).FilterMetadata;
         var notice = CanonicalClientResponseFactory.CreateNotice(metadata);
+        var timeDifference = notice?.ChangedDifferences.SingleOrDefault(difference => difference.Label == "Time");
 
         Assert.IsNotNull(notice);
-        CollectionAssert.Contains(notice.ChangedDifferences.Select(difference => difference.RequestedValue).ToArray(), "Sprint Alpha");
-        CollectionAssert.Contains(notice.ChangedDifferences.Select(difference => difference.EffectiveValue).ToArray(), "Sprint Beta");
+        Assert.IsNotNull(timeDifference);
+        Assert.AreEqual("Sprint Alpha", timeDifference.RequestedValue);
+        Assert.AreEqual("Sprint Beta", timeDifference.EffectiveValue);
     }
 }
