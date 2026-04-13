@@ -34,7 +34,7 @@ public class WiqlQueryBuilderTests
     [TestMethod]
     public void BuildWorkItemsQuery_EmptySelectField_Throws()
     {
-        var ex = Assert.ThrowsException<InvalidOperationException>(() => WiqlQueryBuilder.BuildWorkItemsQuery([" "]));
+        var ex = AssertThrows<InvalidOperationException>(() => WiqlQueryBuilder.BuildWorkItemsQuery([" "]));
 
         StringAssert.Contains(ex.Message, "select field");
     }
@@ -42,7 +42,7 @@ public class WiqlQueryBuilderTests
     [TestMethod]
     public void BuildWorkItemsQuery_EmptyWhereClause_Throws()
     {
-        var ex = Assert.ThrowsException<InvalidOperationException>(() => WiqlQueryBuilder.BuildWorkItemsQuery(
+        var ex = AssertThrows<InvalidOperationException>(() => WiqlQueryBuilder.BuildWorkItemsQuery(
             selectFields: ["[System.Id]"],
             whereClauses: [" "]));
 
@@ -52,7 +52,7 @@ public class WiqlQueryBuilderTests
     [TestMethod]
     public void Validate_UnsupportedTop_Throws()
     {
-        var ex = Assert.ThrowsException<InvalidOperationException>(() => WiqlQueryBuilder.Validate(
+        var ex = AssertThrows<InvalidOperationException>(() => WiqlQueryBuilder.Validate(
             "SELECT TOP 5 [System.Id] FROM WorkItems ORDER BY [System.Id] DESC"));
 
         StringAssert.Contains(ex.Message, "SELECT TOP");
@@ -61,9 +61,25 @@ public class WiqlQueryBuilderTests
     [TestMethod]
     public void Validate_EmptyInFilter_Throws()
     {
-        var ex = Assert.ThrowsException<InvalidOperationException>(() => WiqlQueryBuilder.Validate(
+        var ex = AssertThrows<InvalidOperationException>(() => WiqlQueryBuilder.Validate(
             "SELECT [System.Id] FROM WorkItemLinks WHERE ([Source].[System.Id] IN ()) MODE (Recursive)"));
 
         StringAssert.Contains(ex.Message, "empty IN");
+    }
+
+    private static TException AssertThrows<TException>(Action action)
+        where TException : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (TException ex)
+        {
+            return ex;
+        }
+
+        Assert.Fail($"Expected exception of type {typeof(TException).Name}.");
+        return null!;
     }
 }

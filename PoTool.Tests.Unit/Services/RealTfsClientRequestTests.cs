@@ -238,7 +238,7 @@ public class RealTfsClientRequestTests
         var result = await client.VerifyCapabilitiesAsync(includeWriteChecks: false);
 
         Assert.IsTrue(result.Success, "Verification should succeed for hardened WIQL regression coverage.");
-        Assert.IsTrue(wiqlBodies.Count >= 3);
+        Assert.IsGreaterThanOrEqualTo(3, wiqlBodies.Count);
         Assert.IsTrue(wiqlBodies.All(body => !body.Contains("TOP", StringComparison.OrdinalIgnoreCase)));
 
         using var fieldValidationDoc = JsonDocument.Parse(wiqlBodies[^1]);
