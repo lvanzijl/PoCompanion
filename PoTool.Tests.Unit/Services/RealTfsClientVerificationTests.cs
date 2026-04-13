@@ -411,10 +411,34 @@ public class RealTfsClientVerificationTests
     public async Task VerifyCapabilitiesAsync_PayloadShapeFallback_DoesNotChangeValidationSemantics()
     {
         SetupSuccessfulHttpResponses();
-        SetupHttpResponse("_apis/wit/workitemsbatch", HttpStatusCode.OK,
-            "{\"workItems\":[" +
-            "{\"id\":101,\"fields\":{\"System.WorkItemType\":\"Feature\",\"Rhodium.Funding.ProjectNumber\":\"PRJ-1\",\"Rhodium.Funding.ProjectElement\":\"ELM-1\",\"Microsoft.VSTS.Common.TimeCriticality\":42.5}}" +
-            "]}");
+
+        _mockHttpMessageHandler
+            .Protected()
+            .SetupSequence<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString().Contains("_apis/wit/workitemsbatch")),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(
+                    "{\"value\":[" +
+                    "{\"id\":101,\"fields\":{\"System.WorkItemType\":\"Feature\",\"Rhodium.Funding.ProjectNumber\":\"PRJ-1\",\"Rhodium.Funding.ProjectElement\":\"ELM-1\",\"Microsoft.VSTS.Common.TimeCriticality\":42.5}}" +
+                    "]}")
+            })
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(
+                    "{\"workItems\":[" +
+                    "{\"id\":101,\"fields\":{\"System.WorkItemType\":\"Feature\",\"Rhodium.Funding.ProjectNumber\":\"PRJ-1\",\"Rhodium.Funding.ProjectElement\":\"ELM-1\",\"Microsoft.VSTS.Common.TimeCriticality\":42.5}}" +
+                    "]}")
+            })
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent("{\"value\":[{\"id\":12345}]}")
+            });
 
         var result = await _sut.VerifyCapabilitiesAsync(includeWriteChecks: false);
 
