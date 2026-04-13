@@ -4,6 +4,7 @@ namespace PoTool.Client.Services;
 
 public sealed class GlobalFilterAutoResolveService
 {
+    // Keep the auto-correction fallback aligned with the existing rolling-window correction path.
     private const int DefaultRollingDays = 180;
     private const int DefaultRangeWindow = 5;
 
