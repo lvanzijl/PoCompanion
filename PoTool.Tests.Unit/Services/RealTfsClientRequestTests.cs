@@ -243,7 +243,9 @@ public class RealTfsClientRequestTests
 
         using var fieldValidationDoc = JsonDocument.Parse(wiqlBodies[^1]);
         var fieldValidationQuery = fieldValidationDoc.RootElement.GetProperty("query").GetString();
-        Assert.AreEqual("SELECT [System.Id] FROM WorkItems ORDER BY [System.Id] DESC", fieldValidationQuery);
+        Assert.AreEqual(
+            "SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = 'TestProject' AND [System.State] <> 'Removed' AND [System.AreaPath] UNDER 'TestProject\\Area' ORDER BY [System.ChangedDate] DESC",
+            fieldValidationQuery);
     }
 
     [TestMethod]

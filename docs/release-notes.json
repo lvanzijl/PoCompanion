@@ -2,6 +2,14 @@
   {
     "date": "2026-04-13",
     "type": "Fixed",
+    "title": "TFS verification now validates analytics fields against recent work item samples",
+    "impact": "Settings verification now checks analytics field metadata first and then inspects several recent non-Removed work items instead of relying on a single legacy sample, so fields that exist in TFS no longer fail verification just because they are absent or empty on one older item.",
+    "area": "Settings",
+    "link": "/settings"
+  },
+  {
+    "date": "2026-04-13",
+    "type": "Fixed",
     "title": "Hosted startup now serves the Blazor WebAssembly client assets correctly",
     "impact": "The hosted app at / now serves the client index and required _framework startup files from the API host again, so the browser no longer fails on missing blazor.webassembly.js, WebAssembly/PDB startup assets, or the invalid empty preload tag during startup.",
     "area": "Home",

@@ -15,6 +15,12 @@ internal partial class RealTfsClient
 {
     private const int VerificationSampleWorkItemCount = 5;
     private const string VerificationWorkItemTypeField = "System.WorkItemType";
+    private static readonly string[] VerificationAnalyticsFields =
+    [
+        TfsFieldProjectNumber,
+        TfsFieldProjectElement,
+        TfsFieldTimeCriticality
+    ];
 
     public async Task<TfsVerificationReport> VerifyCapabilitiesAsync(
         bool includeWriteChecks = false,
@@ -397,16 +403,21 @@ internal partial class RealTfsClient
 
                 if (missingFields.Any())
                 {
+                    var metadataDiagnostics = string.Join(
+                        " | ",
+                        VerificationAnalyticsFields.Select(fieldRefName =>
+                            $"{fieldRefName}: metadata={(fields.Contains(fieldRefName) ? "found" : "not found")}"));
+
                     return CreateFailureResult(
                         "work-item-fields",
                         "Work item display and processing",
                         "Required runtime and analytics work item fields are accessible",
-                        $"Missing fields: {string.Join(", ", missingFields)}",
+                        $"Metadata validation failed. Missing fields: {string.Join(", ", missingFields)}. Field diagnostics: {metadataDiagnostics}",
                         FailureCategory.MissingField,
                         $"Found {fields.Count} fields but missing required runtime fields");
                 }
 
-                var sampleValidation = await ValidateWorkItemFieldPayloadAsync(httpClient, config, cancellationToken);
+                var sampleValidation = await ValidateWorkItemFieldPayloadAsync(httpClient, config, fields, cancellationToken);
                 if (!sampleValidation.Success)
                 {
                     return sampleValidation;
@@ -418,7 +429,7 @@ internal partial class RealTfsClient
                     Success = true,
                     ImpactedFunctionality = "Work item display and processing",
                     ExpectedBehavior = "Required runtime and analytics work item fields are accessible",
-                    ObservedBehavior = $"All required runtime fields present ({fields.Count} total fields). {sampleValidation.ObservedBehavior}"
+                    ObservedBehavior = $"All required runtime fields present in metadata ({fields.Count} total fields). {sampleValidation.ObservedBehavior}"
                 };
             }
 
@@ -445,22 +456,127 @@ internal partial class RealTfsClient
     private async Task<TfsCapabilityCheckResult> ValidateWorkItemFieldPayloadAsync(
         HttpClient httpClient,
         TfsConfigEntity config,
+        ISet<string> metadataFields,
         CancellationToken cancellationToken)
     {
+        var areaScopedSelection = await QueryRecentValidationSampleIdsAsync(
+            httpClient,
+            config,
+            includeAreaPath: !string.IsNullOrWhiteSpace(config.DefaultAreaPath),
+            cancellationToken);
+
+        if (areaScopedSelection.FailureResult is not null)
+        {
+            return areaScopedSelection.FailureResult;
+        }
+
+        var sampleIds = areaScopedSelection.SampleIds;
+        var sampleScope = areaScopedSelection.ScopeDescription;
+        var usedAreaFallback = false;
+
+        if (sampleIds.Length == 0 && !string.IsNullOrWhiteSpace(config.DefaultAreaPath))
+        {
+            _logger.LogInformation(
+                "TFS analytics field validation found no recent samples under area path '{AreaPath}'. Retrying recent sample selection without the area-path filter.",
+                config.DefaultAreaPath);
+
+            var fallbackSelection = await QueryRecentValidationSampleIdsAsync(
+                httpClient,
+                config,
+                includeAreaPath: false,
+                cancellationToken);
+
+            if (fallbackSelection.FailureResult is not null)
+            {
+                return fallbackSelection.FailureResult;
+            }
+
+            sampleIds = fallbackSelection.SampleIds;
+            sampleScope = fallbackSelection.ScopeDescription;
+            usedAreaFallback = true;
+        }
+
+        if (sampleIds.Length == 0)
+        {
+            return new TfsCapabilityCheckResult
+            {
+                CapabilityId = "work-item-fields",
+                Success = true,
+                ImpactedFunctionality = "Work item display and processing",
+                ExpectedBehavior = "Required runtime and analytics work item fields are accessible",
+                ObservedBehavior = $"Metadata validated. No recent non-Removed work items were available for payload sampling ({sampleScope}). {BuildNoSampleFieldDiagnostics(metadataFields)}"
+            };
+        }
+
+        var payloadSamples = await FetchValidationPayloadSamplesAsync(httpClient, config, sampleIds, cancellationToken);
+        if (payloadSamples.FailureResult is not null)
+        {
+            return payloadSamples.FailureResult;
+        }
+
+        if (payloadSamples.UsedResponseShapeFallback)
+        {
+            _logger.LogInformation(
+                "TFS analytics field validation used fallback payload parsing for workitemsbatch sample response.");
+        }
+
+        var fieldDiagnostics = BuildPayloadFieldDiagnostics(payloadSamples.Items, metadataFields);
+        var sampledItems = string.Join(
+            ", ",
+            payloadSamples.Items.Select(item => $"{item.Id} ({item.WorkItemType ?? "unknown"})"));
+        var diagnosticSummary = string.Join(
+            " | ",
+            fieldDiagnostics.Select(diagnostic =>
+                $"{diagnostic.FieldRefName}: metadata={(diagnostic.MetadataFound ? "found" : "not found")}, payload={diagnostic.DescribePayload()}, interpretation={diagnostic.DescribeInterpretation()}"));
+        var fallbackSummary = usedAreaFallback
+            ? "Area-scoped recent sampling returned no items, so project-wide fallback sampling was used."
+            : "Area-scoped recent sampling succeeded.";
+
+        return new TfsCapabilityCheckResult
+        {
+            CapabilityId = "work-item-fields",
+            Success = true,
+            ImpactedFunctionality = "Work item display and processing",
+            ExpectedBehavior = "Required runtime and analytics work item fields are accessible",
+            ObservedBehavior = $"Recent payload sampling validated {payloadSamples.Items.Count} work items from {sampleScope}. {fallbackSummary} Sampled work items: {sampledItems}. Field diagnostics: {diagnosticSummary}"
+        };
+    }
+
+    private async Task<ValidationSampleSelectionResult> QueryRecentValidationSampleIdsAsync(
+        HttpClient httpClient,
+        TfsConfigEntity config,
+        bool includeAreaPath,
+        CancellationToken cancellationToken)
+    {
+        var whereClauses = new List<string>
+        {
+            $"[System.TeamProject] = '{EscapeWiql(ValidateRequiredWiqlLiteral(config.Project, "project"))}'",
+            "[System.State] <> 'Removed'"
+        };
+
+        if (includeAreaPath && !string.IsNullOrWhiteSpace(config.DefaultAreaPath))
+        {
+            whereClauses.Add(BuildAreaPathUnderClause(config.DefaultAreaPath));
+        }
+
         var wiqlQuery = WiqlQueryBuilder.BuildWorkItemsQuery(
             selectFields: ["[System.Id]"],
-            orderByClauses: ["[System.Id] DESC"]);
+            whereClauses: whereClauses,
+            orderByClauses: ["[System.ChangedDate] DESC"]);
 
         var wiqlResponse = await ExecuteWiqlQueryAsync(httpClient, config, wiqlQuery, cancellationToken, handleErrors: false);
         if (!wiqlResponse.IsSuccessStatusCode)
         {
-            return CreateFailureResult(
-                "work-item-fields",
-                "Work item display and processing",
-                "Required runtime and analytics work item fields are accessible",
-                $"Sample WIQL query failed: HTTP {(int)wiqlResponse.StatusCode}",
-                CategorizeHttpError(wiqlResponse.StatusCode),
-                await wiqlResponse.Content.ReadAsStringAsync(cancellationToken));
+            return new ValidationSampleSelectionResult(
+                [],
+                includeAreaPath ? "configured area path" : "project-wide scope",
+                CreateFailureResult(
+                    "work-item-fields",
+                    "Work item display and processing",
+                    "Required runtime and analytics work item fields are accessible",
+                    $"Recent sample WIQL query failed: HTTP {(int)wiqlResponse.StatusCode}",
+                    CategorizeHttpError(wiqlResponse.StatusCode),
+                    await wiqlResponse.Content.ReadAsStringAsync(cancellationToken)));
         }
 
         using var wiqlStream = await wiqlResponse.Content.ReadAsStreamAsync(cancellationToken);
@@ -472,24 +588,25 @@ internal partial class RealTfsClient
                 .Where(id => id > 0)
                 .Take(VerificationSampleWorkItemCount)
                 .ToArray()
-            : Array.Empty<int>();
+            : [];
 
-        if (sampleIds.Length == 0)
-        {
-            return new TfsCapabilityCheckResult
-            {
-                CapabilityId = "work-item-fields",
-                Success = true,
-                ImpactedFunctionality = "Work item display and processing",
-                ExpectedBehavior = "Required runtime and analytics work item fields are accessible",
-                ObservedBehavior = "Schema validated. Sample payload validation skipped because no work items were returned by WIQL."
-            };
-        }
+        var scopeDescription = includeAreaPath && !string.IsNullOrWhiteSpace(config.DefaultAreaPath)
+            ? $"configured area path '{config.DefaultAreaPath}'"
+            : $"project '{config.Project}'";
 
+        return new ValidationSampleSelectionResult(sampleIds, scopeDescription, null);
+    }
+
+    private async Task<ValidationPayloadSampleResult> FetchValidationPayloadSamplesAsync(
+        HttpClient httpClient,
+        TfsConfigEntity config,
+        IReadOnlyCollection<int> sampleIds,
+        CancellationToken cancellationToken)
+    {
         var batchRequest = new WorkItemBatchRequest
         {
-            Ids = sampleIds,
-            Fields = [TfsFieldProjectNumber, TfsFieldProjectElement, TfsFieldTimeCriticality, VerificationWorkItemTypeField]
+            Ids = sampleIds.ToArray(),
+            Fields = [.. VerificationAnalyticsFields, VerificationWorkItemTypeField]
         };
 
         var batchUrl = CollectionUrl(config, "_apis/wit/workitemsbatch");
@@ -497,135 +614,240 @@ internal partial class RealTfsClient
         var batchResponse = await SendPostAsync(httpClient, config, batchUrl, batchContent, cancellationToken, handleErrors: false);
         if (!batchResponse.IsSuccessStatusCode)
         {
-            return CreateFailureResult(
-                "work-item-fields",
-                "Work item display and processing",
-                "Required runtime and analytics work item fields are accessible",
-                $"Sample batch query failed: HTTP {(int)batchResponse.StatusCode}",
-                CategorizeHttpError(batchResponse.StatusCode),
-                await batchResponse.Content.ReadAsStringAsync(cancellationToken));
+            return new ValidationPayloadSampleResult(
+                [],
+                UsedResponseShapeFallback: false,
+                CreateFailureResult(
+                    "work-item-fields",
+                    "Work item display and processing",
+                    "Required runtime and analytics work item fields are accessible",
+                    $"Sample payload retrieval failed: HTTP {(int)batchResponse.StatusCode}",
+                    CategorizeHttpError(batchResponse.StatusCode),
+                    await batchResponse.Content.ReadAsStringAsync(cancellationToken)));
         }
 
         using var batchStream = await batchResponse.Content.ReadAsStreamAsync(cancellationToken);
         using var batchDoc = await JsonDocument.ParseAsync(batchStream, cancellationToken: cancellationToken);
-        var items = batchDoc.RootElement.TryGetProperty("value", out var value)
-            ? value.EnumerateArray().Select(item => item.Clone()).ToList()
-            : [];
 
-        var missingPayloadFields = new HashSet<string>(StringComparer.Ordinal);
-        var typeMismatches = new List<string>();
-        var nullOnlyFields = new HashSet<string>(StringComparer.Ordinal)
+        if (!TryGetValidationPayloadItems(batchDoc.RootElement, out var payloadItems, out var usedResponseShapeFallback))
         {
-            TfsFieldProjectNumber,
-            TfsFieldProjectElement,
-            TfsFieldTimeCriticality
-        };
+            return new ValidationPayloadSampleResult(
+                [],
+                UsedResponseShapeFallback: false,
+                CreateFailureResult(
+                    "work-item-fields",
+                    "Work item display and processing",
+                    "Required runtime and analytics work item fields are accessible",
+                    "Sample payload retrieval failed: workitemsbatch response did not contain a usable item array.",
+                    FailureCategory.EndpointUnavailable,
+                    "Expected 'value' or 'workItems' array in workitemsbatch response."));
+        }
 
-        foreach (var item in items)
+        var itemsById = new Dictionary<int, ValidationSampledWorkItem>();
+        foreach (var item in payloadItems.EnumerateArray())
         {
-            if (!item.TryGetProperty("fields", out var payloadFields) || payloadFields.ValueKind != JsonValueKind.Object)
+            if (!item.TryGetProperty("id", out var idElement) || idElement.ValueKind != JsonValueKind.Number)
             {
-                missingPayloadFields.UnionWith(nullOnlyFields);
                 continue;
             }
 
-            ValidatePayloadField(payloadFields, TfsFieldProjectNumber, JsonValueKind.String, missingPayloadFields, nullOnlyFields, typeMismatches);
-            ValidatePayloadField(payloadFields, TfsFieldProjectElement, JsonValueKind.String, missingPayloadFields, nullOnlyFields, typeMismatches);
-            ValidatePayloadField(payloadFields, TfsFieldTimeCriticality, JsonValueKind.Number, missingPayloadFields, nullOnlyFields, typeMismatches);
-        }
-
-        if (missingPayloadFields.Count > 0 || typeMismatches.Count > 0)
-        {
-            var problems = new List<string>();
-            if (missingPayloadFields.Count > 0)
+            var workItemId = idElement.GetInt32();
+            if (!sampleIds.Contains(workItemId))
             {
-                problems.Add($"Missing in payload: {string.Join(", ", missingPayloadFields)}");
+                continue;
             }
 
-            if (typeMismatches.Count > 0)
+            itemsById[workItemId] = CreateValidationSampledWorkItem(workItemId, item);
+        }
+
+        foreach (var sampleId in sampleIds)
+        {
+            if (!itemsById.ContainsKey(sampleId))
             {
-                problems.Add($"Type mismatch: {string.Join("; ", typeMismatches)}");
+                itemsById[sampleId] = CreateMissingValidationSampledWorkItem(sampleId);
             }
-
-            _logger.LogWarning("TFS payload validation failed for analytics fields. {Problems}", string.Join(". ", problems));
-
-            return CreateFailureResult(
-                "work-item-fields",
-                "Work item display and processing",
-                "Required runtime and analytics work item fields are accessible",
-                string.Join(". ", problems),
-                FailureCategory.MissingField,
-                $"Validated {items.Count} sampled work items");
         }
 
-        if (nullOnlyFields.Count > 0)
+        var items = sampleIds.Select(id => itemsById[id]).ToList();
+        if (items.Count == 0)
         {
-            _logger.LogWarning(
-                "TFS payload validation sampled {WorkItemCount} work items. Fields present but null/empty in all samples: {Fields}",
-                items.Count,
-                string.Join(", ", nullOnlyFields));
+            return new ValidationPayloadSampleResult(
+                [],
+                usedResponseShapeFallback,
+                CreateFailureResult(
+                    "work-item-fields",
+                    "Work item display and processing",
+                    "Required runtime and analytics work item fields are accessible",
+                    "Sample payload retrieval failed: workitemsbatch returned no sampled items.",
+                    FailureCategory.EndpointUnavailable,
+                    $"Requested sample IDs: {string.Join(", ", sampleIds)}"));
         }
 
-        return new TfsCapabilityCheckResult
-        {
-            CapabilityId = "work-item-fields",
-            Success = true,
-            ImpactedFunctionality = "Work item display and processing",
-            ExpectedBehavior = "Required runtime and analytics work item fields are accessible",
-            ObservedBehavior = nullOnlyFields.Count > 0
-                ? $"Sample payload validated on {items.Count} work items. Null-only sampled fields: {string.Join(", ", nullOnlyFields)}"
-                : $"Sample payload validated on {items.Count} work items with expected field types."
-        };
+        return new ValidationPayloadSampleResult(items, usedResponseShapeFallback, null);
     }
 
-    private static void ValidatePayloadField(
-        JsonElement payloadFields,
-        string fieldRefName,
-        JsonValueKind expectedKind,
-        ISet<string> missingPayloadFields,
-        ISet<string> nullOnlyFields,
-        ICollection<string> typeMismatches)
+    private static ValidationSampledWorkItem CreateValidationSampledWorkItem(int workItemId, JsonElement item)
+    {
+        if (!item.TryGetProperty("fields", out var payloadFields) || payloadFields.ValueKind != JsonValueKind.Object)
+        {
+            return CreateMissingValidationSampledWorkItem(workItemId);
+        }
+
+        var fieldStates = VerificationAnalyticsFields.ToDictionary(
+            fieldRefName => fieldRefName,
+            fieldRefName => ClassifyPayloadField(payloadFields, fieldRefName),
+            StringComparer.Ordinal);
+
+        var workItemType = payloadFields.TryGetProperty(VerificationWorkItemTypeField, out var workItemTypeValue)
+            && workItemTypeValue.ValueKind == JsonValueKind.String
+            && !string.IsNullOrWhiteSpace(workItemTypeValue.GetString())
+                ? workItemTypeValue.GetString()
+                : null;
+
+        return new ValidationSampledWorkItem(workItemId, workItemType, fieldStates);
+    }
+
+    private static ValidationSampledWorkItem CreateMissingValidationSampledWorkItem(int workItemId)
+    {
+        return new ValidationSampledWorkItem(
+            workItemId,
+            null,
+            VerificationAnalyticsFields.ToDictionary(
+                fieldRefName => fieldRefName,
+                _ => ValidationPayloadFieldState.Absent,
+                StringComparer.Ordinal));
+    }
+
+    private static ValidationPayloadFieldState ClassifyPayloadField(JsonElement payloadFields, string fieldRefName)
     {
         if (!payloadFields.TryGetProperty(fieldRefName, out var fieldValue))
         {
-            missingPayloadFields.Add(fieldRefName);
-            nullOnlyFields.Remove(fieldRefName);
-            return;
+            return ValidationPayloadFieldState.Absent;
         }
 
         if (fieldValue.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
         {
-            return;
+            return ValidationPayloadFieldState.Empty;
         }
 
-        if (expectedKind == JsonValueKind.String)
+        if (fieldValue.ValueKind == JsonValueKind.String && string.IsNullOrWhiteSpace(fieldValue.GetString()))
         {
-            if (fieldValue.ValueKind == JsonValueKind.String)
-            {
-                if (!string.IsNullOrWhiteSpace(fieldValue.GetString()))
-                {
-                    nullOnlyFields.Remove(fieldRefName);
-                }
+            return ValidationPayloadFieldState.Empty;
+        }
 
-                return;
+        return ValidationPayloadFieldState.Present;
+    }
+
+    private static bool TryGetValidationPayloadItems(
+        JsonElement rootElement,
+        out JsonElement payloadItems,
+        out bool usedResponseShapeFallback)
+    {
+        if (rootElement.TryGetProperty("value", out payloadItems) && payloadItems.ValueKind == JsonValueKind.Array)
+        {
+            usedResponseShapeFallback = false;
+            return true;
+        }
+
+        if (rootElement.TryGetProperty("workItems", out payloadItems) && payloadItems.ValueKind == JsonValueKind.Array)
+        {
+            usedResponseShapeFallback = true;
+            return true;
+        }
+
+        payloadItems = default;
+        usedResponseShapeFallback = false;
+        return false;
+    }
+
+    private static IReadOnlyList<ValidationFieldDiagnostic> BuildPayloadFieldDiagnostics(
+        IReadOnlyCollection<ValidationSampledWorkItem> items,
+        ISet<string> metadataFields)
+    {
+        return VerificationAnalyticsFields
+            .Select(fieldRefName =>
+            {
+                var presentCount = items.Count(item => item.FieldStates[fieldRefName] == ValidationPayloadFieldState.Present);
+                var absentCount = items.Count(item => item.FieldStates[fieldRefName] == ValidationPayloadFieldState.Absent);
+                var emptyCount = items.Count(item => item.FieldStates[fieldRefName] == ValidationPayloadFieldState.Empty);
+                return new ValidationFieldDiagnostic(
+                    fieldRefName,
+                    metadataFields.Contains(fieldRefName),
+                    presentCount,
+                    absentCount,
+                    emptyCount);
+            })
+            .ToList();
+    }
+
+    private static string BuildNoSampleFieldDiagnostics(ISet<string> metadataFields)
+    {
+        return "Field diagnostics: " + string.Join(
+            " | ",
+            VerificationAnalyticsFields.Select(fieldRefName =>
+                $"{fieldRefName}: metadata={(metadataFields.Contains(fieldRefName) ? "found" : "not found")}, payload=no sampled items, interpretation=no recent eligible work items were available"));
+    }
+
+    private sealed record ValidationSampleSelectionResult(
+        int[] SampleIds,
+        string ScopeDescription,
+        TfsCapabilityCheckResult? FailureResult);
+
+    private sealed record ValidationPayloadSampleResult(
+        IReadOnlyList<ValidationSampledWorkItem> Items,
+        bool UsedResponseShapeFallback,
+        TfsCapabilityCheckResult? FailureResult);
+
+    private sealed record ValidationSampledWorkItem(
+        int Id,
+        string? WorkItemType,
+        IReadOnlyDictionary<string, ValidationPayloadFieldState> FieldStates);
+
+    private sealed record ValidationFieldDiagnostic(
+        string FieldRefName,
+        bool MetadataFound,
+        int PresentCount,
+        int AbsentCount,
+        int EmptyCount)
+    {
+        public string DescribePayload()
+        {
+            return $"present={PresentCount}, absent={AbsentCount}, empty={EmptyCount}";
+        }
+
+        public string DescribeInterpretation()
+        {
+            if (PresentCount > 0)
+            {
+                return AbsentCount > 0 || EmptyCount > 0
+                    ? "field exists in metadata and is populated on some recent items but not all sampled items"
+                    : "field exists in metadata and is populated on sampled items";
             }
 
-            typeMismatches.Add($"{fieldRefName} expected string but was {fieldValue.ValueKind}");
-            nullOnlyFields.Remove(fieldRefName);
-            return;
-        }
-
-        if (expectedKind == JsonValueKind.Number)
-        {
-            if (fieldValue.ValueKind == JsonValueKind.Number)
+            if (EmptyCount > 0 && AbsentCount == 0)
             {
-                nullOnlyFields.Remove(fieldRefName);
-                return;
+                return "field exists in metadata but sampled values are empty";
             }
 
-            typeMismatches.Add($"{fieldRefName} expected numeric but was {fieldValue.ValueKind}");
-            nullOnlyFields.Remove(fieldRefName);
+            if (AbsentCount > 0 && EmptyCount == 0)
+            {
+                return "field exists in metadata but was not returned for sampled items";
+            }
+
+            if (AbsentCount > 0 && EmptyCount > 0)
+            {
+                return "field exists in metadata but is empty or not applicable on sampled items";
+            }
+
+            return "field exists in metadata but payload evidence was inconclusive";
         }
+    }
+
+    private enum ValidationPayloadFieldState
+    {
+        Present,
+        Absent,
+        Empty
     }
 
     private async Task<TfsCapabilityCheckResult> VerifyBatchReadAsync(
