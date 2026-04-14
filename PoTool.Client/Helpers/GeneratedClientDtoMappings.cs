@@ -168,7 +168,7 @@ public static class GeneratedClientDtoMappings
 
         if (duplicateKeys.Count > 0)
         {
-            throw new InvalidOperationException($"Duplicate canonical filter labels were returned for keys: {string.Join(", ", duplicateKeys.OrderBy(key => key))}.");
+            throw new InvalidOperationException($"Duplicate canonical filter label keys were detected: {string.Join(", ", duplicateKeys.OrderBy(key => key))}.");
         }
 
         return labels;

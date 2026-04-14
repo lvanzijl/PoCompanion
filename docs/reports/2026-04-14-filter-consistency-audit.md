@@ -135,10 +135,6 @@ These pages now rely on shared filter resolution before their query gates run.
 
 ## Remaining risks or edge cases
 
-### Remaining page-local filter flows
-- `PoTool.Client/Pages/Home/PrDeliveryInsights.razor` still uses page-local team/sprint/date parsing rather than `GlobalFilterStore`
-- this page was audited but not refactored in this change because it still follows a page-local filter model instead of the shared global envelope flow
-
 ### Metadata not yet surfaced everywhere
 - `HomePage.razor`, `PlanBoard.razor`, and `TrendsWorkspace.razor` still retain canonical filter metadata for internal consumers without rendering a shared top-level notice
 - this is a visibility gap, not a first-load validity gap
@@ -150,7 +146,7 @@ These pages now rely on shared filter resolution before their query gates run.
   - invalid sprint/range correction
   - default sprint/range resolution
   - shared team/sprint display formatting
-- A remaining architectural gap exists where some pages still use page-local filter models rather than the shared filter store; those pages are now the main source of inconsistency risk rather than the shared filter layer itself.
+- The remaining inconsistency risk is now primarily in metadata visibility and future regressions, not in active page-local ownership of shared team/sprint/product/project/time filter state on the migrated pages.
 
 ## Validation
 
