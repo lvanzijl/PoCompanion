@@ -156,20 +156,21 @@ public static class GeneratedClientDtoMappings
             return new Dictionary<int, string>();
         }
 
-        var grouped = values
-            .GroupBy(pair => pair.Key)
-            .ToList();
-
-        var duplicateKeys = grouped
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .OrderBy(key => key)
-            .ToArray();
-        if (duplicateKeys.Length > 0)
+        var labels = new Dictionary<int, string>();
+        var duplicateKeys = new HashSet<int>();
+        foreach (var pair in values)
         {
-            throw new InvalidOperationException($"Duplicate canonical filter labels were returned for keys: {string.Join(", ", duplicateKeys)}.");
+            if (!labels.TryAdd(pair.Key, pair.Value))
+            {
+                duplicateKeys.Add(pair.Key);
+            }
         }
 
-        return grouped.ToDictionary(group => group.Key, group => group.Single().Value);
+        if (duplicateKeys.Count > 0)
+        {
+            throw new InvalidOperationException($"Duplicate canonical filter labels were returned for keys: {string.Join(", ", duplicateKeys.OrderBy(key => key))}.");
+        }
+
+        return labels;
     }
 }

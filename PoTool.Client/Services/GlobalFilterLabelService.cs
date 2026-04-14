@@ -1,4 +1,5 @@
 using PoTool.Client.Models;
+using System.Collections.Concurrent;
 
 namespace PoTool.Client.Services;
 
@@ -6,9 +7,9 @@ public sealed class GlobalFilterLabelService
 {
     private readonly TeamService _teamService;
     private readonly SprintService _sprintService;
-    private readonly Dictionary<int, string> _teamNames = new();
-    private readonly Dictionary<int, string> _sprintNames = new();
-    private readonly HashSet<int> _loadedSprintTeams = new();
+    private readonly ConcurrentDictionary<int, string> _teamNames = new();
+    private readonly ConcurrentDictionary<int, string> _sprintNames = new();
+    private readonly ConcurrentDictionary<int, byte> _loadedSprintTeams = new();
 
     public GlobalFilterLabelService(
         TeamService teamService,
@@ -84,7 +85,7 @@ public sealed class GlobalFilterLabelService
 
     private async Task EnsureSprintsForTeamAsync(int teamId, CancellationToken cancellationToken)
     {
-        if (!_loadedSprintTeams.Add(teamId))
+        if (!_loadedSprintTeams.TryAdd(teamId, 0))
         {
             return;
         }

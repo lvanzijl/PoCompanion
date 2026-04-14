@@ -588,7 +588,7 @@
         await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, FromSprintId = null, ToSprintId = null });
         await NavigateToResolvedFilterStateAsync();
         ApplySprintFilters();
-            await LoadMetricsAsync();
+        await LoadMetricsAsync();
     }
 
     private async Task OnProductChanged(int? productId)

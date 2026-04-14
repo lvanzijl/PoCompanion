@@ -4,7 +4,7 @@ namespace PoTool.Client.Services;
 
 public sealed class GlobalFilterAutoResolveService
 {
-    // Keep the auto-correction fallback aligned with the existing 180-day rolling-window correction path in shared client filter resolution.
+    // Use the shared six-month fallback when a rolling selection has to be reconstructed safely.
     private const int DefaultRollingDays = 180;
     private const int DefaultRangeWindow = 5;
 
