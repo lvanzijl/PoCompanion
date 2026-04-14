@@ -33,7 +33,7 @@ public sealed class GlobalFilterAutoResolveService
     {
         ArgumentNullException.ThrowIfNull(usage);
 
-        if (activeProfileId is null || updateSource == FilterUpdateSource.Ui)
+        if (activeProfileId is null)
         {
             return null;
         }
@@ -132,22 +132,18 @@ public sealed class GlobalFilterAutoResolveService
 
         foreach (var teamId in candidateTeamIds)
         {
-            var currentSprint = await _sprintService.GetCurrentSprintForTeamAsync(teamId, cancellationToken);
-            if (currentSprint is not null)
-            {
-                var allSprints = state.Time.Mode == FilterTimeMode.Range
-                    ? (await _sprintService.GetSprintsForTeamAsync(teamId, cancellationToken))
-                        .Where(sprint => sprint.StartUtc.HasValue)
-                        .OrderBy(sprint => sprint.StartUtc)
-                        .ToList()
-                    : null;
-                return new DefaultTeamSelection(teamId, currentSprint, allSprints);
-            }
-
             var sprints = (await _sprintService.GetSprintsForTeamAsync(teamId, cancellationToken))
                 .Where(sprint => sprint.StartUtc.HasValue)
                 .OrderBy(sprint => sprint.StartUtc)
                 .ToList();
+
+            var currentSprint = await _sprintService.GetCurrentSprintForTeamAsync(teamId, cancellationToken)
+                ?? sprints.LastOrDefault();
+            if (currentSprint is not null)
+            {
+                return new DefaultTeamSelection(teamId, currentSprint, sprints);
+            }
+
             if (sprints.Count > 0)
             {
                 return new DefaultTeamSelection(teamId, sprints[^1], sprints);
@@ -174,7 +170,12 @@ public sealed class GlobalFilterAutoResolveService
         FilterTimeSelection currentTime,
         DefaultTeamSelection? defaultTeamSelection)
     {
-        if (currentTime.IsResolved || defaultTeamSelection is null)
+        if (defaultTeamSelection is null)
+        {
+            return currentTime;
+        }
+
+        if (HasValidSprintSelection(currentTime, defaultTeamSelection))
         {
             return currentTime;
         }
@@ -217,6 +218,35 @@ public sealed class GlobalFilterAutoResolveService
 
         var startIndex = Math.Max(0, currentIndex - (DefaultRangeWindow - 1));
         return new FilterTimeSelection(FilterTimeMode.Range, StartSprintId: sprints[startIndex].Id, EndSprintId: sprints[currentIndex].Id);
+    }
+
+    private static bool HasValidSprintSelection(FilterTimeSelection time, DefaultTeamSelection selection)
+    {
+        if (!time.IsResolved)
+        {
+            return false;
+        }
+
+        var availableSprintIds = (selection.AllSprints ?? [])
+            .Select(sprint => sprint.Id)
+            .ToHashSet();
+        if (availableSprintIds.Count == 0)
+        {
+            return time.Mode != FilterTimeMode.Range
+                || (selection.CurrentSprint is not null
+                    && time.StartSprintId == selection.CurrentSprint.Id
+                    && time.EndSprintId == selection.CurrentSprint.Id);
+        }
+
+        return time.Mode switch
+        {
+            FilterTimeMode.Sprint => time.SprintId.HasValue && availableSprintIds.Contains(time.SprintId.Value),
+            FilterTimeMode.Range => time.StartSprintId.HasValue
+                && time.EndSprintId.HasValue
+                && availableSprintIds.Contains(time.StartSprintId.Value)
+                && availableSprintIds.Contains(time.EndSprintId.Value),
+            _ => true
+        };
     }
 
     private sealed record DefaultTeamSelection(int TeamId, SprintDto? CurrentSprint, IReadOnlyList<SprintDto>? AllSprints);

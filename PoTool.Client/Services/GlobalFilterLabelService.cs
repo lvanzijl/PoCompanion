@@ -34,6 +34,25 @@ public sealed class GlobalFilterLabelService
             ? name
             : teamId.ToString();
 
+    public string FormatSprint(int sprintId)
+        => _sprintNames.TryGetValue(sprintId, out var name) && !string.IsNullOrWhiteSpace(name)
+            ? name
+            : $"Sprint #{sprintId}";
+
+    public string FormatSprintRange(int? startSprintId, int? endSprintId)
+    {
+        if (!startSprintId.HasValue && !endSprintId.HasValue)
+        {
+            return "Sprint range";
+        }
+
+        var start = startSprintId.HasValue ? FormatSprint(startSprintId.Value) : "?";
+        var end = endSprintId.HasValue ? FormatSprint(endSprintId.Value) : "?";
+        return string.Equals(start, end, StringComparison.Ordinal)
+            ? start
+            : $"{start} → {end}";
+    }
+
     public string FormatTime(FilterState state)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -78,11 +97,6 @@ public sealed class GlobalFilterLabelService
                 : sprint.Name;
         }
     }
-
-    private string FormatSprint(int sprintId)
-        => _sprintNames.TryGetValue(sprintId, out var name) && !string.IsNullOrWhiteSpace(name)
-            ? name
-            : $"Sprint #{sprintId}";
 
     private string FormatBoundary(string label, int? sprintId)
         => sprintId.HasValue ? $"{label} {FormatSprint(sprintId.Value)}" : $"{label} ?";

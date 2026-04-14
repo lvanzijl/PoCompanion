@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-14",
+    "type": "Fixed",
+    "title": "Shared team and sprint filters now stay valid during in-page filter changes",
+    "impact": "Sprint Execution, Portfolio Delivery, Portfolio Flow Trend, Delivery Trends, and Pipeline Insights now re-resolve team and sprint changes through the shared filter layer immediately instead of relying on page-local resets or follow-up navigation timing, and shared team/sprint labels remain readable while Health Overview now surfaces canonical filter corrections when the backend normalizes filter scope.",
+    "area": "Delivery / Trends / Health / Pipelines",
+    "link": "/home/delivery/execution"
+  },
+  {
     "date": "2026-04-13",
     "type": "Fixed",
     "title": "Sprint-based pages now open with a valid shared filter state and readable filter labels",

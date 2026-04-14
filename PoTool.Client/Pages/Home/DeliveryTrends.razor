@@ -368,7 +368,6 @@
             }
 
             ApplySprintFilters();
-            await EnsureRangeSelectionAsync();
             await LoadMetricsAsync();
             UpdateBreadcrumbs();
         }
@@ -589,8 +588,7 @@
         await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, FromSprintId = null, ToSprintId = null });
         await NavigateToResolvedFilterStateAsync();
         ApplySprintFilters();
-        await EnsureRangeSelectionAsync();
-        await LoadMetricsAsync();
+            await LoadMetricsAsync();
     }
 
     private async Task OnProductChanged(int? productId)
@@ -685,24 +683,6 @@
             .Take(endIndex - startIndex + 1)
             .Select(s => s.Id)
             .ToList();
-    }
-
-    private async Task EnsureRangeSelectionAsync()
-    {
-        SelectDeterministicEndSprint();
-        if (_filteredSprints.Count == 0 || (_selectedFromSprintId.HasValue && _selectedToSprintId.HasValue))
-        {
-            return;
-        }
-
-        var endIndex = Math.Max(0, _currentSprintIndex);
-        var startIndex = Math.Max(0, endIndex - DefaultTrendSprintCount + 1);
-        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
-        {
-            FromSprintId = _filteredSprints[startIndex].Id,
-            ToSprintId = _filteredSprints[endIndex].Id
-        });
-        SelectDeterministicEndSprint();
     }
 
     private void HandleGlobalFilterChanged()

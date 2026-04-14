@@ -84,6 +84,45 @@ public sealed class GlobalFilterStoreTests
     }
 
     [TestMethod]
+    public async Task SetStateAsync_UiTeamChangeAutoResolvesSprintForNewTeam()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/home/delivery/execution?teamId=7&sprintId=701&timeMode=Sprint", 42);
+        await store.SetStateAsync(
+            "http://localhost/home/delivery/execution?teamId=7&sprintId=701&timeMode=Sprint",
+            42,
+            new FilterLocalBridgeState(TeamId: 8, SprintId: null),
+            FilterUpdateSource.Ui);
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(8, store.CurrentState.TeamId);
+        Assert.AreEqual(FilterTimeMode.Sprint, store.CurrentState.Time.Mode);
+        Assert.AreEqual(805, store.CurrentState.Time.SprintId);
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
+    }
+
+    [TestMethod]
+    public async Task SetStateAsync_UiTeamChangeAutoResolvesRangeForNewTeam()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/home/delivery/portfolio?teamId=7&fromSprintId=697&toSprintId=701&timeMode=Range", 42);
+        await store.SetStateAsync(
+            "http://localhost/home/delivery/portfolio?teamId=7&fromSprintId=697&toSprintId=701&timeMode=Range",
+            42,
+            new FilterLocalBridgeState(TeamId: 8, FromSprintId: null, ToSprintId: null),
+            FilterUpdateSource.Ui);
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(8, store.CurrentState.TeamId);
+        Assert.AreEqual(FilterTimeMode.Range, store.CurrentState.Time.Mode);
+        Assert.AreEqual(801, store.CurrentState.Time.StartSprintId);
+        Assert.AreEqual(805, store.CurrentState.Time.EndSprintId);
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
+    }
+
+    [TestMethod]
     public async Task TrackNavigation_QueryBackedRoute_TracksKnownFilterValues()
     {
         var store = CreateStore();
@@ -370,12 +409,25 @@ public sealed class GlobalFilterStoreTests
             new(700, 7, "700", "\\Payments\\Sprint 10", "Sprint 10", Now.AddDays(-14), Now.AddDays(-1), "past", Now),
             new(701, 7, "701", "\\Payments\\Sprint 11", "Sprint 11", Now, Now.AddDays(13), "current", Now)
         ];
+        private static readonly SprintDto[] TeamEightSprints =
+        [
+            new(801, 8, "801", "\\Payments\\Beacon\\Sprint 1", "Sprint 1", Now.AddDays(-56), Now.AddDays(-43), "past", Now),
+            new(802, 8, "802", "\\Payments\\Beacon\\Sprint 2", "Sprint 2", Now.AddDays(-42), Now.AddDays(-29), "past", Now),
+            new(803, 8, "803", "\\Payments\\Beacon\\Sprint 3", "Sprint 3", Now.AddDays(-28), Now.AddDays(-15), "past", Now),
+            new(804, 8, "804", "\\Payments\\Beacon\\Sprint 4", "Sprint 4", Now.AddDays(-14), Now.AddDays(-1), "past", Now),
+            new(805, 8, "805", "\\Payments\\Beacon\\Sprint 5", "Sprint 5", Now, Now.AddDays(13), "current", Now)
+        ];
 
         public Task<ICollection<SprintDto>> GetSprintsForTeamAsync(int? teamId)
             => GetSprintsForTeamAsync(teamId, CancellationToken.None);
 
         public Task<ICollection<SprintDto>> GetSprintsForTeamAsync(int? teamId, CancellationToken cancellationToken)
-            => Task.FromResult<ICollection<SprintDto>>(teamId == 7 ? TeamSevenSprints : []);
+            => Task.FromResult<ICollection<SprintDto>>(teamId switch
+            {
+                7 => TeamSevenSprints,
+                8 => TeamEightSprints,
+                _ => []
+            });
 
         public Task<SprintDto> GetCurrentSprintForTeamAsync(int? teamId)
             => GetCurrentSprintForTeamAsync(teamId, CancellationToken.None);
@@ -385,6 +437,11 @@ public sealed class GlobalFilterStoreTests
             if (teamId == 7)
             {
                 return Task.FromResult(TeamSevenSprints[^1]);
+            }
+
+            if (teamId == 8)
+            {
+                return Task.FromResult(TeamEightSprints[^1]);
             }
 
             throw new ApiException("Not found", 404, string.Empty, new Dictionary<string, IEnumerable<string>>(), null);

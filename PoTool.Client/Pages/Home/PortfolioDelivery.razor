@@ -13,6 +13,7 @@
 @inject NavigationManager NavigationManager
 @inject GlobalFilterStore GlobalFilterStore
 @inject PageFilterExecutionGate PageFilterExecutionGate
+@inject GlobalFilterLabelService GlobalFilterLabelService
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -370,23 +371,10 @@
 
     private string ContextTeamLabel =>
         _selectedTeamId.HasValue
-            ? _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value)?.Name ?? "Team"
+            ? GlobalFilterLabelService.FormatTeam(_selectedTeamId.Value)
             : "Select Team";
 
-    private string ContextSprintRangeLabel
-    {
-        get
-        {
-            if (_fromSprintId == null && _toSprintId == null) return "Sprint range";
-            var from = _fromSprintId.HasValue
-                ? _sprints.FirstOrDefault(s => s.Id == _fromSprintId.Value)?.Name ?? "?"
-                : "?";
-            var to = _toSprintId.HasValue
-                ? _sprints.FirstOrDefault(s => s.Id == _toSprintId.Value)?.Name ?? "?"
-                : "?";
-            return from == to ? from : $"{from} → {to}";
-        }
-    }
+    private string ContextSprintRangeLabel => GlobalFilterLabelService.FormatSprintRange(_fromSprintId, _toSprintId);
 
     // ── Lifecycle ────────────────────────────────────────────────────────────────
 
@@ -422,12 +410,6 @@
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsAsync(_selectedTeamId.Value);
-
-                if ((_fromSprintId.HasValue && !_sprints.Any(s => s.Id == _fromSprintId.Value)) ||
-                    (_toSprintId.HasValue && !_sprints.Any(s => s.Id == _toSprintId.Value)))
-                {
-                    await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { FromSprintId = null, ToSprintId = null });
-                }
 
                 UpdateContextUrl();
                 if (_fromSprintId.HasValue && _toSprintId.HasValue)
@@ -572,13 +554,6 @@
         {
             await LoadSprintsAsync(teamId.Value);
             UpdateContextUrl();
-            if ((_fromSprintId.HasValue && !_sprints.Any(s => s.Id == _fromSprintId.Value)) ||
-                (_toSprintId.HasValue && !_sprints.Any(s => s.Id == _toSprintId.Value)))
-            {
-                await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { FromSprintId = null, ToSprintId = null });
-                UpdateContextUrl();
-            }
-
             if (_fromSprintId.HasValue && _toSprintId.HasValue)
             {
                 await LoadDeliveryDataAsync();

@@ -13,6 +13,7 @@
 @inject NavigationManager NavigationManager
 @inject GlobalFilterStore GlobalFilterStore
 @inject PageFilterExecutionGate PageFilterExecutionGate
+@inject GlobalFilterLabelService GlobalFilterLabelService
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -412,11 +413,11 @@
 
     // ── Labels ───────────────────────────────────────────────────────────────────
     private string ContextTeamLabel => _selectedTeamId.HasValue
-        ? _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value)?.Name ?? "Team"
+        ? GlobalFilterLabelService.FormatTeam(_selectedTeamId.Value)
         : "Select Team";
 
     private string ContextSprintLabel => _selectedSprintId.HasValue
-        ? _sprints.FirstOrDefault(s => s.Id == _selectedSprintId.Value)?.Name ?? "Sprint"
+        ? GlobalFilterLabelService.FormatSprint(_selectedSprintId.Value)
         : "Select Sprint";
 
     private string ContextProductLabel => _selectedProductId.HasValue
@@ -462,13 +463,6 @@
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsAsync(_selectedTeamId.Value);
-
-                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
-                {
-                    await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { SprintId = null });
-                    _data = null;
-                    _filterNotice = null;
-                }
 
                 if (_selectedSprintId.HasValue)
                 {
@@ -598,11 +592,6 @@
         if (teamId.HasValue)
         {
             await LoadSprintsAsync(teamId.Value);
-
-            if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
-            {
-                await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { SprintId = null });
-            }
         }
     }
 
