@@ -53,6 +53,7 @@ public sealed class FilterStateResolver
         var teamId = ResolveScalar(
             context.TeamId,
             localState?.TeamId,
+            localState is not null,
             decisions,
             ref lastUpdateSource,
             "teamId",
@@ -102,16 +103,28 @@ public sealed class FilterStateResolver
         }
 
         IReadOnlyList<int> selectedProductIds;
-        if (context.ProductId.HasValue)
+        if (localState is not null)
+        {
+            lastUpdateSource = localSource;
+            if (localState.ProductId.HasValue)
+            {
+                decisions.Add("local bridge supplied productId");
+                selectedProductIds = [localState.ProductId.Value];
+            }
+            else
+            {
+                if (context.ProductId.HasValue)
+                {
+                    decisions.Add("local bridge cleared productId");
+                }
+
+                selectedProductIds = Array.Empty<int>();
+            }
+        }
+        else if (context.ProductId.HasValue)
         {
             lastUpdateSource = FilterUpdateSource.Query;
             selectedProductIds = [context.ProductId.Value];
-        }
-        else if (localState?.ProductId.HasValue == true)
-        {
-            decisions.Add("local bridge supplied productId");
-            lastUpdateSource = localSource;
-            selectedProductIds = [localState.ProductId.Value];
         }
         else
         {
@@ -186,6 +199,32 @@ public sealed class FilterStateResolver
                 routeAlias);
         }
 
+        if (localState is not null)
+        {
+            if (!string.IsNullOrWhiteSpace(localProjectId))
+            {
+                decisions.Add("local bridge supplied projectId");
+                return ([localProjectId], localSource, null, null);
+            }
+
+            if (!string.IsNullOrWhiteSpace(localProjectAlias))
+            {
+                decisions.Add("local bridge supplied project alias");
+                var projectId = await ResolveProjectIdAsync(localProjectAlias, cancellationToken);
+                if (string.IsNullOrWhiteSpace(projectId))
+                {
+                    issues.Add($"local project alias '{localProjectAlias}' could not be resolved");
+                }
+                return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : [projectId], localSource, null, null);
+            }
+
+            if (!string.IsNullOrWhiteSpace(queryProjectId) || !string.IsNullOrWhiteSpace(queryAlias))
+            {
+                decisions.Add("local bridge cleared project selection");
+                return (Array.Empty<string>(), localSource, null, null);
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(queryProjectId))
         {
             return ([queryProjectId], FilterUpdateSource.Query, null, null);
@@ -201,45 +240,39 @@ public sealed class FilterStateResolver
             return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : [projectId], FilterUpdateSource.Query, null, null);
         }
 
-        if (!string.IsNullOrWhiteSpace(localProjectId))
-        {
-            decisions.Add("local bridge supplied projectId");
-            return ([localProjectId], localSource, null, null);
-        }
-
-        if (!string.IsNullOrWhiteSpace(localProjectAlias))
-        {
-            decisions.Add("local bridge supplied project alias");
-            var projectId = await ResolveProjectIdAsync(localProjectAlias, cancellationToken);
-            if (string.IsNullOrWhiteSpace(projectId))
-            {
-                issues.Add($"local project alias '{localProjectAlias}' could not be resolved");
-            }
-            return (string.IsNullOrWhiteSpace(projectId) ? Array.Empty<string>() : [projectId], localSource, null, null);
-        }
-
         return (Array.Empty<string>(), FilterUpdateSource.Default, null, null);
     }
 
     private static int? ResolveScalar(
         int? queryValue,
         int? localValue,
+        bool hasLocalOverride,
         ICollection<string> decisions,
         ref FilterUpdateSource lastUpdateSource,
         string label,
         FilterUpdateSource localSource)
     {
+        if (hasLocalOverride)
+        {
+            lastUpdateSource = localSource;
+            if (localValue.HasValue)
+            {
+                decisions.Add($"local bridge supplied {label}");
+                return localValue.Value;
+            }
+
+            if (queryValue.HasValue)
+            {
+                decisions.Add($"local bridge cleared {label}");
+            }
+
+            return null;
+        }
+
         if (queryValue.HasValue)
         {
             lastUpdateSource = FilterUpdateSource.Query;
             return queryValue.Value;
-        }
-
-        if (localValue.HasValue)
-        {
-            decisions.Add($"local bridge supplied {label}");
-            lastUpdateSource = localSource;
-            return localValue.Value;
         }
 
         return null;
@@ -270,17 +303,27 @@ public sealed class FilterStateResolver
         ref FilterUpdateSource lastUpdateSource,
         FilterUpdateSource localSource)
     {
+        if (localState is not null)
+        {
+            lastUpdateSource = localSource;
+            if (localState.SprintId.HasValue)
+            {
+                decisions.Add("local bridge supplied sprintId");
+                return new FilterTimeSelection(FilterTimeMode.Sprint, SprintId: localState.SprintId);
+            }
+
+            if (context.SprintId.HasValue)
+            {
+                decisions.Add("local bridge cleared sprintId");
+            }
+
+            return new FilterTimeSelection(FilterTimeMode.Sprint);
+        }
+
         if (context.SprintId.HasValue)
         {
             lastUpdateSource = FilterUpdateSource.Query;
             return new FilterTimeSelection(FilterTimeMode.Sprint, SprintId: context.SprintId);
-        }
-
-        if (localState?.SprintId.HasValue == true)
-        {
-            decisions.Add("local bridge supplied sprintId");
-            lastUpdateSource = localSource;
-            return new FilterTimeSelection(FilterTimeMode.Sprint, SprintId: localState.SprintId);
         }
 
         if (context.FromSprintId.HasValue || context.ToSprintId.HasValue)
@@ -299,18 +342,25 @@ public sealed class FilterStateResolver
         ref FilterUpdateSource lastUpdateSource,
         FilterUpdateSource localSource)
     {
-        var start = context.FromSprintId ?? localState?.FromSprintId;
-        var end = context.ToSprintId ?? localState?.ToSprintId;
+        var start = localState is not null ? localState.FromSprintId : context.FromSprintId;
+        var end = localState is not null ? localState.ToSprintId : context.ToSprintId;
         var source = FilterUpdateSource.Default;
 
-        if (context.FromSprintId.HasValue || context.ToSprintId.HasValue)
+        if (localState is not null)
+        {
+            source = localSource;
+            if (localState.FromSprintId.HasValue || localState.ToSprintId.HasValue)
+            {
+                decisions.Add("local bridge supplied sprint range");
+            }
+            else if (context.FromSprintId.HasValue || context.ToSprintId.HasValue)
+            {
+                decisions.Add("local bridge cleared sprint range");
+            }
+        }
+        else if (context.FromSprintId.HasValue || context.ToSprintId.HasValue)
         {
             source = FilterUpdateSource.Query;
-        }
-        else if (localState?.FromSprintId.HasValue == true || localState?.ToSprintId.HasValue == true)
-        {
-            decisions.Add("local bridge supplied sprint range");
-            source = localSource;
         }
 
         if (start.HasValue && end.HasValue && start.Value > end.Value)
@@ -335,6 +385,44 @@ public sealed class FilterStateResolver
         ref FilterUpdateSource lastUpdateSource,
         FilterUpdateSource localSource)
     {
+        if (localState is not null)
+        {
+            lastUpdateSource = localSource;
+
+            if (localState.RollingWindow.HasValue)
+            {
+                if (localState.RollingWindow <= 0 || localState.RollingUnit is null)
+                {
+                    issues.Add("rolling time selection requires a positive rolling window and explicit unit");
+                    return new FilterTimeSelection(FilterTimeMode.Rolling);
+                }
+
+                decisions.Add("local bridge supplied rolling window");
+                return new FilterTimeSelection(
+                    FilterTimeMode.Rolling,
+                    SprintId: localState.SprintId,
+                    RollingWindow: localState.RollingWindow,
+                    RollingUnit: localState.RollingUnit ?? FilterTimeUnit.Days);
+            }
+
+            if (localState.SprintId.HasValue)
+            {
+                decisions.Add("local bridge supplied rolling sprintId");
+                return new FilterTimeSelection(
+                    FilterTimeMode.Rolling,
+                    SprintId: localState.SprintId,
+                    RollingWindow: DefaultRollingDays,
+                    RollingUnit: FilterTimeUnit.Days);
+            }
+
+            if (context.SprintId.HasValue || context.RollingWindow.HasValue || context.RollingUnit.HasValue)
+            {
+                decisions.Add("local bridge cleared rolling selection");
+            }
+
+            return new FilterTimeSelection(FilterTimeMode.Rolling, RollingWindow: DefaultRollingDays, RollingUnit: FilterTimeUnit.Days);
+        }
+
         if (context.SprintId.HasValue)
         {
             decisions.Add("query sprintId normalized to rolling sprint window");
@@ -356,22 +444,6 @@ public sealed class FilterStateResolver
                 FilterTimeMode.Rolling,
                 RollingWindow: context.RollingWindow,
                 RollingUnit: context.RollingUnit);
-        }
-
-        if (localState?.RollingWindow.HasValue == true)
-        {
-            if (localState.RollingWindow <= 0 || localState.RollingUnit is null)
-            {
-                issues.Add("rolling time selection requires a positive rolling window and explicit unit");
-                return new FilterTimeSelection(FilterTimeMode.Rolling);
-            }
-
-            lastUpdateSource = localSource;
-            return new FilterTimeSelection(
-                FilterTimeMode.Rolling,
-                SprintId: localState.SprintId,
-                RollingWindow: localState.RollingWindow,
-                RollingUnit: localState.RollingUnit ?? FilterTimeUnit.Days);
         }
 
         decisions.Add($"default rolling window applied ({DefaultRollingDays} days)");

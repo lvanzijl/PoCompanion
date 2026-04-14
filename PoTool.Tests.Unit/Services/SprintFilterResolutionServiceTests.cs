@@ -68,6 +68,8 @@ public sealed class SprintFilterResolutionServiceTests
         Assert.AreEqual(new DateTimeOffset(2026, 2, 1, 0, 0, 0, TimeSpan.Zero), resolution.EffectiveFilter.RangeStartUtc);
         Assert.AreEqual(new DateTimeOffset(2026, 2, 28, 0, 0, 0, TimeSpan.Zero), resolution.EffectiveFilter.RangeEndUtc);
         CollectionAssert.AreEqual(Array.Empty<string>(), resolution.Validation.InvalidFields.ToArray());
+        Assert.AreEqual("Sprint 42", resolution.SprintLabels[42]);
+        Assert.AreEqual("Sprint 43", resolution.SprintLabels[43]);
     }
 
     [TestMethod]

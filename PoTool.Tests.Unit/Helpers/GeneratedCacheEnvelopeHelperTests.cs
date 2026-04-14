@@ -21,7 +21,9 @@ public sealed class GeneratedCacheEnvelopeHelperTests
                 RequestedFilter = CreateSprintFilter(),
                 EffectiveFilter = CreateSprintFilter(),
                 InvalidFields = Array.Empty<string>(),
-                ValidationMessages = Array.Empty<FilterValidationIssueDto>()
+                ValidationMessages = Array.Empty<FilterValidationIssueDto>(),
+                TeamLabels = new Dictionary<int, string>(),
+                SprintLabels = new Dictionary<int, string>()
             },
             Reason = "ready",
             RetryAfterSeconds = (int?)null
@@ -35,7 +37,9 @@ public sealed class GeneratedCacheEnvelopeHelperTests
                 RequestedFilter = data.RequestedFilter,
                 EffectiveFilter = data.EffectiveFilter,
                 InvalidFields = data.InvalidFields,
-                ValidationMessages = data.ValidationMessages
+                ValidationMessages = data.ValidationMessages,
+                TeamLabels = data.TeamLabels,
+                SprintLabels = data.SprintLabels
             });
 
         Assert.AreEqual(DataStateDto.Available, response.State);
@@ -102,6 +106,8 @@ public sealed class GeneratedCacheEnvelopeHelperTests
         public required SprintFilterContextDto EffectiveFilter { get; init; }
         public required IReadOnlyList<string> InvalidFields { get; init; }
         public required IReadOnlyList<FilterValidationIssueDto> ValidationMessages { get; init; }
+        public required IReadOnlyDictionary<int, string> TeamLabels { get; init; }
+        public required IReadOnlyDictionary<int, string> SprintLabels { get; init; }
     }
 
     private sealed record TestEnvelope<T> : IGeneratedDataStateEnvelope<T>

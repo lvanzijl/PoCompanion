@@ -1,5 +1,29 @@
 [
   {
+    "date": "2026-04-14",
+    "type": "Fixed",
+    "title": "PR delivery and sprint activity pages now use the shared global filter architecture end-to-end",
+    "impact": "PR Delivery Insights and Sprint Activity now open and reload from the shared team and sprint filter state instead of maintaining page-local filters, and Pull Request Insights no longer uses its own fallback sprint recovery logic, so navigation between filtered pages keeps a single consistent effective filter state.",
+    "area": "Delivery / Pull Requests / Trends",
+    "link": "/home/pr-delivery-insights"
+  },
+  {
+    "date": "2026-04-14",
+    "type": "Fixed",
+    "title": "Shared team and sprint filters now stay valid during in-page filter changes",
+    "impact": "Sprint Execution, Portfolio Delivery, Portfolio Flow Trend, Delivery Trends, and Pipeline Insights now re-resolve team and sprint changes through the shared filter layer immediately instead of relying on page-local resets or follow-up navigation timing, and shared team/sprint labels remain readable while Health Overview now surfaces canonical filter corrections when the backend normalizes filter scope.",
+    "area": "Delivery / Trends / Health / Pipelines",
+    "link": "/home/delivery/execution"
+  },
+  {
+    "date": "2026-04-13",
+    "type": "Fixed",
+    "title": "Sprint-based pages now open with a valid shared filter state and readable filter labels",
+    "impact": "Sprint Trends, Sprint Delivery, and other shared filter pages now auto-resolve a valid team and sprint window before their first query runs, keep the resolved defaults in the URL, and show readable team and sprint names in shared filter summaries and canonical filter notices instead of raw IDs.",
+    "area": "Delivery / Trends / Pull Requests / Pipelines",
+    "link": "/home/delivery/sprint"
+  },
+  {
     "date": "2026-04-13",
     "type": "Fixed",
     "title": "TFS verification now validates analytics fields against recent work item samples",

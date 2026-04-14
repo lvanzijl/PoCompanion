@@ -9,7 +9,9 @@ namespace PoTool.Api.Services;
 public sealed record SprintFilterResolution(
     SprintFilterContext RequestedFilter,
     SprintEffectiveFilter EffectiveFilter,
-    FilterValidationResult Validation);
+    FilterValidationResult Validation,
+    IReadOnlyDictionary<int, string> TeamLabels,
+    IReadOnlyDictionary<int, string> SprintLabels);
 
 public sealed record SprintFilterBoundaryRequest(
     int? ProductOwnerId = null,
@@ -93,6 +95,14 @@ public sealed class SprintFilterResolutionService
             resolvedTime.PreviousSprintId);
 
         var validation = FilterValidationResult.FromIssues(issues);
+        var teamLabels = await CanonicalFilterDisplayLabelLoader.LoadTeamLabelsAsync(
+            _context,
+            CanonicalFilterDisplayLabelLoader.CollectTeamIds(requestedFilter.TeamIds, effectiveFilter.Context.TeamIds),
+            cancellationToken);
+        var sprintLabels = await CanonicalFilterDisplayLabelLoader.LoadSprintLabelsAsync(
+            _context,
+            CollectSprintIds(requestedFilter.Time, effectiveFilter.Context.Time, effectiveFilter),
+            cancellationToken);
 
         _logger.LogInformation(
             "Resolved sprint filter for {Boundary}. RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}; OwnerDerivedProductIds: {@OwnerDerivedProductIds}; FinalProductScope: {@FinalProductScope}; FinalIterationScope: {@FinalIterationScope}; FinalAreaScope: {@FinalAreaScope}; TimeRange: {RangeStartUtc} - {RangeEndUtc}; SprintScope: {SprintId}; SprintRange: {@SprintIds}; CurrentSprint: {CurrentSprintId}; PreviousSprint: {PreviousSprintId}",
@@ -111,7 +121,7 @@ public sealed class SprintFilterResolutionService
             effectiveFilter.CurrentSprintId,
             effectiveFilter.PreviousSprintId);
 
-        return new SprintFilterResolution(requestedFilter, effectiveFilter, validation);
+        return new SprintFilterResolution(requestedFilter, effectiveFilter, validation, teamLabels, sprintLabels);
     }
 
     public static SprintQueryResponseDto<T> ToResponse<T>(T data, SprintFilterResolution resolution)
@@ -130,8 +140,39 @@ public sealed class SprintFilterResolutionService
                     Field = issue.Field,
                     Message = issue.Message
                 })
-                .ToArray()
+                .ToArray(),
+            TeamLabels = resolution.TeamLabels,
+            SprintLabels = resolution.SprintLabels
         };
+    }
+
+    private static IReadOnlyList<int> CollectSprintIds(
+        FilterTimeSelection requestedTime,
+        FilterTimeSelection effectiveTime,
+        SprintEffectiveFilter effectiveFilter)
+    {
+        var sprintIds = CanonicalFilterDisplayLabelLoader.CollectSprintIds(requestedTime, effectiveTime).ToList();
+        if (effectiveFilter.SprintId.HasValue)
+        {
+            sprintIds.Add(effectiveFilter.SprintId.Value);
+        }
+
+        sprintIds.AddRange(effectiveFilter.SprintIds);
+        if (effectiveFilter.CurrentSprintId.HasValue)
+        {
+            sprintIds.Add(effectiveFilter.CurrentSprintId.Value);
+        }
+
+        if (effectiveFilter.PreviousSprintId.HasValue)
+        {
+            sprintIds.Add(effectiveFilter.PreviousSprintId.Value);
+        }
+
+        return sprintIds
+            .Where(id => id > 0)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
     }
 
     private static SprintFilterContext MapRequestedFilter(SprintFilterBoundaryRequest request)

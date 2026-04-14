@@ -577,11 +577,6 @@
                 await LoadSprintsForTeamAsync(_selectedTeamId.Value);
             }
 
-            if (_selectedSprintId.HasValue && (!_selectedTeamId.HasValue || !_sprints.Any(s => s.Id == _selectedSprintId.Value)))
-            {
-                await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { SprintId = null });
-            }
-
             if (_selectedTeamId.HasValue && _selectedSprintId.HasValue)
             {
                 await LoadInsightsAsync();

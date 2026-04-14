@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
+using PoTool.Shared.Planning;
 using PoTool.Shared.Settings;
 using System.Net.Http;
 
@@ -55,13 +56,70 @@ public sealed class GlobalFilterStoreTests
     {
         var store = CreateStore();
 
-        await store.TrackNavigationAsync("http://localhost/home/delivery/sprint");
+        await store.TrackNavigationAsync("http://localhost/home/delivery/sprint", 42);
 
         Assert.IsNotNull(store.CurrentUsage);
         Assert.AreEqual("SprintTrend", store.CurrentUsage.PageName);
-        Assert.IsTrue(store.CurrentUsage.MissingTeam);
-        Assert.IsTrue(store.CurrentUsage.MissingSprint);
-        Assert.AreEqual(FilterResolutionStatus.Unresolved, store.CurrentUsage.Status);
+        Assert.AreEqual(7, store.CurrentState.TeamId);
+        Assert.AreEqual(701, store.CurrentState.Time.SprintId);
+        Assert.IsFalse(store.CurrentUsage.MissingTeam);
+        Assert.IsFalse(store.CurrentUsage.MissingSprint);
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
+    }
+
+    [TestMethod]
+    public async Task TrackNavigation_RangeRouteWithoutSelections_DefaultsToHistoricalSprintWindow()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/home/delivery/portfolio", 42);
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual("PortfolioDelivery", store.CurrentUsage.PageName);
+        Assert.AreEqual(7, store.CurrentState.TeamId);
+        Assert.AreEqual(FilterTimeMode.Range, store.CurrentState.Time.Mode);
+        Assert.AreEqual(697, store.CurrentState.Time.StartSprintId);
+        Assert.AreEqual(701, store.CurrentState.Time.EndSprintId);
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
+    }
+
+    [TestMethod]
+    public async Task SetStateAsync_UiTeamChangeAutoResolvesSprintForNewTeam()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/home/delivery/execution?teamId=7&sprintId=701&timeMode=Sprint", 42);
+        await store.SetStateAsync(
+            "http://localhost/home/delivery/execution?teamId=7&sprintId=701&timeMode=Sprint",
+            42,
+            new FilterLocalBridgeState(TeamId: 8, SprintId: null),
+            FilterUpdateSource.Ui);
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(8, store.CurrentState.TeamId);
+        Assert.AreEqual(FilterTimeMode.Sprint, store.CurrentState.Time.Mode);
+        Assert.AreEqual(805, store.CurrentState.Time.SprintId);
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
+    }
+
+    [TestMethod]
+    public async Task SetStateAsync_UiTeamChangeAutoResolvesRangeForNewTeam()
+    {
+        var store = CreateStore();
+
+        await store.TrackNavigationAsync("http://localhost/home/delivery/portfolio?teamId=7&fromSprintId=697&toSprintId=701&timeMode=Range", 42);
+        await store.SetStateAsync(
+            "http://localhost/home/delivery/portfolio?teamId=7&fromSprintId=697&toSprintId=701&timeMode=Range",
+            42,
+            new FilterLocalBridgeState(TeamId: 8, FromSprintId: null, ToSprintId: null),
+            FilterUpdateSource.Ui);
+
+        Assert.IsNotNull(store.CurrentUsage);
+        Assert.AreEqual(8, store.CurrentState.TeamId);
+        Assert.AreEqual(FilterTimeMode.Range, store.CurrentState.Time.Mode);
+        Assert.AreEqual(801, store.CurrentState.Time.StartSprintId);
+        Assert.AreEqual(805, store.CurrentState.Time.EndSprintId);
+        Assert.AreEqual(FilterResolutionStatus.ResolvedWithNormalization, store.CurrentUsage.Status);
     }
 
     [TestMethod]
@@ -156,7 +214,11 @@ public sealed class GlobalFilterStoreTests
         var projectService = new ProjectService(new StubProjectsClient());
         var projectIdentityMapper = new ProjectIdentityMapper(projectService);
         var resolver = new FilterStateResolver(projectIdentityMapper);
-        var store = new GlobalFilterStore(NullLogger<GlobalFilterStore>.Instance, resolver);
+        var store = new GlobalFilterStore(
+            NullLogger<GlobalFilterStore>.Instance,
+            resolver,
+            CreateAutoResolveService(),
+            CreateLabelService());
         var correctionService = new GlobalFilterCorrectionService(
             store,
             new GlobalFilterRouteService(projectIdentityMapper),
@@ -209,8 +271,22 @@ public sealed class GlobalFilterStoreTests
         var projectService = new ProjectService(new StubProjectsClient());
         var projectIdentityMapper = new ProjectIdentityMapper(projectService);
         var resolver = new FilterStateResolver(projectIdentityMapper);
-        return new GlobalFilterStore(NullLogger<GlobalFilterStore>.Instance, resolver);
+        return new GlobalFilterStore(
+            NullLogger<GlobalFilterStore>.Instance,
+            resolver,
+            CreateAutoResolveService(),
+            CreateLabelService());
     }
+
+    private static GlobalFilterAutoResolveService CreateAutoResolveService()
+        => new(
+            new ProductService(new StubProductsClient()),
+            new TeamService(new StubTeamsClient()),
+            new SprintService(new StubSprintsClient()),
+            new GlobalFilterContextResolver());
+
+    private static GlobalFilterLabelService CreateLabelService()
+        => new(new TeamService(new StubTeamsClient()), new SprintService(new StubSprintsClient()));
 
     private sealed class StubProjectsClient : IProjectsClient
     {
@@ -247,5 +323,128 @@ public sealed class GlobalFilterStoreTests
 
         public Task<DataStateResponseDtoOfProjectPlanningSummaryDto> GetPlanningSummaryAsync(string alias, CancellationToken cancellationToken)
             => throw new NotSupportedException();
+    }
+
+    private sealed class StubProductsClient : IProductsClient
+    {
+        private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-04-04T00:00:00Z");
+        private static readonly ProductDto PrimaryProduct = new(11, 42, "Incident Response Control", [1000], 0, ProductPictureType.Default, 9, null, Now, Now, Now, [7], []);
+        private static readonly ProductDto SecondaryProduct = new(12, 42, "Crew Safety Operations", [2000], 1, ProductPictureType.Default, 11, null, Now, Now, Now, [8], []);
+
+        public Task<ICollection<ProductDto>> GetProductsByOwnerAsync(int? productOwnerId)
+            => Task.FromResult<ICollection<ProductDto>>([PrimaryProduct, SecondaryProduct]);
+
+        public Task<ICollection<ProductDto>> GetProductsByOwnerAsync(int? productOwnerId, CancellationToken cancellationToken)
+            => Task.FromResult<ICollection<ProductDto>>([PrimaryProduct, SecondaryProduct]);
+
+        public Task<ProductDto> CreateProductAsync(CreateProductRequest request) => throw new NotSupportedException();
+        public Task<ProductDto> CreateProductAsync(CreateProductRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ProductDto> GetProductByIdAsync(int id) => throw new NotSupportedException();
+        public Task<ProductDto> GetProductByIdAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ProductDto> UpdateProductAsync(int id, UpdateProductRequest request) => throw new NotSupportedException();
+        public Task<ProductDto> UpdateProductAsync(int id, UpdateProductRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task DeleteProductAsync(int id) => throw new NotSupportedException();
+        public Task DeleteProductAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ICollection<PlanningEpicProjectionDto>> GetPlanningProjectionsAsync(int productId) => throw new NotSupportedException();
+        public Task<ICollection<PlanningEpicProjectionDto>> GetPlanningProjectionsAsync(int productId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ICollection<ProductDto>> ReorderProductsAsync(ReorderProductsRequest request) => throw new NotSupportedException();
+        public Task<ICollection<ProductDto>> ReorderProductsAsync(ReorderProductsRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task LinkTeamToProductAsync(int productId, int teamId) => throw new NotSupportedException();
+        public Task LinkTeamToProductAsync(int productId, int teamId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task UnlinkTeamFromProductAsync(int productId, int teamId) => throw new NotSupportedException();
+        public Task UnlinkTeamFromProductAsync(int productId, int teamId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ICollection<ProductDto>> GetAllProductsAsync() => throw new NotSupportedException();
+        public Task<ICollection<ProductDto>> GetAllProductsAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ICollection<ProductDto>> GetSelectableProductsAsync(int? productOwnerId) => throw new NotSupportedException();
+        public Task<ICollection<ProductDto>> GetSelectableProductsAsync(int? productOwnerId, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<ProductDto> ChangeProductOwnerAsync(int productId, ChangeProductOwnerRequest request) => throw new NotSupportedException();
+        public Task<ProductDto> ChangeProductOwnerAsync(int productId, ChangeProductOwnerRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<RepositoryDto> CreateRepositoryAsync(int productId, CreateRepositoryRequest request) => throw new NotSupportedException();
+        public Task<RepositoryDto> CreateRepositoryAsync(int productId, CreateRepositoryRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task DeleteRepositoryAsync(int productId, int repositoryId) => throw new NotSupportedException();
+        public Task DeleteRepositoryAsync(int productId, int repositoryId, CancellationToken cancellationToken) => throw new NotSupportedException();
+    }
+
+    private sealed class StubTeamsClient : ITeamsClient
+    {
+        private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-04-04T00:00:00Z");
+        private static readonly TeamDto TeamSeven = new(7, "Atlas", "\\Payments\\Atlas", false, TeamPictureType.Default, 0, null, Now, Now, "Payments Platform", "atlas", "Atlas", Now);
+        private static readonly TeamDto TeamEight = new(8, "Beacon", "\\Payments\\Beacon", false, TeamPictureType.Default, 1, null, Now, Now, "Payments Platform", "beacon", "Beacon", Now);
+
+        public Task<ICollection<TeamDto>> GetAllTeamsAsync(bool? includeArchived)
+            => Task.FromResult<ICollection<TeamDto>>([TeamSeven, TeamEight]);
+
+        public Task<ICollection<TeamDto>> GetAllTeamsAsync(bool? includeArchived, CancellationToken cancellationToken)
+            => Task.FromResult<ICollection<TeamDto>>([TeamSeven, TeamEight]);
+
+        public Task<TeamDto> GetTeamByIdAsync(int id)
+            => GetTeamByIdAsync(id, CancellationToken.None);
+
+        public Task<TeamDto> GetTeamByIdAsync(int id, CancellationToken cancellationToken)
+            => id switch
+            {
+                7 => Task.FromResult(TeamSeven),
+                8 => Task.FromResult(TeamEight),
+                _ => throw new ApiException("Not found", 404, string.Empty, new Dictionary<string, IEnumerable<string>>(), null)
+            };
+
+        public Task<TeamDto> CreateTeamAsync(CreateTeamRequest request) => throw new NotSupportedException();
+        public Task<TeamDto> CreateTeamAsync(CreateTeamRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<TeamDto> UpdateTeamAsync(int id, UpdateTeamRequest request) => throw new NotSupportedException();
+        public Task<TeamDto> UpdateTeamAsync(int id, UpdateTeamRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task DeleteTeamAsync(int id) => throw new NotSupportedException();
+        public Task DeleteTeamAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<TeamDto> ArchiveTeamAsync(int id, ArchiveTeamRequest request) => throw new NotSupportedException();
+        public Task<TeamDto> ArchiveTeamAsync(int id, ArchiveTeamRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+    }
+
+    private sealed class StubSprintsClient : ISprintsClient
+    {
+        private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-04-04T00:00:00Z");
+        private static readonly SprintDto[] TeamSevenSprints =
+        [
+            new(697, 7, "697", "\\Payments\\Sprint 7", "Sprint 7", Now.AddDays(-56), Now.AddDays(-43), "past", Now),
+            new(698, 7, "698", "\\Payments\\Sprint 8", "Sprint 8", Now.AddDays(-42), Now.AddDays(-29), "past", Now),
+            new(699, 7, "699", "\\Payments\\Sprint 9", "Sprint 9", Now.AddDays(-28), Now.AddDays(-15), "past", Now),
+            new(700, 7, "700", "\\Payments\\Sprint 10", "Sprint 10", Now.AddDays(-14), Now.AddDays(-1), "past", Now),
+            new(701, 7, "701", "\\Payments\\Sprint 11", "Sprint 11", Now, Now.AddDays(13), "current", Now)
+        ];
+        private static readonly SprintDto[] TeamEightSprints =
+        [
+            new(801, 8, "801", "\\Payments\\Beacon\\Sprint 1", "Sprint 1", Now.AddDays(-56), Now.AddDays(-43), "past", Now),
+            new(802, 8, "802", "\\Payments\\Beacon\\Sprint 2", "Sprint 2", Now.AddDays(-42), Now.AddDays(-29), "past", Now),
+            new(803, 8, "803", "\\Payments\\Beacon\\Sprint 3", "Sprint 3", Now.AddDays(-28), Now.AddDays(-15), "past", Now),
+            new(804, 8, "804", "\\Payments\\Beacon\\Sprint 4", "Sprint 4", Now.AddDays(-14), Now.AddDays(-1), "past", Now),
+            new(805, 8, "805", "\\Payments\\Beacon\\Sprint 5", "Sprint 5", Now, Now.AddDays(13), "current", Now)
+        ];
+
+        public Task<ICollection<SprintDto>> GetSprintsForTeamAsync(int? teamId)
+            => GetSprintsForTeamAsync(teamId, CancellationToken.None);
+
+        public Task<ICollection<SprintDto>> GetSprintsForTeamAsync(int? teamId, CancellationToken cancellationToken)
+            => Task.FromResult<ICollection<SprintDto>>(teamId switch
+            {
+                7 => TeamSevenSprints,
+                8 => TeamEightSprints,
+                _ => []
+            });
+
+        public Task<SprintDto> GetCurrentSprintForTeamAsync(int? teamId)
+            => GetCurrentSprintForTeamAsync(teamId, CancellationToken.None);
+
+        public Task<SprintDto> GetCurrentSprintForTeamAsync(int? teamId, CancellationToken cancellationToken)
+        {
+            if (teamId == 7)
+            {
+                return Task.FromResult(TeamSevenSprints[^1]);
+            }
+
+            if (teamId == 8)
+            {
+                return Task.FromResult(TeamEightSprints[^1]);
+            }
+
+            throw new ApiException("Not found", 404, string.Empty, new Dictionary<string, IEnumerable<string>>(), null);
+        }
     }
 }

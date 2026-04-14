@@ -2,13 +2,19 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
+@using PoTool.Client.Services
 @using PoTool.Shared.DataState
 @using PoTool.Shared.Metrics
 @using System.Web
 @inject MetricsStateService MetricsStateService
 @inject IProfileService ProfileService
+@inject SprintService SprintService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
+@inject GlobalFilterRouteService GlobalFilterRouteService
+@inject PageFilterExecutionGate PageFilterExecutionGate
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>Sprint Activity - PO Companion</PageTitle>
 
@@ -40,7 +46,7 @@
         <DataStatePanel State="@_dataState.State"
                         Subject="Sprint activity"
                         Reason="@_dataState.Reason"
-                        ProductOwnerId="@_productOwnerId"
+                        ProductOwnerId="@_profileId"
                         OnRecovery="@ReloadActivityAsync" />
     }
     else if (_dataState.State == DataStateDto.Failed)
@@ -221,13 +227,17 @@
     private WorkItemActivityDetailsDto? _details;
     private CanonicalFilterNoticeModel? _filterNotice;
     private List<BreadcrumbItem> _breadcrumbs = new();
-    private int? _productOwnerId;
-    private DateTimeOffset? _periodStartUtc;
-    private DateTimeOffset? _periodEndUtc;
+    private int? _profileId;
     private string? _returnView;
+    private List<SprintDto> _sprints = new();
     private List<WorkItemActivityGroup> _processedGroups = new();
     private ActivitySummary _summary = new();
     private DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>> _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.NotRequested();
+    private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Sprint
+        ? GlobalFilterStore.GetState().Time.SprintId
+        : null;
 
     // Fields that, when appearing together at the same timestamp, indicate a creation event.
     private static readonly HashSet<string> CreationIndicatorFields = new(StringComparer.OrdinalIgnoreCase)
@@ -249,6 +259,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         _breadcrumbs =
         [
             new("Home", WorkspaceRoutes.Home, icon: Icons.Material.Filled.Home),
@@ -265,28 +276,61 @@
                 return;
             }
 
-            ParseQueryParameters();
+            ParseNavigationState();
 
-            var productOwnerId = _productOwnerId;
-            if (!productOwnerId.HasValue)
-            {
-                var activeProfile = await ProfileService.GetActiveProfileAsync();
-                productOwnerId = activeProfile?.Id;
-            }
-
-            if (!productOwnerId.HasValue)
+            var activeProfile = await ProfileService.GetActiveProfileAsync();
+            _profileId = activeProfile?.Id;
+            if (!_profileId.HasValue)
             {
                 _errorMessage = "No active profile found.";
                 return;
             }
 
+            await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
+            await LoadSprintsForCurrentTeamAsync();
+            await LoadActivityAsync();
+        }
+        catch (Exception)
+        {
+            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Failed("Sprint activity could not be loaded right now.");
+            _errorMessage = null;
+            _filterNotice = null;
+            Snackbar.Add(_dataState.Reason!, Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadActivityAsync()
+    {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _details = null;
+            _filterNotice = null;
+            return;
+        }
+
+        if (!_profileId.HasValue)
+        {
+            _errorMessage = "No active profile found.";
+            return;
+        }
+
+        var selectedSprint = _selectedSprintId.HasValue
+            ? _sprints.FirstOrDefault(sprint => sprint.Id == _selectedSprintId.Value)
+            : null;
+
+        try
+        {
             _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Loading();
             var response = await MetricsStateService.GetWorkItemActivityDetailsStateAsync(
                 WorkItemId,
-                productOwnerId.Value,
-                null,
-                _periodStartUtc,
-                _periodEndUtc,
+                _profileId.Value,
+                _selectedSprintId,
+                selectedSprint?.StartUtc,
+                selectedSprint?.EndUtc,
                 CancellationToken.None);
             _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.FromResponse(response, "Sprint activity could not be loaded right now.");
             if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
@@ -316,10 +360,6 @@
             _errorMessage = null;
             _filterNotice = null;
             Snackbar.Add(_dataState.Reason!, Severity.Error);
-        }
-        finally
-        {
-            _isLoading = false;
         }
     }
 
@@ -507,38 +547,53 @@
 
     private void NavigateBack()
     {
-        var url = WorkspaceRoutes.SprintDelivery;
+        var url = WorkspaceQueryContextHelper.BuildRoute(
+            WorkspaceRoutes.SprintDelivery,
+            new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _selectedSprintId));
         if (_returnView == "zoom")
         {
-            url += "?view=zoom";
+            url += url.Contains('?', StringComparison.Ordinal) ? "&view=zoom" : "?view=zoom";
         }
         NavigationManager.NavigateTo(url);
     }
 
     private Task ReloadActivityAsync()
-        => OnInitializedAsync();
+        => LoadActivityAsync();
 
-    private void ParseQueryParameters()
+    private void ParseNavigationState()
     {
         var uri = new Uri(NavigationManager.Uri);
         var queryParams = HttpUtility.ParseQueryString(uri.Query);
-
-        if (int.TryParse(queryParams["productOwnerId"], out var ownerId))
-        {
-            _productOwnerId = ownerId;
-        }
-
-        if (DateTimeOffset.TryParse(queryParams["periodStartUtc"], out var periodStartUtc))
-        {
-            _periodStartUtc = periodStartUtc;
-        }
-
-        if (DateTimeOffset.TryParse(queryParams["periodEndUtc"], out var periodEndUtc))
-        {
-            _periodEndUtc = periodEndUtc;
-        }
-
         _returnView = queryParams["view"];
+    }
+
+    private async Task LoadSprintsForCurrentTeamAsync()
+    {
+        _sprints.Clear();
+        if (!_selectedTeamId.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            _sprints = (await SprintService.GetSprintsForTeamAsync(_selectedTeamId.Value))
+                .Where(sprint => sprint.StartUtc.HasValue)
+                .OrderByDescending(sprint => sprint.StartUtc)
+                .ToList();
+        }
+        catch
+        {
+            _sprints = new List<SprintDto>();
+        }
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
     }
 
     // ── View Models ──────────────────────────────────────────────────────────────

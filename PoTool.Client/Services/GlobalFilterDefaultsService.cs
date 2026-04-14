@@ -1,22 +1,15 @@
 using System.Text.Json;
 using PoTool.Client.Helpers;
 using PoTool.Client.Models;
-using PoTool.Shared.Settings;
 
 namespace PoTool.Client.Services;
 
 public sealed class GlobalFilterDefaultsService
 {
     private const string SessionStorageKey = "global-filter-default-routes";
-    private const int DefaultRangeWindow = 5;
-    private const int DefaultRollingDays = 30;
-
     private readonly GlobalFilterStore _globalFilterStore;
     private readonly GlobalFilterRouteService _globalFilterRouteService;
-    private readonly ProductService _productService;
-    private readonly TeamService _teamService;
-    private readonly SprintService _sprintService;
-    private readonly GlobalFilterContextResolver _contextResolver;
+    private readonly GlobalFilterAutoResolveService _autoResolveService;
     private readonly ISecureStorageService _secureStorageService;
     private readonly HashSet<string> _appliedRoutes = new(StringComparer.Ordinal);
 
@@ -25,18 +18,12 @@ public sealed class GlobalFilterDefaultsService
     public GlobalFilterDefaultsService(
         GlobalFilterStore globalFilterStore,
         GlobalFilterRouteService globalFilterRouteService,
-        ProductService productService,
-        TeamService teamService,
-        SprintService sprintService,
-        GlobalFilterContextResolver contextResolver,
+        GlobalFilterAutoResolveService autoResolveService,
         ISecureStorageService secureStorageService)
     {
         _globalFilterStore = globalFilterStore;
         _globalFilterRouteService = globalFilterRouteService;
-        _productService = productService;
-        _teamService = teamService;
-        _sprintService = sprintService;
-        _contextResolver = contextResolver;
+        _autoResolveService = autoResolveService;
         _secureStorageService = secureStorageService;
     }
 
@@ -57,10 +44,11 @@ public sealed class GlobalFilterDefaultsService
             return null;
         }
 
-        var defaultState = await CreateDefaultStateAsync(usage, activeProfileId.Value, cancellationToken);
+        var defaultState = await _autoResolveService.ResolveAsync(usage, activeProfileId, usage.LastUpdateSource, cancellationToken)
+            ?? (usage.LastUpdateSource == FilterUpdateSource.DefaultPreset ? usage.State : null);
         await MarkAppliedAsync(usage.RouteSignature);
 
-        if (defaultState is null || defaultState == usage.State)
+        if (defaultState is null)
         {
             return null;
         }
@@ -81,152 +69,6 @@ public sealed class GlobalFilterDefaultsService
             ? null
             : targetUri;
     }
-
-    private async Task<FilterState?> CreateDefaultStateAsync(
-        FilterStateResolution usage,
-        int activeProfileId,
-        CancellationToken cancellationToken)
-    {
-        var ownedProducts = (await _productService.GetProductsByOwnerAsync(activeProfileId, cancellationToken))
-            .OrderBy(product => product.Order)
-            .ThenBy(product => product.Name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var state = usage.State;
-        var defaultTeamSelection = await ResolveDefaultTeamSelectionAsync(usage, state, ownedProducts, cancellationToken);
-
-        var nextState = state with
-        {
-            ProductIds = ResolveProductIds(usage, state),
-            TeamId = defaultTeamSelection?.TeamId ?? state.TeamId,
-            Time = ResolveDefaultTime(usage, state.Time, defaultTeamSelection)
-        };
-
-        return nextState;
-    }
-
-    private static IReadOnlyList<int> ResolveProductIds(
-        FilterStateResolution usage,
-        FilterState state)
-    {
-        if (!state.AllProducts || !usage.UsesProduct || usage.HasRouteProductAuthority)
-        {
-            return state.ProductIds;
-        }
-
-        return Array.Empty<int>();
-    }
-
-    private async Task<DefaultTeamSelection?> ResolveDefaultTeamSelectionAsync(
-        FilterStateResolution usage,
-        FilterState state,
-        IReadOnlyList<ProductDto> ownedProducts,
-        CancellationToken cancellationToken)
-    {
-        var requiresTeamContext = usage.MissingTeam || usage.MissingSprint || usage.UsesTeam;
-        if (!requiresTeamContext)
-        {
-            return null;
-        }
-
-        var candidateTeamIds = BuildCandidateTeamIds(state, ownedProducts, _contextResolver);
-        if (candidateTeamIds.Count == 0)
-        {
-            if (state.PrimaryProductId.HasValue)
-            {
-                return null;
-            }
-
-            candidateTeamIds = (await _teamService.GetAllTeamsAsync(includeArchived: false, cancellationToken))
-                .OrderBy(team => team.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(team => team.Id)
-                .ToList();
-        }
-
-        foreach (var teamId in candidateTeamIds)
-        {
-            var currentSprint = await _sprintService.GetCurrentSprintForTeamAsync(teamId, cancellationToken);
-            if (currentSprint is not null)
-            {
-                return new DefaultTeamSelection(teamId, currentSprint, null);
-            }
-
-            var sprints = (await _sprintService.GetSprintsForTeamAsync(teamId, cancellationToken))
-                .Where(sprint => sprint.StartUtc.HasValue)
-                .OrderBy(sprint => sprint.StartUtc)
-                .ToList();
-            if (sprints.Count > 0)
-            {
-                return new DefaultTeamSelection(teamId, sprints[^1], sprints);
-            }
-        }
-
-        return null;
-    }
-
-    private static List<int> BuildCandidateTeamIds(
-        FilterState state,
-        IReadOnlyList<ProductDto> ownedProducts,
-        GlobalFilterContextResolver contextResolver)
-    {
-        if (state.TeamId.HasValue)
-        {
-            return [state.TeamId.Value];
-        }
-
-        return contextResolver.GetAllowedTeamIds(state.PrimaryProductId, ownedProducts).ToList();
-    }
-
-    private static FilterTimeSelection ResolveDefaultTime(
-        FilterStateResolution usage,
-        FilterTimeSelection currentTime,
-        DefaultTeamSelection? defaultTeamSelection)
-    {
-        if (currentTime.IsResolved || defaultTeamSelection is null)
-        {
-            return currentTime;
-        }
-
-        return currentTime.Mode switch
-        {
-            FilterTimeMode.Sprint when defaultTeamSelection.CurrentSprint is not null
-                => new FilterTimeSelection(FilterTimeMode.Sprint, SprintId: defaultTeamSelection.CurrentSprint.Id),
-            FilterTimeMode.Range => BuildRangeSelection(defaultTeamSelection),
-            FilterTimeMode.Rolling => new FilterTimeSelection(
-                FilterTimeMode.Rolling,
-                RollingWindow: currentTime.RollingWindow ?? DefaultRollingDays,
-                RollingUnit: currentTime.RollingUnit ?? FilterTimeUnit.Days),
-            _ => currentTime
-        };
-    }
-
-    private static FilterTimeSelection BuildRangeSelection(DefaultTeamSelection selection)
-    {
-        var sprints = (selection.AllSprints ?? [])
-            .Where(sprint => sprint.StartUtc.HasValue)
-            .OrderBy(sprint => sprint.StartUtc)
-            .ToList();
-
-        if (selection.CurrentSprint is null)
-        {
-            return FilterTimeSelection.Snapshot;
-        }
-
-        if (sprints.Count == 0)
-        {
-            return new FilterTimeSelection(FilterTimeMode.Range, StartSprintId: selection.CurrentSprint.Id, EndSprintId: selection.CurrentSprint.Id);
-        }
-
-        var currentIndex = sprints.FindIndex(sprint => sprint.Id == selection.CurrentSprint.Id);
-        if (currentIndex < 0)
-        {
-            currentIndex = sprints.Count - 1;
-        }
-
-        var startIndex = Math.Max(0, currentIndex - (DefaultRangeWindow - 1));
-        return new FilterTimeSelection(FilterTimeMode.Range, StartSprintId: sprints[startIndex].Id, EndSprintId: sprints[currentIndex].Id);
-    }
-
     private async Task EnsureLoadedAsync()
     {
         if (_loaded)
@@ -268,6 +110,4 @@ public sealed class GlobalFilterDefaultsService
 
         await _secureStorageService.SetAsync(SessionStorageKey, JsonSerializer.Serialize(_appliedRoutes.OrderBy(static item => item)));
     }
-
-    private sealed record DefaultTeamSelection(int TeamId, SprintDto? CurrentSprint, IReadOnlyList<SprintDto>? AllSprints);
 }

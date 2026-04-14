@@ -553,8 +553,6 @@
     private List<BreadcrumbItem> _breadcrumbs = new();
 
     // Filters
-    private DateTime? _fromDate;
-    private DateTime? _toDate;
     private string? _selectedRepository;
     private List<TeamDto> _teams = new();
     private List<string> _availableRepositories = new();
@@ -576,11 +574,6 @@
     private bool _prDrawerOpen;
     private PrScatterPointDto? _drawerPr;
 
-    /// <summary>
-    /// Fallback sprint duration (days) used when the selected sprint has no EndUtc set.
-    /// Most teams use 2-week sprints; this is applied only as a last resort.
-    /// </summary>
-    private const int DefaultSprintDurationDays = 14;
     private IDisposable? _filterSubscription;
     private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
     private int? _selectedSprintId => GlobalFilterStore.GetState().Time.SprintId;
@@ -596,24 +589,11 @@
             _profileId = activeProfile?.Id;
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
 
-            // Default: last 6 months
-            _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
-            _toDate   = DateTime.UtcNow.Date;
-
             await SyncStoreFromCurrentRouteAsync();
 
             if (_selectedTeamId.HasValue)
             {
                 await LoadSprintsForTeamAsync(_selectedTeamId.Value);
-                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
-                {
-                    await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
-                    {
-                        SprintId = null,
-                        RollingWindow = 180,
-                        RollingUnit = FilterTimeUnit.Days
-                    });
-                }
             }
 
             await LoadInsightsAsync();
@@ -646,14 +626,6 @@
 
         try
         {
-            var from = _fromDate.HasValue
-                ? new DateTimeOffset(_fromDate.Value, TimeSpan.Zero)
-                : DateTimeOffset.UtcNow.AddMonths(-6);
-
-            var to = _toDate.HasValue
-                ? new DateTimeOffset(_toDate.Value.AddDays(1).AddSeconds(-1), TimeSpan.Zero)
-                : DateTimeOffset.UtcNow;
-
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.Loading();
             var response = await PullRequestStateService.GetInsightsStateAsync(_profileId!.Value, _selectedSprintId, _selectedTeamId, _selectedRepository, CancellationToken.None);
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.FromResponse(response, "Pull request insights could not be loaded right now.");

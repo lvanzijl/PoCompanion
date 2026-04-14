@@ -1,6 +1,7 @@
 @page "/home/health/overview"
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Shared.DataState
 @using SharedBuildQualityPageDto = PoTool.Shared.BuildQuality.BuildQualityPageDto
@@ -122,6 +123,8 @@
         }
         else
         {
+            <CanonicalFilterMetadataNotice Metadata="_buildQualityFilterNotice" />
+
             <MudStack Spacing="2" Class="mb-4">
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     Showing default-branch Build Quality for @GetWindowLabel().
@@ -157,6 +160,7 @@
     private SharedBuildQualityPageDto? _buildQualityPage;
     private CacheBackedClientResult<CanonicalClientResponse<SharedBuildQualityPageDto>>? _buildQualityResponse;
     private CanonicalFilterMetadata? _buildQualityFilterMetadata;
+    private CanonicalFilterNoticeModel? _buildQualityFilterNotice;
     private string? _loadError;
     private string? _selectedProductName;
     private int? _activeProfileId;
@@ -190,6 +194,7 @@
         _isLoading = true;
         _loadError = null;
         _buildQualityPage = null;
+        _buildQualityFilterNotice = null;
         _selectedProductName = null;
         await InvokeAsync(StateHasChanged);
 
@@ -217,11 +222,13 @@
             if (_buildQualityResponse.State != CacheBackedClientState.Success || _buildQualityResponse.Data is null)
             {
                 _buildQualityFilterMetadata = null;
+                _buildQualityFilterNotice = null;
                 _buildQualityPage = null;
                 return;
             }
 
             _buildQualityFilterMetadata = _buildQualityResponse.Data.FilterMetadata;
+            _buildQualityFilterNotice = CanonicalClientResponseFactory.CreateNotice(_buildQualityFilterMetadata);
             _buildQualityPage = _buildQualityResponse.Data.Data;
 
             if (ProductId.HasValue)
@@ -237,6 +244,7 @@
         catch (Exception ex)
         {
             _buildQualityFilterMetadata = null;
+            _buildQualityFilterNotice = null;
             _buildQualityResponse = CacheBackedClientResult<CanonicalClientResponse<SharedBuildQualityPageDto>>.Failed($"Build Quality overview unavailable right now: {ex.Message}");
             _buildQualityPage = null;
         }

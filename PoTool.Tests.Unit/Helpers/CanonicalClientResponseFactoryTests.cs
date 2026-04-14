@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.Helpers;
 using PoTool.Shared.Metrics;
-using PoTool.Shared.Pipelines;
 
 namespace PoTool.Tests.Unit.Helpers;
 
@@ -9,55 +8,50 @@ namespace PoTool.Tests.Unit.Helpers;
 public sealed class CanonicalClientResponseFactoryTests
 {
     [TestMethod]
-    public void CreateNotice_WithNormalizedPipelineFilter_ReportsDifferenceAndInvalidField()
+    public void CreateNotice_SprintMetadata_UsesReadableTeamAndSprintLabels()
     {
-        var response = new PipelineQueryResponseDto<string>
+        var response = new SprintQueryResponseDto<string>
         {
             Data = "ok",
-            RequestedFilter = new PipelineFilterContextDto
+            RequestedFilter = new SprintFilterContextDto
             {
-                ProductIds = new FilterSelectionDto<int> { IsAll = false, Values = [42] },
-                TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
-                RepositoryIds = new FilterSelectionDto<int> { IsAll = false, Values = [1, 2] },
+                ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+                TeamIds = new FilterSelectionDto<int> { IsAll = false, Values = [7] },
+                AreaPaths = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
                 Time = new FilterTimeSelectionDto
                 {
-                    Mode = FilterTimeSelectionModeDto.DateRange,
-                    SprintIds = [],
-                    RangeStartUtc = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
-                    RangeEndUtc = new DateTimeOffset(2026, 3, 31, 0, 0, 0, TimeSpan.Zero)
+                    Mode = FilterTimeSelectionModeDto.Sprint,
+                    SprintId = 701,
+                    SprintIds = Array.Empty<int>()
                 }
             },
-            EffectiveFilter = new PipelineFilterContextDto
+            EffectiveFilter = new SprintFilterContextDto
             {
-                ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
-                TeamIds = new FilterSelectionDto<int> { IsAll = true, Values = [] },
-                RepositoryIds = new FilterSelectionDto<int> { IsAll = false, Values = [1] },
+                ProductIds = new FilterSelectionDto<int> { IsAll = true, Values = Array.Empty<int>() },
+                TeamIds = new FilterSelectionDto<int> { IsAll = false, Values = [7] },
+                AreaPaths = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
+                IterationPaths = new FilterSelectionDto<string> { IsAll = true, Values = Array.Empty<string>() },
                 Time = new FilterTimeSelectionDto
                 {
-                    Mode = FilterTimeSelectionModeDto.DateRange,
-                    SprintIds = [],
-                    RangeStartUtc = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
-                    RangeEndUtc = new DateTimeOffset(2026, 3, 31, 0, 0, 0, TimeSpan.Zero)
+                    Mode = FilterTimeSelectionModeDto.Sprint,
+                    SprintId = 702,
+                    SprintIds = Array.Empty<int>()
                 }
             },
-            InvalidFields = ["productIds"],
-            ValidationMessages =
-            [
-                new FilterValidationIssueDto
-                {
-                    Field = "productIds",
-                    Message = "Requested product was outside the resolved scope."
-                }
-            ]
+            InvalidFields = Array.Empty<string>(),
+            ValidationMessages = Array.Empty<FilterValidationIssueDto>(),
+            TeamLabels = new Dictionary<int, string> { [7] = "Atlas" },
+            SprintLabels = new Dictionary<int, string> { [701] = "Sprint Alpha", [702] = "Sprint Beta" }
         };
 
-        var notice = CanonicalClientResponseFactory.CreateNotice(
-            CanonicalClientResponseFactory.Create(response).FilterMetadata);
+        var metadata = CanonicalClientResponseFactory.Create(response).FilterMetadata;
+        var notice = CanonicalClientResponseFactory.CreateNotice(metadata);
+        var timeDifference = notice?.ChangedDifferences.SingleOrDefault(difference => difference.Label == "Time");
 
         Assert.IsNotNull(notice);
-        Assert.IsTrue(notice.HasSignals);
-        Assert.IsTrue(notice.HasInvalidFields);
-        Assert.IsTrue(notice.HasMaterialDifferences);
-        Assert.AreEqual("Products", notice.ChangedDifferences[0].Label);
+        Assert.IsNotNull(timeDifference);
+        Assert.AreEqual("Sprint Alpha", timeDifference.RequestedValue);
+        Assert.AreEqual("Sprint Beta", timeDifference.EffectiveValue);
     }
 }

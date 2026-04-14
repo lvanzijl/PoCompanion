@@ -7,13 +7,17 @@
 @using PoTool.Client.Services
 @using PoTool.Shared.DataState
 @using PoTool.Shared.PullRequests
-@using System.Web
 @inject IProfileService ProfileService
 @inject PullRequestStateService PullRequestStateService
 @inject TeamService TeamService
 @inject SprintService SprintService
 @inject NavigationManager NavigationManager
+@inject GlobalFilterStore GlobalFilterStore
+@inject GlobalFilterRouteService GlobalFilterRouteService
+@inject PageFilterExecutionGate PageFilterExecutionGate
+@inject GlobalFilterLabelService GlobalFilterLabelService
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <PageTitle>PR Delivery Insights - PO Companion</PageTitle>
 
@@ -50,13 +54,11 @@
                     @* Summary chips shown when collapsed *@
                     @if (_selectedTeamId.HasValue)
                     {
-                        var teamName = _teams.FirstOrDefault(t => t.Id == _selectedTeamId)?.Name;
-                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Group">@teamName</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@Icons.Material.Filled.Group">@GlobalFilterLabelService.FormatTeam(_selectedTeamId.Value)</MudChip>
                     }
                     @if (_selectedSprintId.HasValue)
                     {
-                        var sprintName = _sprints.FirstOrDefault(s => s.Id == _selectedSprintId)?.Name;
-                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.CalendarMonth">@sprintName</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.CalendarMonth">@GlobalFilterLabelService.FormatSprint(_selectedSprintId.Value)</MudChip>
                     }
                 }
             </MudStack>
@@ -72,7 +74,7 @@
                 @* Team selector *@
                 <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="int?"
-                               Value="_selectedTeamId"
+                               Value="@_selectedTeamId"
                                Label="Team"
                                Variant="Variant.Outlined"
                                Clearable="true"
@@ -90,7 +92,7 @@
                 {
                     <MudItem xs="12" sm="6" md="3">
                         <MudSelect T="int?"
-                                   Value="_selectedSprintId"
+                                   Value="@_selectedSprintId"
                                    Label="Sprint (optional)"
                                    Variant="Variant.Outlined"
                                    ValueChanged="OnSprintChanged">
@@ -748,11 +750,6 @@
     private bool _featureBreakdownExpanded = false;
     private bool _diagnosticsExpanded = false;
 
-    // Filters
-    private int? _selectedTeamId;
-    private int? _selectedSprintId;
-    private DateTime? _fromDate;
-    private DateTime? _toDate;
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
 
@@ -765,34 +762,27 @@
     // Drawer
     private bool _prDrawerOpen;
     private PrDeliveryScatterPointDto? _drawerPr;
-
-    /// <summary>
-    /// Fallback sprint duration (days) used when the selected sprint has no EndUtc set.
-    /// </summary>
-    private const int DefaultSprintDurationDays = 14;
+    private IDisposable? _filterSubscription;
+    private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? _selectedSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Sprint
+        ? GlobalFilterStore.GetState().Time.SprintId
+        : null;
 
     // ── Init ─────────────────────────────────────────────────────────────
 
     protected override async Task OnInitializedAsync()
     {
+        _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         try
         {
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             _profileId = activeProfile?.Id;
             _teams = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
-
-            // Default: last 6 months
-            ResetToDefaultDateRange();
-
-            ParseQueryParameters();
+            await SyncStoreFromCurrentRouteAsync();
 
             if (_selectedTeamId.HasValue)
             {
-                await LoadSprintsForTeamAsync(_selectedTeamId.Value);
-                if (_selectedSprintId.HasValue && !_sprints.Any(s => s.Id == _selectedSprintId.Value))
-                {
-                    _selectedSprintId = null;
-                }
+                await LoadSprintsForCurrentTeamAsync();
             }
 
             await LoadInsightsAsync();
@@ -811,35 +801,19 @@
         }
     }
 
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var qs  = HttpUtility.ParseQueryString(uri.Query);
-
-        if (int.TryParse(qs["teamId"], out var tid))
-            _selectedTeamId = tid;
-    }
-
-    private void ResetToDefaultDateRange()
-    {
-        _fromDate = DateTime.UtcNow.AddMonths(-6).Date;
-        _toDate   = DateTime.UtcNow.Date;
-    }
-
     // ── Data loading ─────────────────────────────────────────────────────
 
     private async Task LoadInsightsAsync()
     {
+        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        {
+            _data = null;
+            _filterNotice = null;
+            return;
+        }
+
         try
         {
-            var from = _fromDate.HasValue
-                ? new DateTimeOffset(_fromDate.Value, TimeSpan.Zero)
-                : DateTimeOffset.UtcNow.AddMonths(-6);
-
-            var to = _toDate.HasValue
-                ? new DateTimeOffset(_toDate.Value.AddDays(1).AddSeconds(-1), TimeSpan.Zero)
-                : DateTimeOffset.UtcNow;
-
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Loading();
             var response = await PullRequestStateService.GetDeliveryInsightsStateAsync(_profileId!.Value, _selectedSprintId, _selectedTeamId, CancellationToken.None);
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.FromResponse(response, "PR delivery insights could not be loaded right now.");
@@ -871,28 +845,23 @@
 
     private async Task OnTeamChanged(int? teamId)
     {
-        _selectedTeamId   = teamId;
-        _selectedSprintId = null;
-        _sprints.Clear();
-
-        if (teamId.HasValue)
-        {
-            ResetToDefaultDateRange();
-            await LoadSprintsForTeamAsync(teamId.Value);
-        }
-        else
-        {
-            ResetToDefaultDateRange();
-        }
-
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, SprintId = null });
+        await NavigateToResolvedFilterStateAsync();
+        await LoadSprintsForCurrentTeamAsync();
         await ReloadAsync();
     }
 
-    private async Task LoadSprintsForTeamAsync(int teamId)
+    private async Task LoadSprintsForCurrentTeamAsync()
     {
+        _sprints.Clear();
+        if (!_selectedTeamId.HasValue)
+        {
+            return;
+        }
+
         try
         {
-            var sprints = await SprintService.GetSprintsForTeamAsync(teamId);
+            var sprints = await SprintService.GetSprintsForTeamAsync(_selectedTeamId.Value);
             _sprints = sprints
                 .Where(s => s.StartUtc.HasValue)
                 .OrderByDescending(s => s.StartUtc)
@@ -907,18 +876,8 @@
 
     private async Task OnSprintChanged(int? sprintId)
     {
-        _selectedSprintId = sprintId;
-
-        if (sprintId.HasValue)
-        {
-            var sprint = _sprints.FirstOrDefault(s => s.Id == sprintId.Value);
-            if (sprint?.StartUtc.HasValue == true)
-            {
-                _fromDate = sprint.StartUtc.Value.UtcDateTime.Date;
-                _toDate   = sprint.EndUtc?.UtcDateTime.Date ?? _fromDate.Value.AddDays(DefaultSprintDurationDays);
-            }
-        }
-
+        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { SprintId = sprintId });
+        await NavigateToResolvedFilterStateAsync();
         await ReloadAsync();
     }
 
@@ -934,6 +893,27 @@
         _isLoading = false;
         StateHasChanged();
     }
+
+    private async Task SyncStoreFromCurrentRouteAsync()
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId);
+
+    private FilterLocalBridgeState BuildCurrentLocalBridgeState()
+        => FilterLocalBridgeState.FromState(GlobalFilterStore.GetState());
+
+    private async Task UpdateFilterStateAsync(FilterLocalBridgeState localState)
+        => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _profileId, localState, FilterUpdateSource.Ui);
+
+    private async Task NavigateToResolvedFilterStateAsync()
+    {
+        var targetUri = await GlobalFilterRouteService.BuildCurrentPageUriAsync(NavigationManager.Uri, GlobalFilterStore.GetState());
+        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        {
+            NavigationManager.NavigateTo(targetUri, forceLoad: false);
+        }
+    }
+
+    private void HandleGlobalFilterChanged()
+        => _ = InvokeAsync(StateHasChanged);
 
     private void OnScatterPointClick(PrDeliveryScatterPointDto pt)
     {
@@ -1022,5 +1002,10 @@
 
         int idx = (int)Math.Ceiling(0.9 * lifetimes.Count) - 1;
         return lifetimes[Math.Clamp(idx, 0, lifetimes.Count - 1)];
+    }
+
+    public void Dispose()
+    {
+        _filterSubscription?.Dispose();
     }
 }

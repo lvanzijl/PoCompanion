@@ -18,6 +18,7 @@
 @inject NavigationManager NavigationManager
 @inject GlobalFilterStore GlobalFilterStore
 @inject PageFilterExecutionGate PageFilterExecutionGate
+@inject GlobalFilterLabelService GlobalFilterLabelService
 @inject ISnackbar Snackbar
 @implements IDisposable
 
@@ -271,8 +272,6 @@
     private void ToggleScopePopover()   => ToggleOnePopover(v => _scopePopoverOpen   = v, _scopePopoverOpen);
 
     // Selectors
-    private int? _defaultFromSprintId;
-    private int? _defaultToSprintId;
     private List<ProductDto> _products = new();
     private List<TeamDto> _teams = new();
     private List<SprintDto> _sprints = new();
@@ -288,25 +287,10 @@
         : "All Products";
 
     private string ContextTeamLabel => _selectedTeamId.HasValue
-        ? _teams.FirstOrDefault(t => t.Id == _selectedTeamId.Value)?.Name ?? "Unknown Team"
+        ? GlobalFilterLabelService.FormatTeam(_selectedTeamId.Value)
         : "Select Team";
 
-    private string ContextSprintRangeLabel
-    {
-        get
-        {
-            if (!_sprints.Any()) return "No sprints";
-            var from = _fromSprintId.HasValue ? _sprints.FirstOrDefault(s => s.Id == _fromSprintId.Value)?.Name ?? "?" : "?";
-            var to = _toSprintId.HasValue ? _sprints.FirstOrDefault(s => s.Id == _toSprintId.Value)?.Name ?? "?" : "?";
-            return $"{ShortSprintLabel(from)} → {ShortSprintLabel(to)}";
-        }
-    }
-
-    // True when filters differ from the auto-applied defaults
-    private bool IsCustomScope =>
-        _selectedProductId.HasValue ||
-        (_defaultFromSprintId.HasValue && _fromSprintId != _defaultFromSprintId) ||
-        (_defaultToSprintId.HasValue && _toSprintId != _defaultToSprintId);
+    private string ContextSprintRangeLabel => GlobalFilterLabelService.FormatSprintRange(_fromSprintId, _toSprintId);
 
     // Trend data
     private PortfolioProgressTrendDto? _trendData;
@@ -393,11 +377,6 @@
             {
                 await LoadSprintsAsync(_selectedTeamId.Value);
 
-                if (!_fromSprintId.HasValue && !_toSprintId.HasValue)
-                {
-                    await ApplyDefaultSprintWindowAsync();
-                }
-
                 // Auto-load trend data with defaults
                 await LoadTrendDataAsync();
             }
@@ -411,29 +390,6 @@
         {
             _isLoading = false;
         }
-    }
-
-    /// <summary>
-    private async Task ApplyDefaultSprintWindowAsync()
-    {
-        if (_sprints.Count == 0) return;
-
-        var ordered = _sprints.OrderBy(s => s.StartUtc ?? DateTimeOffset.MaxValue).ToList();
-        var toIdx = ordered.Count - 1;
-        var fromIdx = Math.Max(0, toIdx - 4);
-
-        var defaultFromSprintId = ordered[fromIdx].Id;
-        var defaultToSprintId = ordered[toIdx].Id;
-
-        // Remember the default window for "Custom Scope" detection
-        _defaultFromSprintId = defaultFromSprintId;
-        _defaultToSprintId   = defaultToSprintId;
-
-        await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with
-        {
-            FromSprintId = defaultFromSprintId,
-            ToSprintId = defaultToSprintId
-        });
     }
 
     private async Task OnProductChangedAsync(int? productId)
@@ -451,7 +407,6 @@
         if (teamId.HasValue)
         {
             await LoadSprintsAsync(teamId.Value);
-            await ApplyDefaultSprintWindowAsync();
             await LoadTrendDataAsync();
         }
         else

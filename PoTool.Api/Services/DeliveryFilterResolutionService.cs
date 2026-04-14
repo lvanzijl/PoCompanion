@@ -9,7 +9,9 @@ namespace PoTool.Api.Services;
 public sealed record DeliveryFilterResolution(
     DeliveryFilterContext RequestedFilter,
     DeliveryEffectiveFilter EffectiveFilter,
-    FilterValidationResult Validation);
+    FilterValidationResult Validation,
+    IReadOnlyDictionary<int, string> TeamLabels,
+    IReadOnlyDictionary<int, string> SprintLabels);
 
 public sealed record DeliveryFilterBoundaryRequest(
     int? ProductOwnerId = null,
@@ -73,6 +75,10 @@ public sealed class DeliveryFilterResolutionService
             sprintIds);
 
         var validation = FilterValidationResult.FromIssues(issues);
+        var sprintLabels = await CanonicalFilterDisplayLabelLoader.LoadSprintLabelsAsync(
+            _context,
+            CollectSprintIds(requestedFilter.Time, effectiveFilter.Context.Time, effectiveFilter),
+            cancellationToken);
 
         _logger.LogInformation(
             "Resolved delivery filter for {Boundary}. RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}; OwnerDerivedProductIds: {@OwnerDerivedProductIds}; FinalProductScope: {@FinalProductScope}; TimeRange: {RangeStartUtc} - {RangeEndUtc}; SprintScope: {SprintId}; SprintRange: {@SprintIds}",
@@ -87,7 +93,12 @@ public sealed class DeliveryFilterResolutionService
             effectiveFilter.SprintId,
             effectiveFilter.SprintIds);
 
-        return new DeliveryFilterResolution(requestedFilter, effectiveFilter, validation);
+        return new DeliveryFilterResolution(
+            requestedFilter,
+            effectiveFilter,
+            validation,
+            new Dictionary<int, string>(),
+            sprintLabels);
     }
 
     public static DeliveryQueryResponseDto<T> ToResponse<T>(T data, DeliveryFilterResolution resolution)
@@ -106,8 +117,29 @@ public sealed class DeliveryFilterResolutionService
                     Field = issue.Field,
                     Message = issue.Message
                 })
-                .ToArray()
+                .ToArray(),
+            TeamLabels = resolution.TeamLabels,
+            SprintLabels = resolution.SprintLabels
         };
+    }
+
+    private static IReadOnlyList<int> CollectSprintIds(
+        FilterTimeSelection requestedTime,
+        FilterTimeSelection effectiveTime,
+        DeliveryEffectiveFilter effectiveFilter)
+    {
+        var sprintIds = CanonicalFilterDisplayLabelLoader.CollectSprintIds(requestedTime, effectiveTime).ToList();
+        if (effectiveFilter.SprintId.HasValue)
+        {
+            sprintIds.Add(effectiveFilter.SprintId.Value);
+        }
+
+        sprintIds.AddRange(effectiveFilter.SprintIds);
+        return sprintIds
+            .Where(id => id > 0)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
     }
 
     private static DeliveryFilterContext MapRequestedFilter(DeliveryFilterBoundaryRequest request)

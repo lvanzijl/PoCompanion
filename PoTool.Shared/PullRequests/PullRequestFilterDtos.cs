@@ -30,4 +30,8 @@ public sealed record PullRequestQueryResponseDto<T>
     public required IReadOnlyList<string> InvalidFields { get; init; }
 
     public required IReadOnlyList<FilterValidationIssueDto> ValidationMessages { get; init; }
+
+    public required IReadOnlyDictionary<int, string> TeamLabels { get; init; }
+
+    public required IReadOnlyDictionary<int, string> SprintLabels { get; init; }
 }

@@ -10,7 +10,9 @@ namespace PoTool.Api.Services;
 public sealed record PullRequestFilterResolution(
     PullRequestFilterContext RequestedFilter,
     PullRequestEffectiveFilter EffectiveFilter,
-    FilterValidationResult Validation);
+    FilterValidationResult Validation,
+    IReadOnlyDictionary<int, string> TeamLabels,
+    IReadOnlyDictionary<int, string> SprintLabels);
 
 public sealed record PullRequestFilterBoundaryRequest(
     IReadOnlyList<int>? ProductIds = null,
@@ -91,6 +93,14 @@ public sealed class PullRequestFilterResolutionService
             sprintIds);
 
         var validation = FilterValidationResult.FromIssues(issues);
+        var teamLabels = await CanonicalFilterDisplayLabelLoader.LoadTeamLabelsAsync(
+            _context,
+            CanonicalFilterDisplayLabelLoader.CollectTeamIds(requestedFilter.TeamIds, effectiveFilter.Context.TeamIds),
+            cancellationToken);
+        var sprintLabels = await CanonicalFilterDisplayLabelLoader.LoadSprintLabelsAsync(
+            _context,
+            CollectSprintIds(requestedFilter.Time, effectiveFilter.Context.Time, effectiveFilter),
+            cancellationToken);
 
         _logger.LogInformation(
             "Resolved PR filter for {Boundary}. RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}; RepositoryScopeCount: {RepositoryScopeCount}; RangeStartUtc: {RangeStartUtc}; RangeEndUtc: {RangeEndUtc}",
@@ -102,7 +112,7 @@ public sealed class PullRequestFilterResolutionService
             effectiveFilter.RangeStartUtc,
             effectiveFilter.RangeEndUtc);
 
-        return new PullRequestFilterResolution(requestedFilter, effectiveFilter, validation);
+        return new PullRequestFilterResolution(requestedFilter, effectiveFilter, validation, teamLabels, sprintLabels);
     }
 
     public static PullRequestQueryResponseDto<T> ToResponse<T>(T data, PullRequestFilterResolution resolution)
@@ -121,8 +131,29 @@ public sealed class PullRequestFilterResolutionService
                     Field = issue.Field,
                     Message = issue.Message
                 })
-                .ToArray()
+                .ToArray(),
+            TeamLabels = resolution.TeamLabels,
+            SprintLabels = resolution.SprintLabels
         };
+    }
+
+    private static IReadOnlyList<int> CollectSprintIds(
+        FilterTimeSelection requestedTime,
+        FilterTimeSelection effectiveTime,
+        PullRequestEffectiveFilter effectiveFilter)
+    {
+        var sprintIds = CanonicalFilterDisplayLabelLoader.CollectSprintIds(requestedTime, effectiveTime).ToList();
+        if (effectiveFilter.SprintId.HasValue)
+        {
+            sprintIds.Add(effectiveFilter.SprintId.Value);
+        }
+
+        sprintIds.AddRange(effectiveFilter.SprintIds);
+        return sprintIds
+            .Where(id => id > 0)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToArray();
     }
 
     private static PullRequestFilterContext MapRequestedFilter(PullRequestFilterBoundaryRequest request)

@@ -9,15 +9,23 @@ public sealed class GlobalFilterStore
 {
     private readonly ILogger<GlobalFilterStore> _logger;
     private readonly FilterStateResolver _resolver;
+    private readonly GlobalFilterAutoResolveService _autoResolveService;
+    private readonly GlobalFilterLabelService _labelService;
     private readonly List<FilterStateResolution> _history = new();
     private readonly List<Action> _subscriptions = new();
     private string? _currentRouteSignature;
     private string? _pendingRouteSignature;
 
-    public GlobalFilterStore(ILogger<GlobalFilterStore> logger, FilterStateResolver resolver)
+    public GlobalFilterStore(
+        ILogger<GlobalFilterStore> logger,
+        FilterStateResolver resolver,
+        GlobalFilterAutoResolveService autoResolveService,
+        GlobalFilterLabelService labelService)
     {
         _logger = logger;
         _resolver = resolver;
+        _autoResolveService = autoResolveService;
+        _labelService = labelService;
     }
 
     public FilterState CurrentState { get; private set; } = FilterState.Neutral;
@@ -43,7 +51,12 @@ public sealed class GlobalFilterStore
 
     public async Task TrackNavigationAsync(string? uri, int? activeProfileId = null, CancellationToken cancellationToken = default)
     {
-        var resolution = await _resolver.ResolveAsync(uri, activeProfileId, cancellationToken: cancellationToken);
+        var resolution = await ResolveObservedStateAsync(
+            uri,
+            activeProfileId,
+            null,
+            FilterUpdateSource.Default,
+            cancellationToken);
         if (resolution is null)
         {
             CurrentUsage = null;
@@ -62,13 +75,49 @@ public sealed class GlobalFilterStore
         FilterUpdateSource localSource = FilterUpdateSource.LocalBridge,
         CancellationToken cancellationToken = default)
     {
-        var resolution = await _resolver.ResolveAsync(uri, activeProfileId, localState, localSource, cancellationToken);
+        var resolution = await ResolveObservedStateAsync(uri, activeProfileId, localState, localSource, cancellationToken);
         if (resolution is null)
         {
             return;
         }
 
         SetResolvedState(resolution);
+    }
+
+    private async Task<FilterStateResolution?> ResolveObservedStateAsync(
+        string? uri,
+        int? activeProfileId,
+        FilterLocalBridgeState? localState,
+        FilterUpdateSource localSource,
+        CancellationToken cancellationToken)
+    {
+        var resolution = await _resolver.ResolveAsync(uri, activeProfileId, localState, localSource, cancellationToken);
+        if (resolution is null)
+        {
+            return null;
+        }
+
+        var autoResolvedState = await _autoResolveService.ResolveAsync(resolution, activeProfileId, localSource, cancellationToken);
+        if (autoResolvedState is not null)
+        {
+            resolution = await _resolver.ResolveAsync(
+                uri,
+                activeProfileId,
+                FilterLocalBridgeState.FromState(autoResolvedState),
+                FilterUpdateSource.DefaultPreset,
+                cancellationToken) ?? resolution;
+
+            _logger.LogInformation(
+                "Auto-resolved global filter state for {PageName}. Route: {Route}; Status: {Status}; TeamId: {TeamId}; TimeMode: {TimeMode}",
+                resolution.PageName,
+                resolution.Route,
+                resolution.Status,
+                resolution.State.TeamId,
+                resolution.State.Time.Mode);
+        }
+
+        await _labelService.WarmAsync(resolution.State, cancellationToken);
+        return resolution;
     }
 
     public void SetResolvedState(FilterStateResolution resolution)

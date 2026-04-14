@@ -2,6 +2,7 @@
 @using PoTool.Client.Services
 @inject GlobalFilterStore GlobalFilterStore
 @inject GlobalFilterUiState GlobalFilterUiState
+@inject GlobalFilterLabelService GlobalFilterLabelService
 @implements IDisposable
 
 @if (GlobalFilterStore.CurrentUsage is not null)
@@ -27,7 +28,7 @@
             @if (state.TeamId.HasValue)
             {
                 <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Secondary">
-                    Team: @state.TeamId.Value
+                    Team: @GlobalFilterLabelService.FormatTeam(state.TeamId.Value)
                 </MudChip>
             }
             @if (state.Time.Mode != FilterTimeMode.Snapshot)
@@ -95,8 +96,8 @@
     private static string FormatProjects(FilterState state)
         => state.AllProjects ? "ALL" : string.Join(", ", state.ProjectIds);
 
-    private static string FormatTime(FilterState state)
-        => state.Time.ToDisplayString();
+    private string FormatTime(FilterState state)
+        => GlobalFilterLabelService.FormatTime(state);
 
     private static Color GetStatusColor(FilterResolutionStatus status)
         => status switch
