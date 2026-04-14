@@ -1721,29 +1721,9 @@
 
     private string BuildWorkItemActivityUrl(int workItemId)
     {
-        var path = WorkspaceQueryContextHelper.BuildRoute(
+        return WorkspaceQueryContextHelper.BuildRoute(
             $"{WorkspaceRoutes.SprintDeliveryActivity}/{workItemId}",
             new WorkspaceQueryContext(TeamId: _selectedTeamId, SprintId: _selectedSprintId));
-        if (!_profileId.HasValue)
-        {
-            return path;
-        }
-
-        var periodStartUtc = _currentSprint?.StartUtc;
-        var periodEndUtc = _currentSprint?.EndUtc;
-
-        var query = new List<string> { $"productOwnerId={_profileId.Value}" };
-        if (periodStartUtc.HasValue)
-        {
-            query.Add($"periodStartUtc={Uri.EscapeDataString(periodStartUtc.Value.UtcDateTime.ToString("O"))}");
-        }
-
-        if (periodEndUtc.HasValue)
-        {
-            query.Add($"periodEndUtc={Uri.EscapeDataString(periodEndUtc.Value.UtcDateTime.ToString("O"))}");
-        }
-
-        return $"{path}?{string.Join("&", query)}";
     }
 
     private List<EpicProgressDto> GetEpicProgressForProduct(int productId)
