@@ -57,7 +57,7 @@ public sealed class ClientDataStateEnforcementHardeningAuditTests
             }
         }
 
-        CollectionAssert.AreEqual(Array.Empty<string>(), violations);
+        Assert.IsEmpty(violations);
     }
 
     private static string GetRepositoryRoot()

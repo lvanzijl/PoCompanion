@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Reflection;
 using PoTool.Client.Helpers;
 using PoTool.Shared.DataState;
 
@@ -10,6 +12,8 @@ public sealed record DataStateViewModel<T>(
     int? RetryAfterSeconds = null,
     DataStateResultStatus? ResultStatus = null)
 {
+    private static readonly ConcurrentDictionary<Type, PropertyInfo?> InvalidFieldsPropertyCache = new();
+
     public UiDataState UiState => ResultStatus.HasValue
         ? CacheStatePresentation.ToUiDataState(ResultStatus.Value)
         : CacheStatePresentation.ToUiDataState(State);
@@ -72,7 +76,9 @@ public sealed record DataStateViewModel<T>(
             return false;
         }
 
-        var invalidFieldsProperty = data.GetType().GetProperty("InvalidFields");
+        var invalidFieldsProperty = InvalidFieldsPropertyCache.GetOrAdd(
+            data.GetType(),
+            static type => type.GetProperty("InvalidFields"));
         if (invalidFieldsProperty?.GetValue(data) is System.Collections.IEnumerable invalidFields)
         {
             foreach (var _ in invalidFields)
