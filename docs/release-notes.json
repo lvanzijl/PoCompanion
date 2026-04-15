@@ -3,7 +3,7 @@
     "date": "2026-04-15",
     "type": "Fixed",
     "title": "Home dashboard now reports cache-readiness cleanly and keeps delivery signals valid for all-products scope",
-    "impact": "The Home product bar now shows the backend cache/data-state reason instead of a generic \"Context metrics unavailable.\" failure when cached analytics are not ready, and the Delivery workspace tile now resolves sprint execution per product so the default all-products Home view no longer falls into an invalid request path and show \"Signal unavailable.\".",
+    "impact": "The Home product bar now shows the backend cache/data-state reason instead of a generic \"Context metrics unavailable.\" failure when cached analytics are not ready, and the Delivery workspace tile now resolves sprint execution per product so the default all-products Home view no longer falls into an invalid request path and shows \"Signal unavailable.\".",
     "area": "Home",
     "link": "/home"
   },

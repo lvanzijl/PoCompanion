@@ -511,6 +511,8 @@ public sealed class WorkspaceSignalService
         }
         catch (ApiException ex) when (ex.StatusCode == 400 || ex.StatusCode == 404)
         {
+            // Home delivery signals fan out across product/team combinations; stale links can still yield
+            // validation failures for an individual context, which should degrade to a skipped context.
             return null;
         }
     }
