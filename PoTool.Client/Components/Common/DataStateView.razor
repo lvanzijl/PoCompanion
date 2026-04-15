@@ -7,18 +7,6 @@
 {
     <LoadingIndicator IsLoading="true" />
 }
-else if (State.UiState == UiDataState.NotReady)
-{
-    <DataStatePanel State="DataStateDto.NotReady"
-                    UiState="UiDataState.NotReady"
-                    Subject="@Subject"
-                    Reason="@State.Reason"
-                    Title="@NotReadyTitle"
-                    Message="@(State.Reason ?? NotReadyMessage)"
-                    ProductOwnerId="@ProductOwnerId"
-                    RecoveryActionText="@RecoveryActionText"
-                    OnRecovery="@OnRecovery" />
-}
 else if (State.UiState == UiDataState.Invalid)
 {
     <DataStatePanel State="@State.State"

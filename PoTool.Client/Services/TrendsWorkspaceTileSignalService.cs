@@ -134,9 +134,9 @@ public sealed record StatusTileSignal(
         return new(TileSignalKind.InsufficientData, "Insufficient data", tooltip, TileSignalTone.Neutral);
     }
 
-    public static StatusTileSignal NotReady(string tooltip)
+    public static StatusTileSignal Loading(string tooltip)
     {
-        return new(TileSignalKind.NotReady, "Data not ready", tooltip, TileSignalTone.Neutral);
+        return new(TileSignalKind.Loading, "Loading", tooltip, TileSignalTone.Neutral);
     }
 
     public static StatusTileSignal Failed(string tooltip)
@@ -165,7 +165,7 @@ public enum TileSignalKind
     Stable,
     Unstable,
     InsufficientData,
-    NotReady,
+    Loading,
     Failed,
     InvalidFilter,
     NoData

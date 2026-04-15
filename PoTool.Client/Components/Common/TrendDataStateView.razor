@@ -1,8 +1,12 @@
 @typeparam TData
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
+@using PoTool.Client.Services
+@inject GlobalFilterUiState GlobalFilterUiState
+@inject TrendFilterDiagnosticsService TrendFilterDiagnosticsService
+@implements IDisposable
 
-<CanonicalFilterMetadataNotice Metadata="@FilterNotice" />
+<CanonicalFilterMetadataNotice Metadata="@ResolvedFilterNotice" />
 
 <DataStateView TData="TData"
                State="@State"
@@ -15,8 +19,6 @@
                InvalidMessage="@InvalidMessage"
                FailedTitle="Failed to load data"
                FailedMessage="@FailedMessage"
-               NotReadyTitle="@NotReadyTitle"
-               NotReadyMessage="@NotReadyMessage"
                RecoveryActionText="@RecoveryActionText"
                OnRecovery="@OnRecovery">
     <ChildContent Context="data">
@@ -28,6 +30,8 @@
 </DataStateView>
 
 @code {
+    private string? _lastDiagnosticsSignature;
+
     [Parameter, EditorRequired]
     public DataStateViewModel<TData> State { get; set; } = DataStateViewModel<TData>.NotRequested();
 
@@ -69,4 +73,42 @@
 
     [Parameter]
     public EventCallback OnRecovery { get; set; }
+
+    private CanonicalFilterNoticeModel? ResolvedFilterNotice
+        => FilterNotice ?? CanonicalClientResponseFactory.CreateNotice(State.FilterMetadata);
+
+    protected override void OnParametersSet()
+    {
+        var validationFeedback = TrendUiStateFactory.CreateValidationFeedback(State);
+        if (validationFeedback is not null)
+        {
+            GlobalFilterUiState.SetValidationFeedback(validationFeedback);
+        }
+        else
+        {
+            GlobalFilterUiState.ClearValidationFeedback();
+        }
+
+        var signature = TrendFilterDiagnosticsService.BuildSignature(
+            Subject,
+            State.FilterMetadata,
+            State.InvalidFields,
+            State.ValidationMessages,
+            State.Reason);
+        if (!string.IsNullOrWhiteSpace(signature) && !string.Equals(_lastDiagnosticsSignature, signature, StringComparison.Ordinal))
+        {
+            TrendFilterDiagnosticsService.LogIfNeeded(
+                Subject,
+                State.FilterMetadata,
+                State.InvalidFields,
+                State.ValidationMessages,
+                State.Reason);
+            _lastDiagnosticsSignature = signature;
+        }
+    }
+
+    public void Dispose()
+    {
+        GlobalFilterUiState.ClearValidationFeedback();
+    }
 }

@@ -422,7 +422,8 @@
             if (!timeRange.IsResolved || timeRange.SprintIds.Count == 0)
             {
                 _dataState = TrendUiStateFactory.InvalidFilter<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>(
-                    timeRange.FailureReason ?? "The selected sprint range could not be resolved.");
+                    timeRange.FailureReason ?? "The selected sprint range could not be resolved.",
+                    [GlobalFilterValidationMapper.Time]);
                 return;
             }
 
@@ -432,7 +433,7 @@
             _filterNotice = _dataState.Data is null
                 ? null
                 : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(_dataState.Data).FilterMetadata);
-            if (_dataState.UiState is UiDataState.NotReady or UiDataState.Failed or UiDataState.Invalid)
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed || _dataState.UiState == UiDataState.Invalid)
             {
                 _trendMetrics.Clear();
                 return;

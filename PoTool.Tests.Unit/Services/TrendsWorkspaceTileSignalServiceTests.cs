@@ -111,6 +111,16 @@ public sealed class TrendsWorkspaceTileSignalServiceTests
         Assert.AreEqual(TileSignalTone.Caution, signal.Tone);
     }
 
+    [TestMethod]
+    public void Loading_ReturnsLoadingStatus()
+    {
+        var signal = StatusTileSignal.Loading("Cache warming.");
+
+        Assert.AreEqual(TileSignalKind.Loading, signal.Kind);
+        Assert.AreEqual("Loading", signal.Label);
+        Assert.AreEqual(TileSignalTone.Neutral, signal.Tone);
+    }
+
     private static PrSprintMetricsDto CreatePrSprintMetric(
         int sprintId,
         DateTimeOffset startUtc,

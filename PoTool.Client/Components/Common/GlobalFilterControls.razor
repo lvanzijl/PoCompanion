@@ -1,4 +1,5 @@
 @using PoTool.Client.Models
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Shared.Settings
 @inject GlobalFilterStore GlobalFilterStore
@@ -38,6 +39,20 @@
         </MudAlert>
     }
 
+    @if (GlobalFilterUiState.ValidationFeedback is { HasFeedback: true } validationFeedback)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+            @if (!string.IsNullOrWhiteSpace(validationFeedback.SummaryMessage))
+            {
+                <div>@validationFeedback.SummaryMessage</div>
+            }
+            @foreach (var message in validationFeedback.ValidationMessages)
+            {
+                <div>@message.Message</div>
+            }
+        </MudAlert>
+    }
+
     @if (evaluation.NotAppliedMessages.Count > 0)
     {
         <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
@@ -61,6 +76,8 @@
                                    Disabled="@(!CanEditProducts)"
                                    Clearable="true"
                                    Variant="Variant.Outlined"
+                                   Error="@HasValidationError(GlobalFilterValidationMapper.ProductIds)"
+                                   ErrorText="@GetValidationErrorText(GlobalFilterValidationMapper.ProductIds)"
                                    HelperText="@GetProductHelperText()">
                             <MudSelectItem T="int?" Value="@((int?)null)">All products</MudSelectItem>
                             @foreach (var product in _products)
@@ -77,6 +94,8 @@
                                    Disabled="@(!CanEditProjects)"
                                    Clearable="true"
                                    Variant="Variant.Outlined"
+                                   Error="@HasValidationError(GlobalFilterValidationMapper.ProjectIds)"
+                                   ErrorText="@GetValidationErrorText(GlobalFilterValidationMapper.ProjectIds)"
                                    HelperText="@GetProjectHelperText()">
                             <MudSelectItem T="string" Value="@string.Empty">All projects</MudSelectItem>
                             @foreach (var project in _projects)
@@ -93,6 +112,8 @@
                                    Disabled="@(!CanEditTeam)"
                                    Clearable="true"
                                    Variant="Variant.Outlined"
+                                   Error="@HasValidationError(GlobalFilterValidationMapper.TeamIds)"
+                                   ErrorText="@GetValidationErrorText(GlobalFilterValidationMapper.TeamIds)"
                                    HelperText="@GetHelperText(CanEditTeam, "Team filter is not applied on this page.")">
                             <MudSelectItem T="int?" Value="@((int?)null)">No team</MudSelectItem>
                             @foreach (var team in _teams)
@@ -108,6 +129,8 @@
                                    ValueChanged="OnTimeModeChangedAsync"
                                    Disabled="@(!CanEditTime || AllowedTimeModes.Count <= 1)"
                                    Variant="Variant.Outlined"
+                                   Error="@HasValidationError(GlobalFilterValidationMapper.Time)"
+                                   ErrorText="@GetValidationErrorText(GlobalFilterValidationMapper.Time)"
                                    HelperText="@GetHelperText(CanEditTime, "Time filter is not applied on this page.")">
                             @foreach (var timeMode in AllowedTimeModes)
                             {
@@ -124,7 +147,9 @@
                                        Value="@SelectedSprintId"
                                        ValueChanged="OnSprintChangedAsync"
                                        Clearable="true"
-                                       Variant="Variant.Outlined">
+                                       Variant="Variant.Outlined"
+                                       Error="@HasValidationError(GlobalFilterValidationMapper.SprintId)"
+                                       ErrorText="@GetValidationErrorText(GlobalFilterValidationMapper.SprintId)">
                                 <MudSelectItem T="int?" Value="@((int?)null)">No sprint</MudSelectItem>
                                 @foreach (var sprint in _sprints)
                                 {
@@ -141,7 +166,9 @@
                                        Value="@SelectedFromSprintId"
                                        ValueChanged="OnFromSprintChangedAsync"
                                        Clearable="true"
-                                       Variant="Variant.Outlined">
+                                       Variant="Variant.Outlined"
+                                       Error="@HasValidationError(GlobalFilterValidationMapper.StartSprintId)"
+                                       ErrorText="@GetValidationErrorText(GlobalFilterValidationMapper.StartSprintId)">
                                 <MudSelectItem T="int?" Value="@((int?)null)">None</MudSelectItem>
                                 @foreach (var sprint in _sprints)
                                 {
@@ -155,7 +182,9 @@
                                        Value="@SelectedToSprintId"
                                        ValueChanged="OnToSprintChangedAsync"
                                        Clearable="true"
-                                       Variant="Variant.Outlined">
+                                       Variant="Variant.Outlined"
+                                       Error="@HasValidationError(GlobalFilterValidationMapper.EndSprintId)"
+                                       ErrorText="@GetValidationErrorText(GlobalFilterValidationMapper.EndSprintId)">
                                 <MudSelectItem T="int?" Value="@((int?)null)">None</MudSelectItem>
                                 @foreach (var sprint in _sprints)
                                 {
@@ -172,14 +201,18 @@
                                              Value="@SelectedRollingWindow"
                                              ValueChanged="OnRollingWindowChangedAsync"
                                              Min="1"
-                                             Variant="Variant.Outlined" />
+                                             Variant="Variant.Outlined"
+                                             Error="@HasValidationError(GlobalFilterValidationMapper.RollingWindow)"
+                                             ErrorText="@GetValidationErrorText(GlobalFilterValidationMapper.RollingWindow)" />
                         </MudItem>
                         <MudItem xs="12" md="6">
                             <MudSelect T="FilterTimeUnit?"
                                        Label="Rolling unit"
                                        Value="@SelectedRollingUnit"
                                        ValueChanged="OnRollingUnitChangedAsync"
-                                       Variant="Variant.Outlined">
+                                       Variant="Variant.Outlined"
+                                       Error="@HasValidationError(GlobalFilterValidationMapper.RollingUnit)"
+                                       ErrorText="@GetValidationErrorText(GlobalFilterValidationMapper.RollingUnit)">
                                 <MudSelectItem T="FilterTimeUnit?" Value="@FilterTimeUnit.Days">Days</MudSelectItem>
                                 <MudSelectItem T="FilterTimeUnit?" Value="@FilterTimeUnit.Sprint">Sprint</MudSelectItem>
                             </MudSelect>
@@ -352,6 +385,7 @@
 
     private async Task ApplyStateAsync(FilterLocalBridgeState localState)
     {
+        GlobalFilterUiState.ClearValidationFeedback();
         localState = GlobalFilterContextResolver.NormalizeState(State, localState, _products);
         var activeProfileId = ProfileService.GetActiveProfileId();
         await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, activeProfileId, localState, FilterUpdateSource.Ui);
@@ -409,6 +443,26 @@
 
     private static string? GetHelperText(bool canEdit, string message)
         => canEdit ? null : message;
+
+    private bool HasValidationError(string field)
+        => GlobalFilterUiState.ValidationFeedback is { HasFeedback: true } validation
+           && GlobalFilterValidationMapper.MatchesControl(validation.InvalidFields, field, CurrentTimeMode);
+
+    private string? GetValidationErrorText(string field)
+    {
+        if (GlobalFilterUiState.ValidationFeedback is not { HasFeedback: true } validation
+            || !HasValidationError(field))
+        {
+            return null;
+        }
+
+        var specificMessage = validation.ValidationMessages
+            .FirstOrDefault(message => GlobalFilterValidationMapper.MatchesControl(
+                GlobalFilterValidationMapper.NormalizeFields([message.Field]),
+                field,
+                CurrentTimeMode));
+        return specificMessage?.Message ?? validation.SummaryMessage;
+    }
 
     private string? GetProductHelperText()
         => Usage?.HasRouteProductAuthority == true

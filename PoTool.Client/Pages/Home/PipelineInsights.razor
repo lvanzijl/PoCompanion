@@ -625,7 +625,7 @@
                 _includeCanceled,
                 CancellationToken.None);
             _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.FromResponse(response, "Pipeline insights could not be loaded right now.");
-            if (_dataState.UiState is UiDataState.NotReady or UiDataState.Failed or UiDataState.Invalid)
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed || _dataState.UiState == UiDataState.Invalid)
             {
                 _insightsData = null;
                 return;
@@ -634,8 +634,7 @@
             var envelope = _dataState.Data;
             _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
             _insightsData = envelope?.Data;
-            if (_insightsData is null
-                || (_insightsData.TotalBuilds == 0 && _insightsData.Products.All(product => !product.HasData)))
+            if (_insightsData is null || !HasRenderablePageData(_insightsData))
             {
                 _insightsData = null;
                 _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.Empty("No data for selected period.");
@@ -705,6 +704,11 @@
             _scatterPointsByProduct[product.ProductId] = points;
         }
     }
+
+    private static bool HasRenderablePageData(PipelineInsightsDto data)
+        => data.TotalBuilds > 0
+           || data.GlobalTop3InTrouble.Count > 0
+           || data.Products.Any(product => product.HasData);
 
     // ── Highlight interactions ────────────────────────────────────────────
 

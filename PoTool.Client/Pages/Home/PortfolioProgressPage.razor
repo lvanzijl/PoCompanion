@@ -442,7 +442,8 @@
             _trendData = null;
             _filterNotice = null;
             _dataState = TrendUiStateFactory.InvalidFilter<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>(
-                timeRange.FailureReason ?? "The selected sprint range could not be resolved.");
+                timeRange.FailureReason ?? "The selected sprint range could not be resolved.",
+                [GlobalFilterValidationMapper.Time]);
             return;
         }
 
@@ -462,7 +463,7 @@
                 productFilter,
                 CancellationToken.None);
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.FromResponse(response, "Portfolio flow could not be loaded right now.");
-            if (_dataState.UiState is UiDataState.NotReady or UiDataState.Failed or UiDataState.Invalid)
+            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed || _dataState.UiState == UiDataState.Invalid)
             {
                 _trendData = null;
                 return;

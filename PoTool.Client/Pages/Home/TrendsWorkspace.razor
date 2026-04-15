@@ -395,7 +395,7 @@
             _bugTrendAdded = new Dictionary<string, int>();
             _bugTrendSignal = TrendTileSignal.WithFallback(
                 _bugTrendState.State == DataStateDto.NotReady
-                    ? StatusTileSignal.NotReady(_bugTrendState.Reason ?? "Data not ready. Cache not built yet for the bug trend tile.")
+                    ? StatusTileSignal.Loading(_bugTrendState.Reason ?? "Bug trend data is still loading from the cache.")
                     : StatusTileSignal.Failed(_bugTrendState.Reason ?? "Bug trend data could not be loaded right now."));
             return;
         }
@@ -618,7 +618,7 @@
                 _prTrendFilterMetadata = null;
                 _prTrendSignal = TrendTileSignal.WithFallback(
                     _prTrendState.State == DataStateDto.NotReady
-                        ? StatusTileSignal.NotReady(_prTrendState.Reason ?? "Data not ready. Cache not built yet for the PR trend tile.")
+                        ? StatusTileSignal.Loading(_prTrendState.Reason ?? "PR trend data is still loading from the cache.")
                         : StatusTileSignal.Failed(_prTrendState.Reason ?? "PR trend data could not be loaded right now."));
                 return;
             }
@@ -663,7 +663,7 @@
 
             _pipelineSignalFilterMetadata = null;
             _pipelineSignal = buildQualityResponse.State == CacheBackedClientState.NotReady
-                ? StatusTileSignal.NotReady(buildQualityResponse.Reason ?? "Data not ready. Cache not built yet for the pipeline tile.")
+                ? StatusTileSignal.Loading(buildQualityResponse.Reason ?? "Pipeline signal data is still loading from the cache.")
                 : StatusTileSignal.Failed(buildQualityResponse.Reason ?? "Pipeline signal data could not be loaded right now.");
         }
         catch (OperationCanceledException)

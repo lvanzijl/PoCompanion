@@ -1,3 +1,4 @@
+using PoTool.Client.Helpers;
 using PoTool.Client.Models;
 
 namespace PoTool.Client.Services;
@@ -8,7 +9,7 @@ public sealed class PageFilterExecutionGate
     {
         if (usage is null)
         {
-            return new FilterExecutionGateResult(true, Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
+            return new FilterExecutionGateResult(true, Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>());
         }
 
         var blockingMessages = usage.Status switch
@@ -28,12 +29,34 @@ public sealed class PageFilterExecutionGate
         return new FilterExecutionGateResult(
             usage.Status is FilterResolutionStatus.Resolved or FilterResolutionStatus.ResolvedWithNormalization,
             blockingMessages,
+            BuildBlockingFields(usage, blockingMessages),
             notAppliedMessages,
             correctionMessages);
     }
 
     public bool CanExecuteQueries(FilterStateResolution? usage)
         => Evaluate(usage).CanExecuteQueries;
+
+    private static IReadOnlyList<string> BuildBlockingFields(FilterStateResolution usage, IReadOnlyList<string> blockingMessages)
+    {
+        var fields = new HashSet<string>(StringComparer.Ordinal);
+        if (usage.MissingTeam)
+        {
+            fields.Add(GlobalFilterValidationMapper.TeamIds);
+        }
+
+        if (usage.MissingSprint)
+        {
+            fields.Add(GlobalFilterValidationMapper.Time);
+        }
+
+        foreach (var field in GlobalFilterValidationMapper.InferFieldsFromMessages(usage.StateIssues.Concat(blockingMessages)))
+        {
+            fields.Add(field);
+        }
+
+        return fields.ToArray();
+    }
 
     private static IReadOnlyList<string> BuildUnresolvedMessages(FilterStateResolution usage)
     {
@@ -86,5 +109,6 @@ public sealed class PageFilterExecutionGate
 public sealed record FilterExecutionGateResult(
     bool CanExecuteQueries,
     IReadOnlyList<string> BlockingMessages,
+    IReadOnlyList<string> BlockingFields,
     IReadOnlyList<string> NotAppliedMessages,
     IReadOnlyList<string> CorrectionMessages);

@@ -13,6 +13,7 @@ public sealed class TrendUiStateFactoryTests
         var evaluation = new FilterExecutionGateResult(
             CanExecuteQueries: false,
             BlockingMessages: ["Select a team.", "Select a sprint range."],
+            BlockingFields: ["teamids", "time"],
             NotAppliedMessages: [],
             CorrectionMessages: []);
 
@@ -20,5 +21,6 @@ public sealed class TrendUiStateFactoryTests
 
         Assert.AreEqual(UiDataState.Invalid, state.UiState);
         Assert.AreEqual("Select a team. Select a sprint range.", state.Reason);
+        CollectionAssert.AreEquivalent(new[] { "teamids", "time" }, state.InvalidFields.ToArray());
     }
 }
