@@ -304,7 +304,8 @@ public sealed class WorkspaceSignalServiceTests
             pullRequestsClient.Object,
             workItemsClient.Object,
             sprintService,
-            workItemService);
+            workItemService,
+            NullLogger<WorkspaceSignalService>.Instance);
 
         var result = await service.GetDeliverySignalAsync(42, CreateProducts(), selectedProductId: null);
 
@@ -433,7 +434,8 @@ public sealed class WorkspaceSignalServiceTests
             pullRequestsClient.Object,
             workItemsClient.Object,
             sprintService,
-            workItemService);
+            workItemService,
+            NullLogger<WorkspaceSignalService>.Instance);
 
         await service.GetTrendsSignalAsync(42, CreateProducts(), selectedProductId: null);
 
@@ -459,7 +461,8 @@ public sealed class WorkspaceSignalServiceTests
             pullRequestsClient.Object,
             workItemsClient.Object,
             sprintService,
-            workItemService);
+            workItemService,
+            NullLogger<WorkspaceSignalService>.Instance);
     }
 
     private static IReadOnlyCollection<ProductDto> CreateProducts()

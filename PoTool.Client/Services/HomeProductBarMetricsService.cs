@@ -63,6 +63,10 @@ public class HomeProductBarMetricsService
 /// Home dashboard product-bar load result, preserving the cache-backed data state
 /// and any backend reason text alongside the mapped metrics payload.
 /// </summary>
+/// <param name="State">Cache-backed data-state returned for the product-bar request.</param>
+/// <param name="Data">Mapped Home product-bar metrics when <paramref name="State"/> is <see cref="DataStateDto.Available"/>.</param>
+/// <param name="FilterMetadata">Canonical requested/effective filter metadata associated with <paramref name="Data"/>.</param>
+/// <param name="Reason">Backend-provided empty/not-ready/failure explanation that the UI can surface directly.</param>
 public sealed record HomeProductBarMetricsResult(
     DataStateDto State,
     HomeProductBarMetricsDto? Data = null,

@@ -25,6 +25,7 @@ public sealed class WorkspaceSignalService
     private readonly IWorkItemsClient _workItemsClient;
     private readonly SprintService _sprintService;
     private readonly WorkItemService _workItemService;
+    private readonly ILogger<WorkspaceSignalService> _logger;
 
     public IReadOnlyList<CanonicalFilterMetadata> LatestDeliveryFilterMetadata { get; private set; } = Array.Empty<CanonicalFilterMetadata>();
 
@@ -37,13 +38,15 @@ public sealed class WorkspaceSignalService
         IPullRequestsClient pullRequestsClient,
         IWorkItemsClient workItemsClient,
         SprintService sprintService,
-        WorkItemService workItemService)
+        WorkItemService workItemService,
+        ILogger<WorkspaceSignalService> logger)
     {
         _metricsClient = metricsClient;
         _pullRequestsClient = pullRequestsClient;
         _workItemsClient = workItemsClient;
         _sprintService = sprintService;
         _workItemService = workItemService;
+        _logger = logger;
     }
 
     public async Task<WorkspaceSignalSet> GetSignalsAsync(
@@ -514,6 +517,12 @@ public sealed class WorkspaceSignalService
         {
             // Home delivery signals fan out across product/team combinations; stale links can still yield
             // validation failures for an individual context, which should degrade to a skipped context.
+            _logger.LogWarning(
+                ex,
+                "Skipping home delivery signal context for ProductOwner {ProductOwnerId}, Sprint {SprintId}, Product {ProductId}.",
+                productOwnerId,
+                sprint.Id,
+                productId);
             return null;
         }
     }
