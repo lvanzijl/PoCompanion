@@ -14,9 +14,9 @@ public sealed class GlobalFilterLayoutAuditTests
         var controlsIndex = content.IndexOf("<GlobalFilterControls />", StringComparison.Ordinal);
         var bodyIndex = content.IndexOf("@Body", StringComparison.Ordinal);
 
-        Assert.IsTrue(summaryIndex >= 0, "MainLayout must render the shared filter summary.");
-        Assert.IsTrue(controlsIndex >= 0, "MainLayout must render the shared filter controls.");
-        Assert.IsTrue(bodyIndex >= 0, "MainLayout must render the page body.");
+        Assert.IsGreaterThanOrEqualTo(0, summaryIndex, "MainLayout must render the shared filter summary.");
+        Assert.IsGreaterThanOrEqualTo(0, controlsIndex, "MainLayout must render the shared filter controls.");
+        Assert.IsGreaterThanOrEqualTo(0, bodyIndex, "MainLayout must render the page body.");
         Assert.IsTrue(
             summaryIndex < controlsIndex && controlsIndex < bodyIndex,
             "MainLayout must place shared filter controls directly after the shared filter summary and before page content.");
