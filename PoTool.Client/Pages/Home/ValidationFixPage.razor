@@ -63,18 +63,24 @@
                              SecondaryActionLabel="Home"
                              SecondaryAction="NavigateToHome" />
     }
-    else if (_dataState.State == DataStateDto.NotReady)
+    else if (_dataState.UiState == UiDataState.Loading)
     {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Validation fix session"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId" />
+        <CanonicalDataStateView TData="ValidationFixSessionDto"
+                                State="@_dataState"
+                                ProductOwnerId="@_profileId"
+                                Subject="Validation fix session">
+            <ChildContent Context="state">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
-    else if (_dataState.State == DataStateDto.Failed)
+    else if (_dataState.UiState == UiDataState.Failed)
     {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Validation fix session"
-                        Reason="@_dataState.Reason" />
+        <CanonicalDataStateView TData="ValidationFixSessionDto"
+                                State="@_dataState"
+                                Subject="Validation fix session">
+            <ChildContent Context="state">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
     else if (_loadError != null)
     {

@@ -47,19 +47,19 @@
                             FailedMessage="Sprint activity could not be loaded right now."
                             FilterNotice="@_filterNotice"
                             OnRecovery="@ReloadActivityAsync">
-        <ChildContent Context="_">
+        <ChildContent Context="details">
         @* Work item metadata *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="1">
-                <MudText Typo="Typo.h6">@_details.WorkItemType #@_details.WorkItemId</MudText>
-                <MudText Typo="Typo.body1">@_details.WorkItemTitle</MudText>
-                @if (_details.PeriodStartUtc.HasValue || _details.PeriodEndUtc.HasValue)
+                <MudText Typo="Typo.h6">@details.WorkItemType #@details.WorkItemId</MudText>
+                <MudText Typo="Typo.body1">@details.WorkItemTitle</MudText>
+                @if (details.PeriodStartUtc.HasValue || details.PeriodEndUtc.HasValue)
                 {
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
                         Period:
-                        @(_details.PeriodStartUtc?.ToString("u") ?? "Start unbounded")
+                        @(details.PeriodStartUtc?.ToString("u") ?? "Start unbounded")
                         –
-                        @(_details.PeriodEndUtc?.ToString("u") ?? "End unbounded")
+                        @(details.PeriodEndUtc?.ToString("u") ?? "End unbounded")
                     </MudText>
                 }
             </MudStack>

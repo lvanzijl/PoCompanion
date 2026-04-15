@@ -29,18 +29,24 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (_dataState.State == DataStateDto.NotReady)
+    else if (_dataState.UiState == UiDataState.Loading)
     {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Portfolio history"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId" />
+        <CanonicalDataStateView TData="object"
+                                State="@_dataState"
+                                ProductOwnerId="@_profileId"
+                                Subject="Portfolio history">
+            <ChildContent Context="state">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
-    else if (_dataState.State == DataStateDto.Failed)
+    else if (_dataState.UiState == UiDataState.Failed)
     {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Portfolio history"
-                        Reason="@_dataState.Reason" />
+        <CanonicalDataStateView TData="object"
+                                State="@_dataState"
+                                Subject="Portfolio history">
+            <ChildContent Context="state">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
     else if (!string.IsNullOrWhiteSpace(_errorMessage))
     {

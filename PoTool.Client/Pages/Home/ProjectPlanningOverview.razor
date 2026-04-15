@@ -96,8 +96,8 @@
                         <MudChip T="string" Color="@GetRiskColor(HasPlanningGap())" Variant="Variant.Outlined">
                             @GetPlanningGapLabel()
                         </MudChip>
-                        <MudChip T="string" Color="@GetRiskColor(_summary.OvercommitIndicator)" Variant="Variant.Outlined">
-                            @(_summary.OvercommitIndicator ? "Overcommitted across visible sprint scope" : "Capacity window is within range")
+                        <MudChip T="string" Color="@GetRiskColor(summary.OvercommitIndicator)" Variant="Variant.Outlined">
+                            @(summary.OvercommitIndicator ? "Overcommitted across visible sprint scope" : "Capacity window is within range")
                         </MudChip>
                     </MudStack>
                 </MudStack>
@@ -106,7 +106,7 @@
             <MudPaper Elevation="1" Class="pa-4">
                 <MudStack Spacing="2">
                     <MudText Typo="Typo.overline" Color="Color.Secondary">Product distribution</MudText>
-                    <MudTable Items="@_summary.Products" Dense="true" Hover="true" Elevation="0">
+                    <MudTable Items="@summary.Products" Dense="true" Hover="true" Elevation="0">
                         <HeaderContent>
                             <MudTh>Product</MudTh>
                             <MudTh>Roadmap epics</MudTh>
@@ -136,7 +136,6 @@
     public string ProjectAliasRoute { get; set; } = string.Empty;
 
     private bool _isLoading = true;
-    private string? _errorMessage;
     private CacheBackedClientResult<ProjectPlanningSummaryDto>? _summaryState;
     private int? _activeProfileId;
     private ProjectPlanningSummaryDto? _summary;
@@ -207,7 +206,6 @@
     private async Task ReloadSummaryAsync()
     {
         _isLoading = true;
-        _errorMessage = null;
         try
         {
             await GlobalFilterStore.TrackNavigationAsync(NavigationManager.Uri, _activeProfileId);
