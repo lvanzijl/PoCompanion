@@ -2,6 +2,14 @@
   {
     "date": "2026-04-15",
     "type": "Fixed",
+    "title": "Shared collapsible filters now expand directly below their summary header",
+    "impact": "Managed pages that use the shared global filter chrome now render the expanded filter body immediately under the filter summary instead of dropping it after the main page content, preserving the existing filter state, summary chips, and collapse/expand behavior across delivery, trends, planning, health, bug, and work-item pages.",
+    "area": "Home / Delivery / Trends / Planning / Health / Bugs / Work Items",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-15",
+    "type": "Fixed",
     "title": "Client-side cache-backed reads now keep one explicit DataState model through shared services and UI fallbacks",
     "impact": "Work item, pull request, pipeline, release-planning, roadmap, and health/backlog client reads now preserve explicit Not Ready, Empty, Failed, and Invalid states instead of collapsing cache-backed responses into nulls or empty payloads, and shared DataState views now surface invalid filter scope as a warning state instead of treating corrected responses as ready success.",
     "area": "Home / Planning / Health / Work Items / Delivery",
