@@ -101,6 +101,16 @@ public sealed class TrendsWorkspaceTileSignalServiceTests
         Assert.AreEqual("No data", signal.Label);
     }
 
+    [TestMethod]
+    public void InvalidFilter_ReturnsCautionStatus()
+    {
+        var signal = StatusTileSignal.InvalidFilter("Select a team and sprint.");
+
+        Assert.AreEqual(TileSignalKind.InvalidFilter, signal.Kind);
+        Assert.AreEqual("Invalid filter", signal.Label);
+        Assert.AreEqual(TileSignalTone.Caution, signal.Tone);
+    }
+
     private static PrSprintMetricsDto CreatePrSprintMetric(
         int sprintId,
         DateTimeOffset startUtc,

@@ -2,6 +2,14 @@
   {
     "date": "2026-04-15",
     "type": "Fixed",
+    "title": "Trend pages now distinguish invalid filters, empty periods, and load failures",
+    "impact": "Trend-facing pages and workspace signals now use one shared trend-state pattern so unresolved or rejected filters show an explicit invalid-filter state, valid zero-result periods show a no-data state, and backend or network failures show a failed-load state instead of collapsing everything into generic unavailable messaging.",
+    "area": "Trends / Delivery / Pull Requests / Pipelines",
+    "link": "/home/trends"
+  },
+  {
+    "date": "2026-04-15",
+    "type": "Fixed",
     "title": "Trend pages now carry the shared sprint-range filter into backend trend reads consistently",
     "impact": "Delivery Trends, Portfolio Delivery, Portfolio Flow Trend, and shared PR trend reads now translate the resolved global From/To sprint selection through one shared client mapper before calling backend trend endpoints, so multi-sprint requests keep the intended sprint window instead of dropping the range and drifting to unrelated sprint data.",
     "area": "Trends / Delivery / Pull Requests",

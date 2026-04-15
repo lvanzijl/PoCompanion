@@ -38,6 +38,15 @@ public sealed class DataStateViewModelTests
         Assert.AreEqual("Selected team does not belong to the current product.", viewModel.Reason);
     }
 
+    [TestMethod]
+    public void InvalidFactory_CreatesInvalidUiStateWithoutResponseEnvelope()
+    {
+        var viewModel = DataStateViewModel<string>.Invalid("Selected sprint range cannot be resolved.");
+
+        Assert.AreEqual(UiDataState.Invalid, viewModel.UiState);
+        Assert.AreEqual("Selected sprint range cannot be resolved.", viewModel.Reason);
+    }
+
     private sealed class FakeInvalidPayload
     {
         public IReadOnlyList<string> InvalidFields { get; init; } = [];

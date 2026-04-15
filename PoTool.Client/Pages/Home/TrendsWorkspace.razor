@@ -172,6 +172,14 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
+    else if (!CurrentGateEvaluation.CanExecuteQueries)
+    {
+        <DataStatePanel State="DataStateDto.Failed"
+                        UiState="UiDataState.Invalid"
+                        Subject="Trend workspace"
+                        Title="Invalid filter selection"
+                        Message="@TrendUiStateFactory.GetBlockingReason(CurrentGateEvaluation, "Adjust the selected filter to load trend data.")" />
+    }
     else
     {
         @* Information Notice *@
@@ -257,6 +265,7 @@
     private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
     private int? _selectedFromSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.StartSprintId : null;
     private int? _selectedToSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.EndSprintId : null;
+    private FilterExecutionGateResult CurrentGateEvaluation => PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
     
     protected override async Task OnInitializedAsync()
     {
@@ -352,12 +361,14 @@
     /// </summary>
     private async Task LoadBugTrendDataAsync()
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        if (!CurrentGateEvaluation.CanExecuteQueries)
         {
             _bugTrendTotal = new Dictionary<string, int>();
             _bugTrendFixed = new Dictionary<string, int>();
             _bugTrendAdded = new Dictionary<string, int>();
-            _bugTrendSignal = null;
+            _bugTrendSignal = TrendTileSignal.WithFallback(
+                StatusTileSignal.InvalidFilter(
+                    TrendUiStateFactory.GetBlockingReason(CurrentGateEvaluation, "Adjust the selected filter to load bug trends.")));
             return;
         }
 
@@ -366,6 +377,16 @@
         _bugTrendState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.FromResponse(
             response,
             "Bug trend data is unavailable right now.");
+
+        if (_bugTrendState.UiState is UiDataState.Invalid)
+        {
+            _bugTrendTotal = new Dictionary<string, int>();
+            _bugTrendFixed = new Dictionary<string, int>();
+            _bugTrendAdded = new Dictionary<string, int>();
+            _bugTrendSignal = TrendTileSignal.WithFallback(
+                StatusTileSignal.InvalidFilter(_bugTrendState.Reason ?? "Adjust the selected filter to load bug trends."));
+            return;
+        }
 
         if (_bugTrendState.State != DataStateDto.Available || _bugTrendState.Data is null)
         {
@@ -548,15 +569,18 @@
     /// </summary>
     private async Task LoadPrTrendSignalAsync(CancellationToken cancellationToken)
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        if (!CurrentGateEvaluation.CanExecuteQueries)
         {
-            _prTrendSignal = null;
+            _prTrendSignal = TrendTileSignal.WithFallback(
+                StatusTileSignal.InvalidFilter(
+                    TrendUiStateFactory.GetBlockingReason(CurrentGateEvaluation, "Adjust the selected filter to load PR trend data.")));
             return;
         }
 
         if (!_selectedFromSprintId.HasValue || !_selectedToSprintId.HasValue || _sprints.Count == 0)
         {
-            _prTrendSignal = null;
+            _prTrendSignal = TrendTileSignal.WithFallback(
+                StatusTileSignal.InvalidFilter("Select a valid sprint range to load PR trend data."));
             return;
         }
 
@@ -565,7 +589,8 @@
             var timeRange = GlobalFilterTrendRequestMapper.ResolveRange(GlobalFilterStore.GetState(), _sprints);
             if (!timeRange.IsResolved || timeRange.SprintIds.Count == 0)
             {
-                _prTrendSignal = null;
+                _prTrendSignal = TrendTileSignal.WithFallback(
+                    StatusTileSignal.InvalidFilter(timeRange.FailureReason ?? "Adjust the selected sprint range to load PR trend data."));
                 return;
             }
 
@@ -578,6 +603,16 @@
             _prTrendState = DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>.FromResponse(
                 response,
                 "PR trend data is unavailable right now.");
+            if (_prTrendState.UiState == UiDataState.Invalid)
+            {
+                _prTrendFilterMetadata = _prTrendState.Data is null
+                    ? null
+                    : CanonicalClientResponseFactory.Create(_prTrendState.Data).FilterMetadata;
+                _prTrendSignal = TrendTileSignal.WithFallback(
+                    StatusTileSignal.InvalidFilter(_prTrendState.Reason ?? "Adjust the selected filter to load PR trend data."));
+                return;
+            }
+
             if (_prTrendState.State != DataStateDto.Available || _prTrendState.Data is null)
             {
                 _prTrendFilterMetadata = null;
@@ -599,9 +634,10 @@
 
     private async Task LoadPipelineSignalAsync(CancellationToken cancellationToken)
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        if (!CurrentGateEvaluation.CanExecuteQueries)
         {
-            _pipelineSignal = null;
+            _pipelineSignal = StatusTileSignal.InvalidFilter(
+                TrendUiStateFactory.GetBlockingReason(CurrentGateEvaluation, "Adjust the selected filter to load pipeline signal data."));
             return;
         }
 

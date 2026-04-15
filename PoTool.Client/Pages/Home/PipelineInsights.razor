@@ -85,50 +85,35 @@
         }
     </MudPaper>
 
-    <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
-
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Pipeline insights"
-                        Reason="@_dataState.Reason"
+    <TrendDataStateView TData="PipelineQueryResponseDto<PipelineInsightsDto>"
+                        State="@_dataState"
+                        IsLoading="@_isLoading"
+                        FilterNotice="@_filterNotice"
                         ProductOwnerId="@_activeProfileId"
-                        OnRecovery="@LoadInsightsAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
                         Subject="Pipeline insights"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@LoadInsightsAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true"
-                  CloseIconClicked="@(() => _errorMessage = null)">
-            @_errorMessage
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="LoadInsightsAsync" Class="ml-2">
-                Retry
-            </MudButton>
-        </MudAlert>
-    }
-    else if (_insightsData is null)
-    {
-        @* No sprint selected yet *@
-        <MudPaper Elevation="1" Class="pa-6 mb-4 d-flex flex-column align-center">
-            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" Color="Color.Default" Class="mb-2" />
-            <MudText Typo="Typo.h6">Select a team and sprint to view pipeline health</MudText>
-            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                Data is read from the local cache — no live TFS calls.
-            </MudText>
-        </MudPaper>
-    }
-    else
-    {
+                        InvalidMessage="Adjust the selected team or sprint to load pipeline insights."
+                        FailedMessage="The pipeline insights request failed."
+                        NotReadyMessage="Pipeline insights will load once the cache is ready."
+                        OnRecovery="@LoadInsightsAsync">
+        <NotRequestedContent>
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+            }
+            else
+            {
+                <MudPaper Elevation="1" Class="pa-6 mb-4 d-flex flex-column align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" Color="Color.Default" Class="mb-2" />
+                    <MudText Typo="Typo.h6">Select a team and sprint to view pipeline health</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Data is read from the local cache — no live TFS calls.
+                    </MudText>
+                </MudPaper>
+            }
+        </NotRequestedContent>
+        <ChildContent Context="_">
+        @if (_insightsData is not null)
+        {
         @if (!string.IsNullOrWhiteSpace(_pipelineQualityErrorMessage))
         {
             <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="mb-4">
@@ -338,11 +323,13 @@
                     </MudGrid>
 
                     @* ── Per-Pipeline Breakdown ──────────────────────── *@
-                    <PipelineBreakdownTable Entries="@product.PipelineBreakdown" />
+                <PipelineBreakdownTable Entries="@product.PipelineBreakdown" />
                 }
             </MudPaper>
         }
-    }
+        }
+        </ChildContent>
+    </TrendDataStateView>
 
 </MudContainer>
 
@@ -597,15 +584,22 @@
 
     private async Task LoadInsightsAsync()
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        var evaluation = PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+        if (!evaluation.CanExecuteQueries)
         {
             _insightsData = null;
             _filterNotice = null;
+            _dataState = TrendUiStateFactory.InvalidFilter<PipelineQueryResponseDto<PipelineInsightsDto>>(
+                evaluation,
+                "Select a valid team and sprint to load pipeline insights.");
             return;
         }
 
         if (!_activeProfileId.HasValue || !_selectedTeamId.HasValue || !_selectedSprintId.HasValue)
+        {
+            _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.NotRequested();
             return;
+        }
 
         _isLoading    = true;
         _errorMessage = null;
@@ -631,9 +625,8 @@
                 _includeCanceled,
                 CancellationToken.None);
             _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.FromResponse(response, "Pipeline insights could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.NotReady or UiDataState.Failed or UiDataState.Invalid)
             {
-                _filterNotice = null;
                 _insightsData = null;
                 return;
             }
@@ -641,6 +634,13 @@
             var envelope = _dataState.Data;
             _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
             _insightsData = envelope?.Data;
+            if (_insightsData is null
+                || (_insightsData.TotalBuilds == 0 && _insightsData.Products.All(product => !product.HasData)))
+            {
+                _insightsData = null;
+                _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.Empty("No data for selected period.");
+                return;
+            }
 
             _prevIncludePartial   = _includePartiallySucceeded;
             _prevIncludeCanceled  = _includeCanceled;
@@ -654,7 +654,9 @@
         }
         catch (Exception)
         {
-            _errorMessage = "Pipeline insights could not be loaded right now. Try again later.";
+            _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.Failed("The pipeline insights request failed.");
+            _insightsData = null;
+            _filterNotice = null;
         }
         finally
         {

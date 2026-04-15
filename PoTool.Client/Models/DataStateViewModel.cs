@@ -33,6 +33,13 @@ public sealed record DataStateViewModel<T>(
     public static DataStateViewModel<T> Failed(string? reason = null)
         => new(DataStateDto.Failed, Reason: reason);
 
+    public static DataStateViewModel<T> Invalid(string? reason = null, T? data = default)
+        => new(
+            data is null ? DataStateDto.Failed : DataStateDto.Available,
+            data,
+            reason,
+            ResultStatus: DataStateResultStatus.Invalid);
+
     public static DataStateViewModel<T> FromResponse(DataStateResponseDto<T>? response, string failureReason)
     {
         if (response is null)

@@ -114,32 +114,24 @@
         </MudCollapse>
     </MudPaper>
 
-    <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
-
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="PR delivery insights"
-                        Reason="@_dataState.Reason"
+    <TrendDataStateView TData="PullRequestQueryResponseDto<PrDeliveryInsightsDto>"
+                        State="@_dataState"
+                        IsLoading="@_isLoading"
+                        FilterNotice="@_filterNotice"
                         ProductOwnerId="@_profileId"
-                        OnRecovery="@ReloadAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
                         Subject="PR delivery insights"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@ReloadAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
-    }
-    else if (_data != null)
+                        InvalidMessage="Adjust the selected team or sprint to load PR delivery insights."
+                        FailedMessage="The PR delivery insights request failed."
+                        NotReadyMessage="PR delivery insights will load once the cache is ready."
+                        OnRecovery="@ReloadAsync">
+        <NotRequestedContent>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+            }
+        </NotRequestedContent>
+        <ChildContent Context="_">
+    @if (_data != null)
     {
         @* ── Section 1: Category Summary Chips ──────────────────────────── *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -654,18 +646,8 @@
             </MudPaper>
         }
     }
-    else
-    {
-        @* Empty / no data state *@
-        <MudPaper Elevation="2" Class="pa-6 mb-4 text-center">
-            <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
-            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No PR data available</MudText>
-            <MudAlert Severity="Severity.Info" Class="mt-3">
-                Select a team and sprint to load PR delivery data.
-                All data is read from the local cache — no live Azure DevOps calls are made.
-            </MudAlert>
-        </MudPaper>
-    }
+        </ChildContent>
+    </TrendDataStateView>
 
 </MudContainer>
 
@@ -805,10 +787,14 @@
 
     private async Task LoadInsightsAsync()
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        var evaluation = PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+        if (!evaluation.CanExecuteQueries)
         {
             _data = null;
             _filterNotice = null;
+            _dataState = TrendUiStateFactory.InvalidFilter<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>(
+                evaluation,
+                "Select a valid team and sprint to load PR delivery insights.");
             return;
         }
 
@@ -817,16 +803,21 @@
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Loading();
             var response = await PullRequestStateService.GetDeliveryInsightsStateAsync(_profileId!.Value, _selectedSprintId, _selectedTeamId, CancellationToken.None);
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.FromResponse(response, "PR delivery insights could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.NotReady or UiDataState.Failed or UiDataState.Invalid)
             {
                 _data = null;
-                _filterNotice = null;
                 return;
             }
 
             var envelope = _dataState.Data;
             _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
             _data = envelope?.Data;
+            if (_data?.CategorySummary.TotalPrs == 0)
+            {
+                _data = null;
+                _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Empty("No data for selected period.");
+                return;
+            }
 
             if (_data != null)
             {
@@ -835,7 +826,7 @@
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Failed("PR delivery insights could not be loaded right now.");
+            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Failed("The PR delivery insights request failed.");
             _data = null;
             _filterNotice = null;
         }

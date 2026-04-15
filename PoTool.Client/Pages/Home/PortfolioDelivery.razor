@@ -38,49 +38,44 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Portfolio delivery"
-                        Reason="@_dataState.Reason"
+    <TrendDataStateView TData="DeliveryQueryResponseDto<PortfolioDeliveryDto>"
+                        State="@_dataState"
+                        IsLoading="@_isLoading"
+                        FilterNotice="@_filterNotice"
                         ProductOwnerId="@_profileId"
-                        OnRecovery="@LoadInitialDataAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
                         Subject="Portfolio delivery"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@LoadInitialDataAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
-            @_errorMessage
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadInitialDataAsync" Class="ml-2">
-                Retry
-            </MudButton>
-        </MudAlert>
-    }
-    else
-    {
-        <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
-
-
+                        InvalidMessage="Adjust the selected team or sprint range to load portfolio delivery."
+                        FailedMessage="The portfolio delivery request failed."
+                        NotReadyMessage="Portfolio delivery will load once the cache is ready."
+                        OnRecovery="@LoadInitialDataAsync">
+        <NotRequestedContent>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+            }
+            else if (_data == null && !_deliveryLoading && _selectedSprintIds.Count == 0 && _sprints.Any())
+            {
+                <MudPaper Elevation="1" Class="pa-6 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="Color.Secondary" Style="font-size: 2.5rem;" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+                        Select a sprint range above to view the portfolio delivery snapshot.
+                    </MudText>
+                </MudPaper>
+            }
+            else if (!_sprints.Any() && !_isLoading)
+            {
+                <MudPaper Elevation="1" Class="pa-6 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Secondary" Style="font-size: 2.5rem;" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+                        Select a team to load sprints.
+                    </MudText>
+                </MudPaper>
+            }
+        </NotRequestedContent>
+        <ChildContent Context="_">
         @if (_deliveryLoading)
         {
             <MudProgressLinear Indeterminate="true" Color="Color.Warning" Class="mb-4" />
-        }
-
-        @if (_data == null && !_deliveryLoading && _selectedSprintIds.Count > 0)
-        {
-            <MudAlert Severity="Severity.Info" Class="mb-4">
-                No delivery data found for the selected sprint range.
-            </MudAlert>
         }
 
         @if (_data != null)
@@ -310,27 +305,8 @@
             }
         }
 
-        @* Initial state — no sprint range selected *@
-        @if (_data == null && !_deliveryLoading && _selectedSprintIds.Count == 0 && _sprints.Any())
-        {
-            <MudPaper Elevation="1" Class="pa-6 text-center">
-                <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="Color.Secondary" Style="font-size: 2.5rem;" />
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
-                    Select a sprint range above to view the portfolio delivery snapshot.
-                </MudText>
-            </MudPaper>
-        }
-
-        @if (!_sprints.Any() && !_isLoading)
-        {
-            <MudPaper Elevation="1" Class="pa-6 text-center">
-                <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Secondary" Style="font-size: 2.5rem;" />
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
-                    Select a team to load sprints.
-                </MudText>
-            </MudPaper>
-        }
-    }
+        </ChildContent>
+    </TrendDataStateView>
 </MudContainer>
 
 <style>
@@ -391,6 +367,8 @@
             _isLoading = true;
             _errorMessage = null;
             _data = null;
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.NotRequested();
+            _filterNotice = null;
 
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
@@ -446,11 +424,15 @@
 
     private async Task LoadDeliveryDataAsync()
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        var evaluation = PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+        if (!evaluation.CanExecuteQueries)
         {
             _selectedSprintIds = new List<int>();
             _data = null;
             _filterNotice = null;
+            _dataState = TrendUiStateFactory.InvalidFilter<DeliveryQueryResponseDto<PortfolioDeliveryDto>>(
+                evaluation,
+                "Select a valid team and sprint range to load portfolio delivery.");
             return;
         }
 
@@ -459,6 +441,7 @@
             _selectedSprintIds = new List<int>();
             _data = null;
             _filterNotice = null;
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.NotRequested();
             return;
         }
 
@@ -469,6 +452,8 @@
         {
             _data = null;
             _filterNotice = null;
+            _dataState = TrendUiStateFactory.InvalidFilter<DeliveryQueryResponseDto<PortfolioDeliveryDto>>(
+                timeRange.FailureReason ?? "The selected sprint range could not be resolved.");
             return;
         }
 
@@ -485,20 +470,23 @@
                 GlobalFilterStore.GetState().ProductIds.Count > 0 ? GlobalFilterStore.GetState().ProductIds : null,
                 CancellationToken.None);
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.FromResponse(response, "Portfolio delivery data could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.NotReady or UiDataState.Failed or UiDataState.Invalid)
             {
                 _data = null;
-                _filterNotice = null;
                 return;
             }
 
             var envelope = _dataState.Data;
             _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
             _data = envelope?.Data.HasData == true ? envelope.Data : null;
+            if (_data is null)
+            {
+                _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.Empty("No data for selected period.");
+            }
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.Failed("Portfolio delivery could not be loaded right now.");
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.Failed("The portfolio delivery request failed.");
             Snackbar.Add(_dataState.Reason!, Severity.Error);
             _data = null;
             _filterNotice = null;

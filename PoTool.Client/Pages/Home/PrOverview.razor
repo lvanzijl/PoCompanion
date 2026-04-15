@@ -62,32 +62,24 @@
         </MudGrid>
     </MudPaper>
 
-    <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
-
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Pull request insights"
-                        Reason="@_dataState.Reason"
+    <TrendDataStateView TData="PullRequestQueryResponseDto<PullRequestInsightsDto>"
+                        State="@_dataState"
+                        IsLoading="@_isLoading"
+                        FilterNotice="@_filterNotice"
                         ProductOwnerId="@_profileId"
-                        OnRecovery="@ReloadAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
                         Subject="Pull request insights"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@ReloadAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
-    }
-    else if (_data != null)
+                        InvalidMessage="Adjust the selected team or sprint to load pull request insights."
+                        FailedMessage="The pull request insights request failed."
+                        NotReadyMessage="Pull request insights will load once the cache is ready."
+                        OnRecovery="@ReloadAsync">
+        <NotRequestedContent>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+            }
+        </NotRequestedContent>
+        <ChildContent Context="_">
+    @if (_data != null)
     {
         @* ── Section 1: Global Summary chips ─────────────────────────── *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -442,17 +434,9 @@
             </MudPaper>
         }
 
-        @* ── Empty state ──────────────────────────────────────────────── *@
-        @if (_data.Summary.TotalPrs == 0)
-        {
-            <MudPaper Elevation="2" Class="pa-6">
-                <MudAlert Severity="Severity.Info">
-                    No pull request data found for the selected filters and date range.
-                    Try expanding the date range or selecting a different team.
-                </MudAlert>
-            </MudPaper>
-        }
     }
+        </ChildContent>
+    </TrendDataStateView>
 
 </MudContainer>
 
@@ -616,11 +600,15 @@
 
     private async Task LoadInsightsAsync()
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        var evaluation = PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+        if (!evaluation.CanExecuteQueries)
         {
             _data = null;
             _filterNotice = null;
             _availableRepositories = new List<string>();
+            _dataState = TrendUiStateFactory.InvalidFilter<PullRequestQueryResponseDto<PullRequestInsightsDto>>(
+                evaluation,
+                "Select a valid team and sprint to load pull request insights.");
             return;
         }
 
@@ -629,16 +617,22 @@
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.Loading();
             var response = await PullRequestStateService.GetInsightsStateAsync(_profileId!.Value, _selectedSprintId, _selectedTeamId, _selectedRepository, CancellationToken.None);
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.FromResponse(response, "Pull request insights could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.NotReady or UiDataState.Failed or UiDataState.Invalid)
             {
                 _data = null;
-                _filterNotice = null;
                 return;
             }
 
             var envelope = _dataState.Data;
             _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
             _data = envelope?.Data;
+            if (_data?.Summary.TotalPrs == 0)
+            {
+                _data = null;
+                _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.Empty("No data for selected period.");
+                _availableRepositories = new List<string>();
+                return;
+            }
 
             // Populate repository filter list from scatter data
             _availableRepositories = _data?.ScatterPoints
@@ -650,7 +644,7 @@
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.Failed("Pull request insights could not be loaded right now.");
+            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.Failed("The pull request insights request failed.");
             _data = null;
             _filterNotice = null;
         }

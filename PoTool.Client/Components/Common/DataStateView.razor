@@ -25,6 +25,8 @@ else if (State.UiState == UiDataState.Invalid)
                     UiState="UiDataState.Invalid"
                     Subject="@Subject"
                     Reason="@State.Reason"
+                    Title="@InvalidTitle"
+                    Message="@(State.Reason ?? InvalidMessage)"
                     ProductOwnerId="@ProductOwnerId"
                     RecoveryActionText="@RecoveryActionText"
                     OnRecovery="@OnRecovery" />
@@ -85,6 +87,12 @@ else
 
     [Parameter]
     public string FailedMessage { get; set; } = string.Empty;
+
+    [Parameter]
+    public string InvalidTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string InvalidMessage { get; set; } = string.Empty;
 
     [Parameter]
     public string RecoveryActionText { get; set; } = "Retry";

@@ -50,34 +50,27 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Delivery trends"
-                        Reason="@_dataState.Reason"
+    <TrendDataStateView TData="SprintQueryResponseDto<GetSprintTrendMetricsResponse>"
+                        State="@_dataState"
+                        IsLoading="@_isLoading"
+                        FilterNotice="@_filterNotice"
                         ProductOwnerId="@_profileId"
-                        OnRecovery="@LoadDataAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
                         Subject="Delivery trends"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@LoadDataAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
-            @_errorMessage
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadDataAsync" Class="ml-2">Retry</MudButton>
-        </MudAlert>
-    }
-    else
-    {
+                        InvalidMessage="Adjust the selected team or sprint range to load delivery trends."
+                        FailedMessage="The delivery trends request failed."
+                        NotReadyMessage="Delivery trends will load once the cache is ready."
+                        OnRecovery="@LoadDataAsync">
+        <NotRequestedContent>
+            @if (_filteredSprints.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">No sprints found. Ensure sprint data has been synced.</MudAlert>
+            }
+            else if (_currentSprint == null)
+            {
+                <MudAlert Severity="Severity.Info">No sprint selected.</MudAlert>
+            }
+        </NotRequestedContent>
+        <ChildContent Context="_">
         @* Canonical range projection *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="2">
@@ -130,15 +123,7 @@
             <MudProgressLinear Indeterminate="true" Color="Color.Success" Class="mb-2" />
         }
 
-        @if (_filteredSprints.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info">No sprints found. Ensure sprint data has been synced.</MudAlert>
-        }
-        else if (_currentSprint == null)
-        {
-            <MudAlert Severity="Severity.Info">No sprint selected.</MudAlert>
-        }
-        else if (_trendMetrics.Count > 0)
+        @if (_trendMetrics.Count > 0)
         {
             @* Chart Layout (Primary Visualization Pattern) *@
             <AnalyticalPageLayout>
@@ -277,11 +262,8 @@
                 </MudExpansionPanel>
             </MudExpansionPanels>
         }
-        else if (!_metricsLoading)
-        {
-            <MudAlert Severity="Severity.Info">No delivery data available for the selected sprint range.</MudAlert>
-        }
-    }
+        </ChildContent>
+    </TrendDataStateView>
 </MudContainer>
 
 @code {
@@ -304,6 +286,7 @@
     // Trend data
     private List<SprintTrendMetricsDto> _trendMetrics = new();
     private DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>> _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.NotRequested();
+    private CanonicalFilterNoticeModel? _filterNotice;
     private string[] _trendXAxisLabels = Array.Empty<string>();
 
     // Chart series
@@ -344,6 +327,8 @@
         {
             _isLoading = true;
             _errorMessage = null;
+            _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.NotRequested();
+            _filterNotice = null;
 
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             _profileId = activeProfile?.Id;
@@ -413,26 +398,41 @@
         _metricsLoading = true;
         _trendMetrics.Clear();
         _trendXAxisLabels = Array.Empty<string>();
+        _filterNotice = null;
         StateHasChanged();
 
         try
         {
-            if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+            var evaluation = PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+            if (!evaluation.CanExecuteQueries)
             {
+                _dataState = TrendUiStateFactory.InvalidFilter<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>(
+                    evaluation,
+                    "Select a valid team and sprint range to load delivery trends.");
                 return;
             }
 
             if (!_profileId.HasValue || _currentSprint == null)
+            {
+                _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.NotRequested();
                 return;
+            }
 
             var timeRange = GlobalFilterTrendRequestMapper.ResolveRange(GlobalFilterStore.GetState(), _filteredSprints);
             if (!timeRange.IsResolved || timeRange.SprintIds.Count == 0)
+            {
+                _dataState = TrendUiStateFactory.InvalidFilter<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>(
+                    timeRange.FailureReason ?? "The selected sprint range could not be resolved.");
                 return;
+            }
 
             _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.Loading();
             var response = await MetricsStateService.GetSprintTrendMetricsStateAsync(_profileId.Value, timeRange, _selectedProductId, _selectedTeamId, CancellationToken.None);
             _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.FromResponse(response, "Delivery trends could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            _filterNotice = _dataState.Data is null
+                ? null
+                : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(_dataState.Data).FilterMetadata);
+            if (_dataState.UiState is UiDataState.NotReady or UiDataState.Failed or UiDataState.Invalid)
             {
                 _trendMetrics.Clear();
                 return;
@@ -444,12 +444,18 @@
                     .OrderBy(m => m.StartUtc ?? DateTimeOffset.MaxValue)
                     .ToList();
 
+                if (_trendMetrics.Count == 0)
+                {
+                    _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.Empty("No data for selected period.");
+                    return;
+                }
+
                 BuildTrendCharts();
             }
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.Failed("Delivery trends could not be loaded right now.");
+            _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.Failed("The delivery trends request failed.");
             Snackbar.Add(_dataState.Reason!, Severity.Warning);
         }
         finally

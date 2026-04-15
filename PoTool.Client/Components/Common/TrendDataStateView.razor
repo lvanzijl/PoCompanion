@@ -1,0 +1,72 @@
+@typeparam TData
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
+
+<CanonicalFilterMetadataNotice Metadata="@FilterNotice" />
+
+<DataStateView TData="TData"
+               State="@State"
+               IsLoading="@IsLoading"
+               ProductOwnerId="@ProductOwnerId"
+               Subject="@Subject"
+               EmptyTitle="No data for selected period"
+               EmptyMessage="@EmptyMessage"
+               InvalidTitle="Invalid filter selection"
+               InvalidMessage="@InvalidMessage"
+               FailedTitle="Failed to load data"
+               FailedMessage="@FailedMessage"
+               NotReadyTitle="@NotReadyTitle"
+               NotReadyMessage="@NotReadyMessage"
+               RecoveryActionText="@RecoveryActionText"
+               OnRecovery="@OnRecovery">
+    <ChildContent Context="data">
+        @ChildContent(data)
+    </ChildContent>
+    <NotRequestedContent>
+        @NotRequestedContent
+    </NotRequestedContent>
+</DataStateView>
+
+@code {
+    [Parameter, EditorRequired]
+    public DataStateViewModel<TData> State { get; set; } = DataStateViewModel<TData>.NotRequested();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TData> ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? NotRequestedContent { get; set; }
+
+    [Parameter]
+    public CanonicalFilterNoticeModel? FilterNotice { get; set; }
+
+    [Parameter]
+    public int? ProductOwnerId { get; set; }
+
+    [Parameter]
+    public string Subject { get; set; } = "Trend data";
+
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No data for selected period.";
+
+    [Parameter]
+    public string InvalidMessage { get; set; } = "The current filter selection cannot be resolved for this view.";
+
+    [Parameter]
+    public string FailedMessage { get; set; } = "The trend data request failed.";
+
+    [Parameter]
+    public string NotReadyTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    public string NotReadyMessage { get; set; } = string.Empty;
+
+    [Parameter]
+    public string RecoveryActionText { get; set; } = "Retry";
+
+    [Parameter]
+    public EventCallback OnRecovery { get; set; }
+}

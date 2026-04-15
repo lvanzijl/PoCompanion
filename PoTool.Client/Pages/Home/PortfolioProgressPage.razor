@@ -43,38 +43,38 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Portfolio flow"
-                        Reason="@_dataState.Reason"
+    <TrendDataStateView TData="DeliveryQueryResponseDto<PortfolioProgressTrendDto>"
+                        State="@_dataState"
+                        IsLoading="@_isLoading"
+                        FilterNotice="@_filterNotice"
                         ProductOwnerId="@_profileId"
-                        OnRecovery="@LoadInitialDataAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
                         Subject="Portfolio flow"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@LoadInitialDataAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
-            @_errorMessage
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadInitialDataAsync" Class="ml-2">
-                Retry
-            </MudButton>
-        </MudAlert>
-    }
-    else
-    {
-        <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
+                        InvalidMessage="Adjust the selected team or sprint range to load portfolio flow."
+                        FailedMessage="The portfolio flow request failed."
+                        NotReadyMessage="Portfolio flow will load once the cache is ready."
+                        OnRecovery="@LoadInitialDataAsync">
+        <NotRequestedContent>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+            }
+            else if (!TrendsLoading)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    @if (!_selectedTeamId.HasValue)
+                    {
+                        <text>Select a team to enable sprint range selection, then data will load automatically.</text>
+                    }
+                    else
+                    {
+                        <text>Select a sprint range to view portfolio progress data.</text>
+                    }
+                </MudAlert>
+            }
 
+            <PortfolioCdcReadOnlyPanel />
+        </NotRequestedContent>
+        <ChildContent Context="_">
         <MudGrid Spacing="3">
 
                     @* Cell 1 — Combined Flow (Net emphasis) *@
@@ -198,36 +198,10 @@
                     </MudItem>
 
                 </MudGrid>
-            }
-            else if (!TrendsLoading)
-            {
-                <MudAlert Severity="Severity.Info" Class="mb-4">
-                    No portfolio flow projection data available for the selected range.
-                    Portfolio flow projections are computed when Sprint Trend is loaded with recompute enabled.
-                    @if (_selectedProductId.HasValue)
-                    {
-                        var product = _products.FirstOrDefault(p => p.Id == _selectedProductId.Value);
-                        <text> Showing data for product: @(product?.Name ?? _selectedProductId.ToString()).</text>
-                    }
-                </MudAlert>
-            }
         }
-        else if (!TrendsLoading)
-        {
-            <MudAlert Severity="Severity.Info" Class="mb-4">
-                @if (!_selectedTeamId.HasValue)
-                {
-                    <text>Select a team to enable sprint range selection, then data will load automatically.</text>
-                }
-                else
-                {
-                    <text>Select a sprint range to view portfolio progress data.</text>
-                }
-            </MudAlert>
-        }
-
         <PortfolioCdcReadOnlyPanel />
-    }
+        </ChildContent>
+    </TrendDataStateView>
 </MudContainer>
 
 <style>
@@ -366,6 +340,8 @@
 
             _profileId = activeProfile.Id;
             ProfileService.SetCachedActiveProfileId(_profileId);
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.NotRequested();
+            _filterNotice = null;
 
             _teams   = (await TeamService.GetAllTeamsAsync(includeArchived: false)).ToList();
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
@@ -443,20 +419,30 @@
 
     private async Task LoadTrendDataAsync()
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        var evaluation = PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+        if (!evaluation.CanExecuteQueries)
         {
             _trendData = null;
             _filterNotice = null;
+            _dataState = TrendUiStateFactory.InvalidFilter<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>(
+                evaluation,
+                "Select a valid team and sprint range to load portfolio flow.");
             return;
         }
 
-        if (!_profileId.HasValue) return;
+        if (!_profileId.HasValue)
+        {
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.NotRequested();
+            return;
+        }
 
         var timeRange = GlobalFilterTrendRequestMapper.ResolveRange(GlobalFilterStore.GetState(), _sprints);
         if (!timeRange.IsResolved || timeRange.SprintIds.Count == 0)
         {
             _trendData = null;
             _filterNotice = null;
+            _dataState = TrendUiStateFactory.InvalidFilter<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>(
+                timeRange.FailureReason ?? "The selected sprint range could not be resolved.");
             return;
         }
 
@@ -476,9 +462,8 @@
                 productFilter,
                 CancellationToken.None);
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.FromResponse(response, "Portfolio flow could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.NotReady or UiDataState.Failed or UiDataState.Invalid)
             {
-                _filterNotice = null;
                 _trendData = null;
                 return;
             }
@@ -496,12 +481,19 @@
 
             if (_trendData != null)
             {
+                if (!_trendData.Sprints.Any(static sprint => sprint.HasData))
+                {
+                    _trendData = null;
+                    _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.Empty("No data for selected period.");
+                    return;
+                }
+
                 BuildChartData(_trendData);
             }
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.Failed("Portfolio flow could not be loaded right now.");
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.Failed("The portfolio flow request failed.");
             Snackbar.Add(_dataState.Reason!, Severity.Warning);
             _filterNotice = null;
             _trendData = null;
