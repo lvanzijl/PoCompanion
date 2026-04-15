@@ -59,11 +59,13 @@
         </div>
 
         <article class="content px-4">
-            <FilterSummaryBar />
+            <section class="workspace-filter-region">
+                <FilterSummaryBar />
+                <GlobalFilterControls />
+            </section>
             <StartupGuard>
                 @Body
             </StartupGuard>
-            <GlobalFilterControls />
         </article>
     </main>
 </div>
