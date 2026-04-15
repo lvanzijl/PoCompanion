@@ -78,18 +78,26 @@
     }
     else if (_dataState.State == DataStateDto.NotReady)
     {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Sprint execution"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId"
-                        OnRecovery="@LoadInitialDataAsync" />
+        <CanonicalDataStateView TData="SprintQueryResponseDto<SprintExecutionDto>"
+                                State="@_dataState"
+                                ProductOwnerId="@_profileId"
+                                Subject="Sprint execution"
+                                FailedMessage="Sprint execution could not be loaded right now."
+                                OnRecovery="@LoadInitialDataAsync">
+            <ChildContent Context="_">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
     else if (_dataState.State == DataStateDto.Failed)
     {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Sprint execution"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@LoadInitialDataAsync" />
+        <CanonicalDataStateView TData="SprintQueryResponseDto<SprintExecutionDto>"
+                                State="@_dataState"
+                                Subject="Sprint execution"
+                                FailedMessage="Sprint execution could not be loaded right now."
+                                OnRecovery="@LoadInitialDataAsync">
+            <ChildContent Context="_">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
 
     @if (_sprints.Count == 0 && !_isLoading)

@@ -177,18 +177,26 @@
         }
         else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
         {
-            <DataStatePanel State="DataStateDto.NotReady"
-                            Subject="Project roadmap summary"
-                            Reason="@_projectPlanningSummaryState.Reason"
-                            ProductOwnerId="@_profileId"
-                            OnRecovery="@LoadProjectPlanningSummaryAsync" />
+            <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
+                                    State="@_projectPlanningSummaryState.ToViewModel("Project roadmap summary could not be loaded right now.")"
+                                    ProductOwnerId="@_profileId"
+                                    Subject="Project roadmap summary"
+                                    FailedMessage="Project roadmap summary could not be loaded right now."
+                                    OnRecovery="@LoadProjectPlanningSummaryAsync">
+                <ChildContent Context="_">
+                </ChildContent>
+            </CanonicalDataStateView>
         }
         else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
         {
-            <DataStatePanel State="DataStateDto.Failed"
-                            Subject="Project roadmap summary"
-                            Reason="@(_projectPlanningSummaryState?.Reason)"
-                            OnRecovery="@LoadProjectPlanningSummaryAsync" />
+            <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
+                                    State="@_projectPlanningSummaryState.ToViewModel("Project roadmap summary could not be loaded right now.")"
+                                    Subject="Project roadmap summary"
+                                    FailedMessage="Project roadmap summary could not be loaded right now."
+                                    OnRecovery="@LoadProjectPlanningSummaryAsync">
+                <ChildContent Context="_">
+                </ChildContent>
+            </CanonicalDataStateView>
         }
 
         @* Horizontal Scrollable Product Lanes *@

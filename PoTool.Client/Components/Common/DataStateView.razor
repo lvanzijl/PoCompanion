@@ -5,7 +5,13 @@
 
 @if (IsLoading || State.UiState == UiDataState.Loading)
 {
-    <LoadingIndicator IsLoading="true" />
+    <MudStack Spacing="2">
+        <LoadingIndicator IsLoading="true" />
+        @if (State.State == DataStateDto.NotReady && ProductOwnerId.HasValue)
+        {
+            <CacheStatusSection ProductOwnerId="@ProductOwnerId.Value" />
+        }
+    </MudStack>
 }
 else if (State.UiState == UiDataState.Invalid)
 {
@@ -63,12 +69,6 @@ else
 
     [Parameter]
     public string Subject { get; set; } = "Data";
-
-    [Parameter]
-    public string NotReadyTitle { get; set; } = string.Empty;
-
-    [Parameter]
-    public string NotReadyMessage { get; set; } = string.Empty;
 
     [Parameter]
     public string FailedTitle { get; set; } = string.Empty;

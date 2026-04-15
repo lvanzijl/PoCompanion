@@ -39,45 +39,22 @@
             </MudStack>
         </MudPaper>
 
-        @if (_isLoading)
-        {
-            <LoadingIndicator IsLoading="true" />
-        }
-        else if (!string.IsNullOrWhiteSpace(_contextError))
-        {
-            <MudAlert Severity="Severity.Error">@_contextError</MudAlert>
-        }
-        else if (!string.IsNullOrWhiteSpace(_errorMessage))
-        {
-            <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
-        }
-        else if (_summaryState?.State == CacheBackedClientState.NotReady)
-        {
-            <DataStatePanel State="DataStateDto.NotReady"
-                            Subject="Project planning summary"
-                            Reason="@_summaryState.Reason"
-                            ProductOwnerId="@_activeProfileId"
-                            OnRecovery="@ReloadSummaryAsync" />
-        }
-        else if (_summaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
-        {
-            <DataStatePanel State="DataStateDto.Failed"
-                            Subject="Project planning summary"
-                            Reason="@(_summaryState?.Reason)"
-                            OnRecovery="@ReloadSummaryAsync" />
-        }
-        else if (_summary is null)
-        {
-            <MudAlert Severity="Severity.Info">@(_summaryState?.Reason ?? "Project planning summary is unavailable.")</MudAlert>
-        }
-        else
-        {
+        <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
+                                State="@_summaryViewState"
+                                IsLoading="@_isLoading"
+                                ProductOwnerId="@_activeProfileId"
+                                Subject="Project planning summary"
+                                EmptyMessage="Project planning summary is unavailable."
+                                InvalidMessage="Adjust the current filter selection to load the project planning summary."
+                                FailedMessage="Project planning summary could not be loaded right now."
+                                OnRecovery="@ReloadSummaryAsync">
+            <ChildContent Context="summary">
             <MudPaper Elevation="1" Class="pa-4">
                 <MudStack Spacing="1">
                     <MudText Typo="Typo.overline" Color="Color.Secondary">Project context</MudText>
-                    <MudText Typo="Typo.h5">@_summary.ProjectAlias</MudText>
+                    <MudText Typo="Typo.h5">@summary.ProjectAlias</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Read-only summary across @_summary.ProductCount product@(_summary.ProductCount == 1 ? "" : "s").
+                        Read-only summary across @summary.ProductCount product@(summary.ProductCount == 1 ? "" : "s").
                     </MudText>
                 </MudStack>
 
@@ -85,25 +62,25 @@
                     <MudItem xs="12" sm="6" md="3">
                         <MudPaper Outlined="true" Class="pa-3">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Roadmap epics</MudText>
-                            <MudText Typo="Typo.h5">@_summary.TotalEpics</MudText>
+                            <MudText Typo="Typo.h5">@summary.TotalEpics</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="3">
                         <MudPaper Outlined="true" Class="pa-3">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Planned PBIs</MudText>
-                            <MudText Typo="Typo.h5">@_summary.PlannedPBIs / @_summary.TotalPBIs</MudText>
+                            <MudText Typo="Typo.h5">@summary.PlannedPBIs / @summary.TotalPBIs</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="3">
                         <MudPaper Outlined="true" Class="pa-3">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Planned effort</MudText>
-                            <MudText Typo="Typo.h5">@_summary.PlannedEffort / @_summary.TotalEffort</MudText>
+                            <MudText Typo="Typo.h5">@summary.PlannedEffort / @summary.TotalEffort</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="3">
                         <MudPaper Outlined="true" Class="pa-3">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Capacity / sprint</MudText>
-                            <MudText Typo="Typo.h5">@FormatCapacity(_summary.CapacityPerSprint)</MudText>
+                            <MudText Typo="Typo.h5">@FormatCapacity(summary.CapacityPerSprint)</MudText>
                         </MudPaper>
                     </MudItem>
                 </MudGrid>
@@ -149,7 +126,8 @@
                     </MudTable>
                 </MudStack>
             </MudPaper>
-        }
+            </ChildContent>
+        </CanonicalDataStateView>
     </MudStack>
 </MudContainer>
 
@@ -162,6 +140,7 @@
     private CacheBackedClientResult<ProjectPlanningSummaryDto>? _summaryState;
     private int? _activeProfileId;
     private ProjectPlanningSummaryDto? _summary;
+    private DataStateViewModel<ProjectPlanningSummaryDto> _summaryViewState = DataStateViewModel<ProjectPlanningSummaryDto>.NotRequested();
     private string? _contextError;
     private List<BreadcrumbItem> _breadcrumbs = new();
 
@@ -191,23 +170,19 @@
             if (!string.IsNullOrWhiteSpace(_contextError))
             {
                 _summary = null;
+                _summaryViewState = CreateInvalidContextState();
                 return;
             }
 
             _summaryState = await ProjectService.GetPlanningSummaryAsync(ProjectAliasRoute);
-            if (_summaryState.State == CacheBackedClientState.Success)
-            {
-                _summary = _summaryState.Data;
-            }
-            else if (_summaryState.State == CacheBackedClientState.Empty)
-            {
-                _summary = null;
-            }
+            _summaryViewState = _summaryState.ToViewModel("Project planning summary could not be loaded right now.");
+            _summary = _summaryViewState.UiState == UiDataState.Ready ? _summaryViewState.Data : null;
         }
         catch (Exception ex)
         {
             _summaryState = CacheBackedClientResult<ProjectPlanningSummaryDto>.Failed($"Could not load project planning summary: {ex.Message}");
             _summary = null;
+            _summaryViewState = _summaryState.ToViewModel("Project planning summary could not be loaded right now.");
         }
         finally
         {
@@ -240,11 +215,13 @@
             if (!string.IsNullOrWhiteSpace(_contextError))
             {
                 _summary = null;
+                _summaryViewState = CreateInvalidContextState();
                 return;
             }
 
             _summaryState = await ProjectService.GetPlanningSummaryAsync(ProjectAliasRoute);
-            _summary = _summaryState.State == CacheBackedClientState.Success ? _summaryState.Data : null;
+            _summaryViewState = _summaryState.ToViewModel("Project planning summary could not be loaded right now.");
+            _summary = _summaryViewState.UiState == UiDataState.Ready ? _summaryViewState.Data : null;
         }
         finally
         {
@@ -258,7 +235,18 @@
         _contextError = usage?.Status == FilterResolutionStatus.Invalid && usage.StateIssues.Count > 0
             ? string.Join(" ", usage.StateIssues)
             : null;
+        if (!string.IsNullOrWhiteSpace(_contextError))
+        {
+            _summaryViewState = CreateInvalidContextState();
+        }
     }
+
+    private DataStateViewModel<ProjectPlanningSummaryDto> CreateInvalidContextState()
+        => DataStateViewModel<ProjectPlanningSummaryDto>.Invalid(
+            reason: _contextError,
+            data: default,
+            invalidFields: GlobalFilterValidationMapper.InferFieldsFromMessages(string.IsNullOrWhiteSpace(_contextError) ? [] : [_contextError]),
+            validationMessages: []);
 
     private bool HasProductImbalance()
     {

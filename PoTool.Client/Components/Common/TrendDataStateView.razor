@@ -1,37 +1,29 @@
 @typeparam TData
-@using PoTool.Client.Helpers
 @using PoTool.Client.Models
-@using PoTool.Client.Services
-@inject GlobalFilterUiState GlobalFilterUiState
-@inject TrendFilterDiagnosticsService TrendFilterDiagnosticsService
-@implements IDisposable
 
-<CanonicalFilterMetadataNotice Metadata="@ResolvedFilterNotice" />
-
-<DataStateView TData="TData"
-               State="@State"
-               IsLoading="@IsLoading"
-               ProductOwnerId="@ProductOwnerId"
-               Subject="@Subject"
-               EmptyTitle="No data for selected period"
-               EmptyMessage="@EmptyMessage"
-               InvalidTitle="Invalid filter selection"
-               InvalidMessage="@InvalidMessage"
-               FailedTitle="Failed to load data"
-               FailedMessage="@FailedMessage"
-               RecoveryActionText="@RecoveryActionText"
-               OnRecovery="@OnRecovery">
+<CanonicalDataStateView TData="TData"
+                        State="@State"
+                        IsLoading="@IsLoading"
+                        ProductOwnerId="@ProductOwnerId"
+                        Subject="@Subject"
+                        EmptyTitle="No data for selected period"
+                        EmptyMessage="@EmptyMessage"
+                        InvalidTitle="Invalid filter selection"
+                        InvalidMessage="@InvalidMessage"
+                        FailedTitle="Failed to load data"
+                        FailedMessage="@FailedMessage"
+                        RecoveryActionText="@RecoveryActionText"
+                        FilterNotice="@FilterNotice"
+                        OnRecovery="@OnRecovery">
     <ChildContent Context="data">
         @ChildContent(data)
     </ChildContent>
     <NotRequestedContent>
         @NotRequestedContent
     </NotRequestedContent>
-</DataStateView>
+</CanonicalDataStateView>
 
 @code {
-    private string? _lastDiagnosticsSignature;
-
     [Parameter, EditorRequired]
     public DataStateViewModel<TData> State { get; set; } = DataStateViewModel<TData>.NotRequested();
 
@@ -63,52 +55,8 @@
     public string FailedMessage { get; set; } = "The trend data request failed.";
 
     [Parameter]
-    public string NotReadyTitle { get; set; } = string.Empty;
-
-    [Parameter]
-    public string NotReadyMessage { get; set; } = string.Empty;
-
-    [Parameter]
     public string RecoveryActionText { get; set; } = "Retry";
 
     [Parameter]
     public EventCallback OnRecovery { get; set; }
-
-    private CanonicalFilterNoticeModel? ResolvedFilterNotice
-        => FilterNotice ?? CanonicalClientResponseFactory.CreateNotice(State.FilterMetadata);
-
-    protected override void OnParametersSet()
-    {
-        var validationFeedback = TrendUiStateFactory.CreateValidationFeedback(State);
-        if (validationFeedback is not null)
-        {
-            GlobalFilterUiState.SetValidationFeedback(validationFeedback);
-        }
-        else
-        {
-            GlobalFilterUiState.ClearValidationFeedback();
-        }
-
-        var signature = TrendFilterDiagnosticsService.BuildSignature(
-            Subject,
-            State.FilterMetadata,
-            State.InvalidFields,
-            State.ValidationMessages,
-            State.Reason);
-        if (!string.IsNullOrWhiteSpace(signature) && !string.Equals(_lastDiagnosticsSignature, signature, StringComparison.Ordinal))
-        {
-            TrendFilterDiagnosticsService.LogIfNeeded(
-                Subject,
-                State.FilterMetadata,
-                State.InvalidFields,
-                State.ValidationMessages,
-                State.Reason);
-            _lastDiagnosticsSignature = signature;
-        }
-    }
-
-    public void Dispose()
-    {
-        GlobalFilterUiState.ClearValidationFeedback();
-    }
 }

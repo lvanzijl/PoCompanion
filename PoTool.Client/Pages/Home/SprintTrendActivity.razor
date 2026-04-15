@@ -37,37 +37,17 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Sprint activity"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId"
-                        OnRecovery="@ReloadActivityAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Sprint activity"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@ReloadActivityAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
-    }
-    else if (_details == null)
-    {
-        <MudAlert Severity="Severity.Warning">No activity details available for this work item.</MudAlert>
-    }
-    else
-    {
-        <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
-
+    <CanonicalDataStateView TData="WorkItemActivityDetailsDto"
+                            State="@ActivityState"
+                            IsLoading="@_isLoading"
+                            ProductOwnerId="@_profileId"
+                            Subject="Sprint activity"
+                            EmptyMessage="No activity details available for this work item."
+                            InvalidMessage="Adjust the current filter selection to load sprint activity."
+                            FailedMessage="Sprint activity could not be loaded right now."
+                            FilterNotice="@_filterNotice"
+                            OnRecovery="@ReloadActivityAsync">
+        <ChildContent Context="_">
         @* Work item metadata *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="1">
@@ -215,7 +195,8 @@
                 </MudExpansionPanels>
             }
         </MudPaper>
-    }
+        </ChildContent>
+    </CanonicalDataStateView>
 </MudContainer>
 
 @code {
@@ -238,6 +219,29 @@
     private int? _selectedSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Sprint
         ? GlobalFilterStore.GetState().Time.SprintId
         : null;
+    private DataStateViewModel<WorkItemActivityDetailsDto> ActivityState
+        => !string.IsNullOrWhiteSpace(_errorMessage)
+            ? DataStateViewModel<WorkItemActivityDetailsDto>.Failed(_errorMessage)
+            : _details is null
+                ? _dataState.State switch
+                {
+                    DataStateDto.NotReady => new DataStateViewModel<WorkItemActivityDetailsDto>(DataStateDto.NotReady, Reason: _dataState.Reason, RetryAfterSeconds: _dataState.RetryAfterSeconds, ResultStatus: _dataState.ResultStatus),
+                    DataStateDto.Failed => DataStateViewModel<WorkItemActivityDetailsDto>.Failed(_dataState.Reason),
+                    _ => DataStateViewModel<WorkItemActivityDetailsDto>.Empty("No activity details available for this work item.")
+                }
+                : _dataState.UiState == UiDataState.Invalid
+                    ? DataStateViewModel<WorkItemActivityDetailsDto>.Invalid(
+                        reason: _dataState.Reason ?? "Adjust the current filter selection to load sprint activity.",
+                        data: _details,
+                        invalidFields: _dataState.InvalidFields,
+                        validationMessages: _dataState.ValidationMessages,
+                        filterMetadata: _dataState.FilterMetadata)
+                    : DataStateViewModel<WorkItemActivityDetailsDto>.Ready(_details) with
+                    {
+                        FilterMetadata = _dataState.FilterMetadata,
+                        InvalidFields = _dataState.InvalidFields,
+                        ValidationMessages = _dataState.ValidationMessages
+                    };
 
     // Fields that, when appearing together at the same timestamp, indicate a creation event.
     private static readonly HashSet<string> CreationIndicatorFields = new(StringComparer.OrdinalIgnoreCase)

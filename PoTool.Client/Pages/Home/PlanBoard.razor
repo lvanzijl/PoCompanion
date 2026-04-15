@@ -113,18 +113,26 @@
     }
     else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
     {
-        <DataStatePanel State="DataStateDto.NotReady"
-                        Subject="Project planning summary"
-                        Reason="@_projectPlanningSummaryState.Reason"
-                        ProductOwnerId="@_activeProfileId"
-                        OnRecovery="@LoadProjectPlanningSummaryAsync" />
+        <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
+                                State="@_projectPlanningSummaryState.ToViewModel("Project planning summary could not be loaded right now.")"
+                                ProductOwnerId="@_activeProfileId"
+                                Subject="Project planning summary"
+                                FailedMessage="Project planning summary could not be loaded right now."
+                                OnRecovery="@LoadProjectPlanningSummaryAsync">
+            <ChildContent Context="_">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
     else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
     {
-        <DataStatePanel State="DataStateDto.Failed"
-                        Subject="Project planning summary"
-                        Reason="@(_projectPlanningSummaryState?.Reason)"
-                        OnRecovery="@LoadProjectPlanningSummaryAsync" />
+        <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
+                                State="@_projectPlanningSummaryState.ToViewModel("Project planning summary could not be loaded right now.")"
+                                Subject="Project planning summary"
+                                FailedMessage="Project planning summary could not be loaded right now."
+                                OnRecovery="@LoadProjectPlanningSummaryAsync">
+            <ChildContent Context="_">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
 
     @* Board Content *@
@@ -152,18 +160,26 @@
     }
     else if (_boardState.State == DataStateDto.NotReady)
     {
-        <DataStatePanel State="@_boardState.State"
-                        Subject="Plan Board"
-                        Reason="@_boardState.Reason"
-                        ProductOwnerId="@_activeProfileId"
-                        OnRecovery="@RetryBoardLoadAsync" />
+        <CanonicalDataStateView TData="IReadOnlyList<WorkItemDto>"
+                                State="@_boardState"
+                                ProductOwnerId="@_activeProfileId"
+                                Subject="Plan Board"
+                                FailedMessage="Plan Board could not be loaded right now."
+                                OnRecovery="@RetryBoardLoadAsync">
+            <ChildContent Context="_">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
     else if (_boardState.State == DataStateDto.Failed)
     {
-        <DataStatePanel State="@_boardState.State"
-                        Subject="Plan Board"
-                        Reason="@_boardState.Reason"
-                        OnRecovery="@RetryBoardLoadAsync" />
+        <CanonicalDataStateView TData="IReadOnlyList<WorkItemDto>"
+                                State="@_boardState"
+                                Subject="Plan Board"
+                                FailedMessage="Plan Board could not be loaded right now."
+                                OnRecovery="@RetryBoardLoadAsync">
+            <ChildContent Context="_">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
     else if (_boardState.State == DataStateDto.Empty)
     {

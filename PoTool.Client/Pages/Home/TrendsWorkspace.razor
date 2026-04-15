@@ -174,11 +174,13 @@
     }
     else if (!CurrentGateEvaluation.CanExecuteQueries)
     {
-        <DataStatePanel State="DataStateDto.Failed"
-                        UiState="UiDataState.Invalid"
-                        Subject="Trend workspace"
-                        Title="Invalid filter selection"
-                        Message="@TrendUiStateFactory.GetBlockingReason(CurrentGateEvaluation, "Adjust the selected filter to load trend data.")" />
+        <CanonicalDataStateView TData="object"
+                                State="@InvalidWorkspaceState"
+                                Subject="Trend workspace"
+                                InvalidMessage="Adjust the selected filter to load trend data.">
+            <ChildContent Context="_">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
     else
     {
@@ -266,6 +268,12 @@
     private int? _selectedFromSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.StartSprintId : null;
     private int? _selectedToSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Range ? GlobalFilterStore.GetState().Time.EndSprintId : null;
     private FilterExecutionGateResult CurrentGateEvaluation => PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+    private DataStateViewModel<object> InvalidWorkspaceState
+        => DataStateViewModel<object>.Invalid(
+            reason: TrendUiStateFactory.GetBlockingReason(CurrentGateEvaluation, "Adjust the selected filter to load trend data."),
+            data: default,
+            invalidFields: CurrentGateEvaluation.BlockingFields,
+            validationMessages: []);
     
     protected override async Task OnInitializedAsync()
     {

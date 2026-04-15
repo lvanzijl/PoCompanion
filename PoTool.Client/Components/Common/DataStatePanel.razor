@@ -22,10 +22,6 @@
             </MudStack>
         }
 
-        @if (State == DataStateDto.NotReady && ProductOwnerId.HasValue)
-        {
-            <CacheStatusSection ProductOwnerId="@ProductOwnerId.Value" />
-        }
     </MudStack>
 </MudPaper>
 
