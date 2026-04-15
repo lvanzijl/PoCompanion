@@ -22,7 +22,6 @@ public sealed class WorkspaceSignalService
 
     private readonly IMetricsClient _metricsClient;
     private readonly IPullRequestsClient _pullRequestsClient;
-    private readonly IWorkItemsClient _workItemsClient;
     private readonly SprintService _sprintService;
     private readonly WorkItemService _workItemService;
     private readonly ILogger<WorkspaceSignalService> _logger;
@@ -43,7 +42,6 @@ public sealed class WorkspaceSignalService
     {
         _metricsClient = metricsClient;
         _pullRequestsClient = pullRequestsClient;
-        _workItemsClient = workItemsClient;
         _sprintService = sprintService;
         _workItemService = workItemService;
         _logger = logger;
@@ -52,94 +50,112 @@ public sealed class WorkspaceSignalService
     public async Task<WorkspaceSignalSet> GetSignalsAsync(
         int productOwnerId,
         IReadOnlyCollection<ProductDto> products,
-        int? selectedProductId,
+        FilterState requestedState,
         CancellationToken cancellationToken = default)
     {
-        var healthTask = GetHealthSignalAsync(products, selectedProductId, cancellationToken);
-        var deliveryTask = GetDeliverySignalAsync(productOwnerId, products, selectedProductId, cancellationToken);
-        var trendsTask = GetTrendsSignalAsync(productOwnerId, products, selectedProductId, cancellationToken);
-        var planningTask = GetPlanningSignalAsync(productOwnerId, products, selectedProductId, cancellationToken);
+        var healthTask = GetHealthSignalAsync(products, requestedState, cancellationToken);
+        var deliveryTask = GetDeliverySignalAsync(productOwnerId, products, requestedState, cancellationToken);
+        var trendsTask = GetTrendsSignalAsync(productOwnerId, products, requestedState, cancellationToken);
+        var planningTask = GetPlanningSignalAsync(productOwnerId, products, requestedState, cancellationToken);
 
         await Task.WhenAll(healthTask, deliveryTask, trendsTask, planningTask);
 
         return new WorkspaceSignalSet(
-            await healthTask,
-            await deliveryTask,
-            await trendsTask,
-            await planningTask);
+            (await healthTask).Data ?? NeutralSignals.Health,
+            (await deliveryTask).Data ?? NeutralSignals.Delivery,
+            (await trendsTask).Data ?? NeutralSignals.Trends,
+            (await planningTask).Data ?? NeutralSignals.Planning);
     }
 
-    public async Task<string> GetHealthSignalAsync(
+    public async Task<DataStateResult<string>> GetHealthSignalAsync(
         IReadOnlyCollection<ProductDto> products,
-        int? selectedProductId,
+        FilterState requestedState,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var scopedProducts = GetScopedProducts(products, selectedProductId);
-        if (scopedProducts.Count == 0)
+        var scope = GlobalProductSelectionHelper.ResolveEffectiveScope(requestedState, products);
+        if (scope.HasInvalidSelection)
         {
-            return NeutralSignals.Health;
+            return DataStateResult<string>.Invalid(scope.Reason);
         }
 
-        var productIds = scopedProducts.Select(product => product.Id).ToArray();
-        var summary = await _workItemService.GetValidationTriageSummaryAsync(productIds);
+        if (scope.Products.Count == 0)
+        {
+            return DataStateResult<string>.Empty("No products are available for the current signal scope.");
+        }
+
+        var summary = await _workItemService.GetValidationTriageSummaryResultAsync(
+            scope.EffectiveProductIds.ToArray(),
+            cancellationToken);
 
         cancellationToken.ThrowIfCancellationRequested();
-        return SelectHealthSignal(summary);
+        return MapSignalResult(summary, SelectHealthSignal);
     }
 
-    public async Task<string> GetDeliverySignalAsync(
+    public async Task<DataStateResult<string>> GetDeliverySignalAsync(
         int productOwnerId,
         IReadOnlyCollection<ProductDto> products,
-        int? selectedProductId,
+        FilterState requestedState,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var scopedProducts = GetScopedProducts(products, selectedProductId);
-        if (scopedProducts.Count == 0)
+        var scope = GlobalProductSelectionHelper.ResolveEffectiveScope(requestedState, products);
+        if (scope.HasInvalidSelection)
         {
             LatestDeliveryFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
-            return NeutralSignals.Delivery;
+            return DataStateResult<string>.Invalid(scope.Reason);
         }
 
-        var teamIds = scopedProducts
+        if (scope.Products.Count == 0)
+        {
+            LatestDeliveryFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
+            return DataStateResult<string>.Empty("No products are available for the current signal scope.");
+        }
+
+        var teamIds = scope.Products
             .SelectMany(product => product.TeamIds)
             .Distinct()
             .ToArray();
 
         var currentSprints = await LoadCurrentSprintsAsync(teamIds);
-        var deliveryContexts = await LoadDeliveryContextsAsync(
+        var deliveryContextsResult = await LoadDeliveryContextsAsync(
             productOwnerId,
-            scopedProducts,
+            scope.Products,
             currentSprints,
             cancellationToken);
-        LatestDeliveryFilterMetadata = deliveryContexts
-            .SelectMany(context => context.FilterMetadata)
-            .ToList();
+        LatestDeliveryFilterMetadata = deliveryContextsResult.Metadata;
 
         cancellationToken.ThrowIfCancellationRequested();
-        return SelectDeliverySignal(deliveryContexts, DateTimeOffset.UtcNow);
+        return MapSignalResult(
+            deliveryContextsResult,
+            contexts => SelectDeliverySignal(contexts, DateTimeOffset.UtcNow));
     }
 
-    public async Task<string> GetTrendsSignalAsync(
+    public async Task<DataStateResult<string>> GetTrendsSignalAsync(
         int productOwnerId,
         IReadOnlyCollection<ProductDto> products,
-        int? selectedProductId,
+        FilterState requestedState,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var scopedProducts = GetScopedProducts(products, selectedProductId);
-        if (scopedProducts.Count == 0)
+        var scope = GlobalProductSelectionHelper.ResolveEffectiveScope(requestedState, products);
+        if (scope.HasInvalidSelection)
         {
             LatestTrendFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
-            return NeutralSignals.Trends;
+            return DataStateResult<string>.Invalid(scope.Reason);
         }
 
-        var productIds = scopedProducts.Select(product => product.Id).ToArray();
-        var teamIds = scopedProducts
+        if (scope.Products.Count == 0)
+        {
+            LatestTrendFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
+            return DataStateResult<string>.Empty("No products are available for the current signal scope.");
+        }
+
+        var productIds = scope.Products.Select(product => product.Id).ToArray();
+        var teamIds = scope.Products
             .SelectMany(product => product.TeamIds)
             .Distinct()
             .ToArray();
@@ -158,41 +174,53 @@ public sealed class WorkspaceSignalService
 
         var sprintTrendResponse = await sprintTrendTask;
         var prTrendResponse = await prTrendTask;
-        LatestTrendFilterMetadata = new[]
-            {
-                sprintTrendResponse?.FilterMetadata,
-                prTrendResponse?.FilterMetadata
-            }
-            .Where(metadata => metadata is not null)
-            .Cast<CanonicalFilterMetadata>()
+        LatestTrendFilterMetadata = sprintTrendResponse.Metadata
+            .Concat(prTrendResponse.Metadata)
             .ToList();
 
         cancellationToken.ThrowIfCancellationRequested();
-        return SelectTrendsSignal(sprintTrendResponse?.Data, prTrendResponse?.Data);
+        if (sprintTrendResponse.CanUseData || prTrendResponse.CanUseData)
+        {
+            return DataStateResult<string>.Ready(
+                SelectTrendsSignal(sprintTrendResponse.Data, prTrendResponse.Data),
+                LatestTrendFilterMetadata);
+        }
+
+        return AggregateSignalStates(
+            NeutralSignals.Trends,
+            "No trend signal data matched the current scope.",
+            sprintTrendResponse,
+            prTrendResponse);
     }
 
-    public async Task<string> GetPlanningSignalAsync(
+    public async Task<DataStateResult<string>> GetPlanningSignalAsync(
         int productOwnerId,
         IReadOnlyCollection<ProductDto> products,
-        int? selectedProductId,
+        FilterState requestedState,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var scopedProducts = GetScopedProducts(products, selectedProductId);
-        if (scopedProducts.Count == 0)
+        var scope = GlobalProductSelectionHelper.ResolveEffectiveScope(requestedState, products);
+        if (scope.HasInvalidSelection)
         {
             LatestPlanningFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
-            return NeutralSignals.Planning;
+            return DataStateResult<string>.Invalid(scope.Reason);
         }
 
-        var productIds = scopedProducts.Select(product => product.Id).ToArray();
-        var teamIds = scopedProducts
+        if (scope.Products.Count == 0)
+        {
+            LatestPlanningFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
+            return DataStateResult<string>.Empty("No products are available for the current signal scope.");
+        }
+
+        var productIds = scope.Products.Select(product => product.Id).ToArray();
+        var teamIds = scope.Products
             .SelectMany(product => product.TeamIds)
             .Distinct()
             .ToArray();
 
-        var backlogStatesTask = LoadBacklogStatesAsync(scopedProducts, cancellationToken);
+        var backlogStatesTask = LoadBacklogStatesAsync(scope.Products, cancellationToken);
         var recentSprintsTask = LoadRecentSprintsAsync(teamIds);
 
         await Task.WhenAll(backlogStatesTask, recentSprintsTask);
@@ -207,12 +235,22 @@ public sealed class WorkspaceSignalService
             capacitySprintIds,
             productIds,
             cancellationToken);
-        LatestPlanningFilterMetadata = capacityCalibrationResponse?.FilterMetadata is null
-            ? Array.Empty<CanonicalFilterMetadata>()
-            : [capacityCalibrationResponse.FilterMetadata];
+        LatestPlanningFilterMetadata = capacityCalibrationResponse.Metadata;
 
         cancellationToken.ThrowIfCancellationRequested();
-        return SelectPlanningSignal(await backlogStatesTask, capacityCalibrationResponse?.Data);
+        var backlogStatesResult = await backlogStatesTask;
+        if (backlogStatesResult.CanUseData)
+        {
+            return DataStateResult<string>.Ready(
+                SelectPlanningSignal(backlogStatesResult.Data, capacityCalibrationResponse.CanUseData ? capacityCalibrationResponse.Data : null),
+                backlogStatesResult.Metadata.Concat(capacityCalibrationResponse.Metadata).ToList());
+        }
+
+        return AggregateSignalStates(
+            NeutralSignals.Planning,
+            "No planning signal data matched the current scope.",
+            backlogStatesResult,
+            capacityCalibrationResponse);
     }
 
     public static string SelectHealthSignal(ValidationTriageSummaryDto? summary)
@@ -381,41 +419,28 @@ public sealed class WorkspaceSignalService
         return NeutralSignals.Planning;
     }
 
-    private static IReadOnlyList<ProductDto> GetScopedProducts(
-        IReadOnlyCollection<ProductDto> products,
-        int? selectedProductId)
-    {
-        if (!selectedProductId.HasValue)
-        {
-            return products.ToList();
-        }
-
-        return products
-            .Where(product => product.Id == selectedProductId.Value)
-            .ToList();
-    }
-
-    private async Task<IReadOnlyList<ProductBacklogStateDto>> LoadBacklogStatesAsync(
+    private async Task<DataStateResult<IReadOnlyList<ProductBacklogStateDto>>> LoadBacklogStatesAsync(
         IReadOnlyCollection<ProductDto> products,
         CancellationToken cancellationToken)
     {
-        var states = await Task.WhenAll(products.Select(async product =>
-        {
-            try
-            {
-                var response = await _workItemsClient.GetBacklogStateAsync(product.Id, cancellationToken);
-                return GeneratedCacheEnvelopeHelper.GetDataOrDefault<ProductBacklogStateDto>(response);
-            }
-            catch (ApiException ex) when (ex.StatusCode == 404)
-            {
-                return null;
-            }
-        }));
+        var states = await Task.WhenAll(products.Select(product =>
+            _workItemService.GetBacklogStateResultAsync(product.Id, cancellationToken)));
 
-        return states
-            .Where(state => state is not null)
-            .Cast<ProductBacklogStateDto>()
+        var readyStates = states
+            .Where(state => state.CanUseData)
+            .Select(state => state.Data!)
             .ToList();
+
+        if (readyStates.Count > 0)
+        {
+            return DataStateResult<IReadOnlyList<ProductBacklogStateDto>>.Ready(
+                readyStates,
+                states.SelectMany(state => state.Metadata).ToList());
+        }
+
+        return AggregateDataStates<ProductBacklogStateDto>(
+            states,
+            "No backlog state data matched the current scope.");
     }
 
     private async Task<IReadOnlyList<SprintDto>> LoadCurrentSprintsAsync(IEnumerable<int> teamIds)
@@ -443,7 +468,7 @@ public sealed class WorkspaceSignalService
             .ToList();
     }
 
-    private async Task<IReadOnlyList<DeliverySignalContext>> LoadDeliveryContextsAsync(
+    private async Task<DataStateResult<IReadOnlyList<DeliverySignalContext>>> LoadDeliveryContextsAsync(
         int productOwnerId,
         IReadOnlyCollection<ProductDto> scopedProducts,
         IReadOnlyCollection<SprintDto> currentSprints,
@@ -454,7 +479,12 @@ public sealed class WorkspaceSignalService
                 .Where(product => product.TeamIds.Contains(sprint.TeamId))
                 .Select(product => (Sprint: sprint, ProductId: product.Id)))
             .ToArray();
-        var contexts = new List<DeliverySignalContext?>(combinations.Length);
+        if (combinations.Length == 0)
+        {
+            return DataStateResult<IReadOnlyList<DeliverySignalContext>>.Empty("No current sprint delivery contexts matched the current scope.");
+        }
+
+        var contexts = new List<DataStateResult<DeliverySignalContext>>(combinations.Length);
 
         foreach (var batch in combinations.Chunk(DeliveryContextBatchSize))
         {
@@ -462,13 +492,24 @@ public sealed class WorkspaceSignalService
                 LoadDeliveryContextAsync(productOwnerId, scope.Sprint, scope.ProductId, cancellationToken))));
         }
 
-        return contexts
-            .Where(context => context is not null)
-            .Cast<DeliverySignalContext>()
+        var readyContexts = contexts
+            .Where(context => context.CanUseData)
+            .Select(context => context.Data!)
             .ToList();
+
+        if (readyContexts.Count > 0)
+        {
+            return DataStateResult<IReadOnlyList<DeliverySignalContext>>.Ready(
+                readyContexts,
+                contexts.SelectMany(context => context.Metadata).ToList());
+        }
+
+        return AggregateDataStates<DeliverySignalContext>(
+            contexts,
+            "No sprint delivery contexts matched the current scope.");
     }
 
-    private async Task<DeliverySignalContext?> LoadDeliveryContextAsync(
+    private async Task<DataStateResult<DeliverySignalContext>> LoadDeliveryContextAsync(
         int productOwnerId,
         SprintDto sprint,
         int productId,
@@ -490,80 +531,108 @@ public sealed class WorkspaceSignalService
 
             await Task.WhenAll(sprintExecutionEnvelopeTask, backlogHealthEnvelopeTask);
 
-            var sprintExecutionEnvelope = (await sprintExecutionEnvelopeTask).GetDataOrDefault();
-            var backlogHealthEnvelope = (await backlogHealthEnvelopeTask).GetDataOrDefault();
-            if (sprintExecutionEnvelope is null || backlogHealthEnvelope is null)
+            var sprintExecutionResponse = (await sprintExecutionEnvelopeTask)
+                .ToDataStateResponse()
+                .ToDataStateResult();
+            var backlogHealthResponse = (await backlogHealthEnvelopeTask)
+                .ToDataStateResponse()
+                .ToDataStateResult();
+
+            if (!sprintExecutionResponse.CanUseData || !backlogHealthResponse.CanUseData)
             {
-                return null;
+                if (sprintExecutionResponse.Status == DataStateResultStatus.Invalid || backlogHealthResponse.Status == DataStateResultStatus.Invalid)
+                {
+                    return DataStateResult<DeliverySignalContext>.Invalid(
+                        sprintExecutionResponse.Reason ?? backlogHealthResponse.Reason ?? "The sprint delivery context did not return usable data.",
+                        filterMetadata: sprintExecutionResponse.Metadata.Concat(backlogHealthResponse.Metadata).ToList());
+                }
+
+                if (sprintExecutionResponse.Status == DataStateResultStatus.NotReady || backlogHealthResponse.Status == DataStateResultStatus.NotReady)
+                {
+                    return DataStateResult<DeliverySignalContext>.NotReady(
+                        sprintExecutionResponse.Reason ?? backlogHealthResponse.Reason ?? "The sprint delivery context is not ready yet.",
+                        filterMetadata: sprintExecutionResponse.Metadata.Concat(backlogHealthResponse.Metadata).ToList());
+                }
+
+                if (sprintExecutionResponse.Status == DataStateResultStatus.Failed || backlogHealthResponse.Status == DataStateResultStatus.Failed)
+                {
+                    return DataStateResult<DeliverySignalContext>.Failed(
+                        sprintExecutionResponse.Reason ?? backlogHealthResponse.Reason ?? "The sprint delivery context could not be loaded.",
+                        filterMetadata: sprintExecutionResponse.Metadata.Concat(backlogHealthResponse.Metadata).ToList());
+                }
+
+                return DataStateResult<DeliverySignalContext>.Empty(
+                    sprintExecutionResponse.Reason ?? backlogHealthResponse.Reason ?? "The sprint delivery context did not return usable data.",
+                    filterMetadata: sprintExecutionResponse.Metadata.Concat(backlogHealthResponse.Metadata).ToList());
             }
 
-            var sprintExecutionResponse = CanonicalClientResponseFactory.Create<SprintExecutionDto>(sprintExecutionEnvelope);
-            var backlogHealthResponse = CanonicalClientResponseFactory.Create<BacklogHealthDto>(backlogHealthEnvelope);
-
-            return new DeliverySignalContext(
+            var metadata = sprintExecutionResponse.Metadata
+                .Concat(backlogHealthResponse.Metadata)
+                .ToList();
+            var context = new DeliverySignalContext(
                 sprint,
                 sprintExecutionResponse.Data,
                 backlogHealthResponse.Data,
-                new[]
-                    {
-                        sprintExecutionResponse.FilterMetadata,
-                        backlogHealthResponse.FilterMetadata
-                    }
-                    .Where(metadata => metadata is not null)
-                    .Cast<CanonicalFilterMetadata>()
-                    .ToList());
+                metadata);
+
+            return sprintExecutionResponse.HasInvalidFilter || backlogHealthResponse.HasInvalidFilter
+                ? DataStateResult<DeliverySignalContext>.Invalid(
+                    sprintExecutionResponse.Reason ?? backlogHealthResponse.Reason ?? "The delivery scope was corrected before loading signal data.",
+                    context,
+                    filterMetadata: metadata)
+                : DataStateResult<DeliverySignalContext>.Ready(context, metadata);
         }
         catch (ApiException ex) when (ex.StatusCode == 400 || ex.StatusCode == 404)
         {
-            // Home delivery signals fan out across product/team combinations; stale links can still yield
-            // validation failures for an individual context, which should degrade to a skipped context.
             _logger.LogWarning(
                 ex,
                 "Skipping home delivery signal context for ProductOwner {ProductOwnerId}, Sprint {SprintId}, Product {ProductId}.",
                 productOwnerId,
                 sprint.Id,
                 productId);
-            return null;
+            return ex.StatusCode == 400
+                ? DataStateResult<DeliverySignalContext>.Invalid("The sprint delivery scope was rejected for one product context.")
+                : DataStateResult<DeliverySignalContext>.Empty("No sprint delivery context was available for one product.");
         }
     }
 
-    private async Task<CanonicalClientResponse<GetSprintTrendMetricsResponse>?> LoadSprintTrendsAsync(
+    private async Task<DataStateResult<GetSprintTrendMetricsResponse>> LoadSprintTrendsAsync(
         int productOwnerId,
         IReadOnlyCollection<int> sprintIds,
         CancellationToken cancellationToken)
     {
         if (sprintIds.Count < 2)
         {
-            return null;
+            return DataStateResult<GetSprintTrendMetricsResponse>.Empty("Need at least two sprints to evaluate delivery trends.");
         }
 
-        var response = await _metricsClient.GetSprintTrendMetricsAsync(
+        return (await _metricsClient.GetSprintTrendMetricsAsync(
             productOwnerId,
             sprintIds,
             null,
             false,
             true,
-            cancellationToken);
-        var envelope = response.GetDataOrDefault();
-        return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
+            cancellationToken))
+            .ToDataStateResponse()
+            .ToDataStateResult();
     }
 
-    private async Task<CanonicalClientResponse<GetPrSprintTrendsResponse>?> LoadPrTrendsAsync(
+    private async Task<DataStateResult<GetPrSprintTrendsResponse>> LoadPrTrendsAsync(
         IReadOnlyCollection<int> sprintIds,
         string productIdsCsv,
         CancellationToken cancellationToken)
     {
         if (sprintIds.Count < 2)
         {
-            return null;
+            return DataStateResult<GetPrSprintTrendsResponse>.Empty("Need at least two sprints to evaluate PR trends.");
         }
 
-        var response = await _pullRequestsClient.GetSprintTrendsAsync(sprintIds, productIdsCsv, null, cancellationToken);
-        var envelope = response.GetDataOrDefault();
-        return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
+        return (await _pullRequestsClient.GetSprintTrendsAsync(sprintIds, productIdsCsv, null, cancellationToken))
+            .ToDataStateResponse()
+            .ToDataStateResult();
     }
 
-    private async Task<CanonicalClientResponse<CapacityCalibrationDto>?> LoadCapacityCalibrationAsync(
+    private async Task<DataStateResult<CapacityCalibrationDto>> LoadCapacityCalibrationAsync(
         int productOwnerId,
         IReadOnlyCollection<int> sprintIds,
         IReadOnlyCollection<int> productIds,
@@ -571,12 +640,12 @@ public sealed class WorkspaceSignalService
     {
         if (sprintIds.Count == 0)
         {
-            return null;
+            return DataStateResult<CapacityCalibrationDto>.Empty("No sprint range was available for capacity calibration.");
         }
 
-        var response = await _metricsClient.GetCapacityCalibrationAsync(productOwnerId, sprintIds, productIds, cancellationToken);
-        var envelope = response.GetDataOrDefault();
-        return envelope is null ? null : CanonicalClientResponseFactory.Create(envelope);
+        return (await _metricsClient.GetCapacityCalibrationAsync(productOwnerId, sprintIds, productIds, cancellationToken))
+            .ToDataStateResponse()
+            .ToDataStateResult();
     }
 
     private static IEnumerable<WorkspaceSignalCandidate> GetDeliveryCandidates(
@@ -659,6 +728,111 @@ public sealed class WorkspaceSignalService
             readyFeatures.Count,
             readyPbis.Count,
             readyPbis.Sum(pbi => pbi.Effort ?? 0));
+    }
+
+    private static DataStateResult<string> MapSignalResult<T>(
+        DataStateResult<T> result,
+        Func<T?, string> selector)
+    {
+        if (result.CanUseData)
+        {
+            return result.Status == DataStateResultStatus.Invalid
+                ? DataStateResult<string>.Invalid(
+                    result.Reason ?? "The selected filter scope was corrected before loading the signal.",
+                    selector(result.Data),
+                    result.RetryAfterSeconds,
+                    result.Metadata)
+                : DataStateResult<string>.Ready(
+                    selector(result.Data),
+                    result.Metadata,
+                    result.Reason,
+                    result.RetryAfterSeconds);
+        }
+
+        return result.Status switch
+        {
+            DataStateResultStatus.Empty => DataStateResult<string>.Empty(result.Reason, result.RetryAfterSeconds, result.Metadata),
+            DataStateResultStatus.NotReady => DataStateResult<string>.NotReady(result.Reason, result.RetryAfterSeconds, result.Metadata),
+            DataStateResultStatus.Invalid => DataStateResult<string>.Invalid(result.Reason, retryAfterSeconds: result.RetryAfterSeconds, filterMetadata: result.Metadata),
+            _ => DataStateResult<string>.Failed(result.Reason, result.RetryAfterSeconds, result.Metadata)
+        };
+    }
+
+    private static DataStateResult<IReadOnlyList<T>> AggregateDataStates<T>(
+        IEnumerable<DataStateResult<T>> results,
+        string emptyReason)
+    {
+        var resultList = results.ToList();
+        var metadata = resultList.SelectMany(result => result.Metadata).ToList();
+        if (resultList.Count == 0)
+        {
+            return DataStateResult<IReadOnlyList<T>>.Empty(emptyReason);
+        }
+
+        var invalidResult = resultList.FirstOrDefault(result => result.Status == DataStateResultStatus.Invalid);
+        if (invalidResult is not null)
+        {
+            return DataStateResult<IReadOnlyList<T>>.Invalid(
+                invalidResult.Reason ?? emptyReason,
+                retryAfterSeconds: invalidResult.RetryAfterSeconds,
+                filterMetadata: metadata);
+        }
+
+        var notReadyResult = resultList.FirstOrDefault(result => result.Status == DataStateResultStatus.NotReady);
+        if (notReadyResult is not null)
+        {
+            return DataStateResult<IReadOnlyList<T>>.NotReady(
+                notReadyResult.Reason ?? emptyReason,
+                notReadyResult.RetryAfterSeconds,
+                metadata);
+        }
+
+        var failedResult = resultList.FirstOrDefault(result => result.Status == DataStateResultStatus.Failed);
+        if (failedResult is not null)
+        {
+            return DataStateResult<IReadOnlyList<T>>.Failed(
+                failedResult.Reason ?? emptyReason,
+                failedResult.RetryAfterSeconds,
+                metadata);
+        }
+
+        return DataStateResult<IReadOnlyList<T>>.Empty(emptyReason, filterMetadata: metadata);
+    }
+
+    private static DataStateResult<string> AggregateSignalStates<T1, T2>(
+        string neutralSignal,
+        string emptyReason,
+        DataStateResult<T1> first,
+        DataStateResult<T2> second)
+    {
+        var metadata = first.Metadata.Concat(second.Metadata).ToList();
+
+        if (first.Status == DataStateResultStatus.Invalid || second.Status == DataStateResultStatus.Invalid)
+        {
+            return DataStateResult<string>.Invalid(
+                first.Reason ?? second.Reason ?? emptyReason,
+                neutralSignal,
+                first.RetryAfterSeconds ?? second.RetryAfterSeconds,
+                metadata);
+        }
+
+        if (first.Status == DataStateResultStatus.NotReady || second.Status == DataStateResultStatus.NotReady)
+        {
+            return DataStateResult<string>.NotReady(
+                first.Reason ?? second.Reason ?? emptyReason,
+                first.RetryAfterSeconds ?? second.RetryAfterSeconds,
+                metadata);
+        }
+
+        if (first.Status == DataStateResultStatus.Failed || second.Status == DataStateResultStatus.Failed)
+        {
+            return DataStateResult<string>.Failed(
+                first.Reason ?? second.Reason ?? emptyReason,
+                first.RetryAfterSeconds ?? second.RetryAfterSeconds,
+                metadata);
+        }
+
+        return DataStateResult<string>.Empty(emptyReason, filterMetadata: metadata);
     }
 
     private static string SelectSignalText(

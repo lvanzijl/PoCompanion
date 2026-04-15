@@ -48,20 +48,18 @@ public class PullRequestService
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
     /// <param name="fromDate">Optional start date filter</param>
-    public async Task<CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
+    public async Task<DataStateResult<IReadOnlyList<SharedPullRequestMetricsDto>>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
     {
-        var response = await _pullRequestsClient.GetMetricsAsync(productIds, fromDate, CancellationToken.None);
-        var payload = response.GetDataOrDefault();
-        return payload is null
-            ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>(Array.Empty<SharedPullRequestMetricsDto>())
-            : CanonicalClientResponseFactory.Create(payload);
+        return (await _pullRequestsClient.GetMetricsAsync(productIds, fromDate, CancellationToken.None))
+            .ToDataStateResponse()
+            .ToDataStateResult();
     }
 
     /// <summary>
     /// Gets filtered pull requests.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
-    public async Task<CanonicalClientResponse<IReadOnlyList<SharedPullRequestDto>>> GetFilteredAsync(
+    public async Task<DataStateResult<IReadOnlyList<SharedPullRequestDto>>> GetFilteredAsync(
         string? productIds = null,
         string? iterationPath = null,
         string? createdBy = null,
@@ -69,18 +67,16 @@ public class PullRequestService
         DateTimeOffset? toDate = null,
         string? status = null)
     {
-        var response = await _pullRequestsClient.GetFilteredAsync(
+        return (await _pullRequestsClient.GetFilteredAsync(
             productIds,
             iterationPath,
             createdBy,
             fromDate,
             toDate,
             status,
-            CancellationToken.None);
-        var payload = response.GetDataOrDefault();
-        return payload is null
-            ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestDto>>(Array.Empty<SharedPullRequestDto>())
-            : CanonicalClientResponseFactory.Create(payload);
+            CancellationToken.None))
+            .ToDataStateResponse()
+            .ToDataStateResult();
     }
 
     /// <summary>

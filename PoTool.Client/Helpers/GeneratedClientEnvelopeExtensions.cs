@@ -124,12 +124,20 @@ public static class GeneratedClientEnvelopeExtensions
         this DataStateResponseDtoOfSprintQueryResponseDtoOfMultiIterationBacklogHealthDto envelope)
         => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
 
+    public static DataStateResponseDto<SprintQueryResponseDto<BacklogHealthDto>> ToDataStateResponse(
+        this DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto envelope)
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
+
     public static DataStateResponseDto<DeliveryQueryResponseDto<CapacityCalibrationDto>> ToDataStateResponse(
         this DataStateResponseDtoOfDeliveryQueryResponseDtoOfCapacityCalibrationDto envelope)
         => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
 
     public static DataStateResponseDto<DeliveryQueryResponseDto<PortfolioDeliveryDto>> ToDataStateResponse(
         this DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioDeliveryDto envelope)
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
+
+    public static DataStateResponseDto<DeliveryQueryResponseDto<HomeProductBarMetricsDto>> ToDataStateResponse(
+        this DataStateResponseDtoOfDeliveryQueryResponseDtoOfHomeProductBarMetricsDto envelope)
         => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
 
     public static DataStateResponseDto<SprintQueryResponseDto<GetSprintTrendMetricsResponse>> ToDataStateResponse(
@@ -152,6 +160,14 @@ public static class GeneratedClientEnvelopeExtensions
         this DataStateResponseDtoOfPipelineQueryResponseDtoOfPipelineInsightsDto envelope)
         => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
 
+    public static DataStateResponseDto<PipelineQueryResponseDto<IReadOnlyList<PipelineMetricsDto>>> ToDataStateResponse(
+        this DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto envelope)
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
+
+    public static DataStateResponseDto<PipelineQueryResponseDto<IReadOnlyList<PipelineRunDto>>> ToDataStateResponse(
+        this DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto envelope)
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
+
     public static DataStateResponseDto<PullRequestQueryResponseDto<PullRequestInsightsDto>> ToDataStateResponse(
         this DataStateResponseDtoOfPullRequestQueryResponseDtoOfPullRequestInsightsDto envelope)
         => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
@@ -162,6 +178,14 @@ public static class GeneratedClientEnvelopeExtensions
 
     public static DataStateResponseDto<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>> ToDataStateResponse(
         this DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse envelope)
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
+
+    public static DataStateResponseDto<PullRequestQueryResponseDto<IReadOnlyList<PullRequestMetricsDto>>> ToDataStateResponse(
+        this DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto envelope)
+        => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
+
+    public static DataStateResponseDto<PullRequestQueryResponseDto<IReadOnlyList<PullRequestDto>>> ToDataStateResponse(
+        this DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto envelope)
         => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
 
     public static DeliveryQueryResponseDto<PortfolioProgressTrendDto>? GetDataOrDefault(

@@ -29,16 +29,14 @@ public class PipelineService
     /// Gets aggregated metrics for pipelines, optionally filtered by products.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
-    public async Task<CanonicalClientResponse<IReadOnlyList<PipelineMetricsDto>>> GetMetricsAsync(
+    public async Task<DataStateResult<IReadOnlyList<PipelineMetricsDto>>> GetMetricsAsync(
         string? productIds = null,
         DateTimeOffset? fromDate = null,
         DateTimeOffset? toDate = null)
     {
-        var response = await _pipelinesClient.GetMetricsAsync(productIds, fromDate, toDate, CancellationToken.None);
-        var payload = response.GetDataOrDefault();
-        return payload is null
-            ? new CanonicalClientResponse<IReadOnlyList<PipelineMetricsDto>>(Array.Empty<PipelineMetricsDto>())
-            : CanonicalClientResponseFactory.Create(payload);
+        return (await _pipelinesClient.GetMetricsAsync(productIds, fromDate, toDate, CancellationToken.None))
+            .ToDataStateResponse()
+            .ToDataStateResult();
     }
 
     /// <summary>
@@ -55,14 +53,14 @@ public class PipelineService
     /// Uses the canonical filter envelope and returns only the payload data to the UI.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by (currently uses only first ID)</param>
-    public async Task<CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>> GetRunsForProductsAsync(
+    public async Task<DataStateResult<IReadOnlyList<PipelineRunDto>>> GetRunsForProductsAsync(
         string? productIds = null,
         DateTimeOffset? fromDate = null,
         DateTimeOffset? toDate = null)
     {
         if (string.IsNullOrWhiteSpace(productIds))
         {
-            return new CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>(Array.Empty<PipelineRunDto>());
+            return DataStateResult<IReadOnlyList<PipelineRunDto>>.Empty("No product scope was selected for pipeline runs.");
         }
         
         // Parse and validate the first product ID
@@ -71,14 +69,12 @@ public class PipelineService
             !int.TryParse(firstProductIdStr, out var firstId) || 
             firstId <= 0)
         {
-            return new CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>(Array.Empty<PipelineRunDto>());
+            return DataStateResult<IReadOnlyList<PipelineRunDto>>.Invalid("A valid product selection is required to load pipeline runs.");
         }
 
-        var response = await _pipelinesClient.GetRunsForProductsAsync(productIds, fromDate, toDate, CancellationToken.None);
-        var payload = response.GetDataOrDefault();
-        return payload is null
-            ? new CanonicalClientResponse<IReadOnlyList<PipelineRunDto>>(Array.Empty<PipelineRunDto>())
-            : CanonicalClientResponseFactory.Create(payload);
+        return (await _pipelinesClient.GetRunsForProductsAsync(productIds, fromDate, toDate, CancellationToken.None))
+            .ToDataStateResponse()
+            .ToDataStateResult();
     }
 
     /// <summary>

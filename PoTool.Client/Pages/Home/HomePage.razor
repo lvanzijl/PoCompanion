@@ -134,6 +134,11 @@
                         </MudText>
                     }
                 </div>
+
+                @if (_productBarFilterNotice is not null)
+                {
+                    <CanonicalFilterMetadataNotice Metadata="@_productBarFilterNotice" />
+                }
             </MudPaper>
 
             <div class="dashboard-sync-status dashboard-section" role="status" aria-live="polite">
@@ -273,8 +278,10 @@
     private List<ProductDto> _products = new();
     private HomeProductBarMetricsDto? _productBarMetrics;
     private CanonicalFilterMetadata? _productBarFilterMetadata;
+    private CanonicalFilterNoticeModel? _productBarFilterNotice;
     private IDisposable? _filterSubscription;
     private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
+    private int? _requestedProductId => GlobalFilterStore.GetState().PrimaryProductId;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -478,6 +485,7 @@
         _productMetricsError = null;
         _productBarMetrics = null;
         _productBarFilterMetadata = null;
+        _productBarFilterNotice = null;
         await InvokeAsync(StateHasChanged);
 
         try
@@ -489,20 +497,29 @@
 
             var metricsResponse = await HomeProductBarMetricsService.GetAsync(
                 _profileId.Value,
-                _selectedProductId,
+                _requestedProductId,
                 cancellationToken);
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (metricsResponse.State != PoTool.Shared.DataState.DataStateDto.Available)
+            _productBarFilterMetadata = metricsResponse.Metadata.FirstOrDefault();
+            _productBarFilterNotice = _productBarFilterMetadata is null
+                ? null
+                : CanonicalClientResponseFactory.CreateNotice(_productBarFilterMetadata);
+
+            if (!metricsResponse.CanUseData)
             {
+                if (metricsResponse.Status == DataStateResultStatus.Empty)
+                {
+                    return;
+                }
+
                 _productMetricsError = string.IsNullOrWhiteSpace(metricsResponse.Reason)
                     ? ProductMetricsUnavailableMessage
                     : metricsResponse.Reason;
                 return;
             }
 
-            _productBarFilterMetadata = metricsResponse.FilterMetadata;
             _productBarMetrics = metricsResponse.Data;
         }
         catch (OperationCanceledException)
@@ -512,6 +529,7 @@
         catch (Exception)
         {
             _productBarFilterMetadata = null;
+            _productBarFilterNotice = null;
             _productMetricsError = ProductMetricsUnavailableMessage;
         }
         finally
@@ -537,19 +555,19 @@
         {
             LoadWorkspaceSignalAsync(
                 _healthSignalState,
-                token => WorkspaceSignalService.GetHealthSignalAsync(_products, _selectedProductId, token),
+                token => WorkspaceSignalService.GetHealthSignalAsync(_products, GlobalFilterStore.GetState(), token),
                 cancellationToken),
             LoadWorkspaceSignalAsync(
                 _deliverySignalState,
-                token => WorkspaceSignalService.GetDeliverySignalAsync(_profileId.Value, _products, _selectedProductId, token),
+                token => WorkspaceSignalService.GetDeliverySignalAsync(_profileId.Value, _products, GlobalFilterStore.GetState(), token),
                 cancellationToken),
             LoadWorkspaceSignalAsync(
                 _trendsSignalState,
-                token => WorkspaceSignalService.GetTrendsSignalAsync(_profileId.Value, _products, _selectedProductId, token),
+                token => WorkspaceSignalService.GetTrendsSignalAsync(_profileId.Value, _products, GlobalFilterStore.GetState(), token),
                 cancellationToken),
             LoadWorkspaceSignalAsync(
                 _planningSignalState,
-                token => WorkspaceSignalService.GetPlanningSignalAsync(_profileId.Value, _products, _selectedProductId, token),
+                token => WorkspaceSignalService.GetPlanningSignalAsync(_profileId.Value, _products, GlobalFilterStore.GetState(), token),
                 cancellationToken)
         };
 
@@ -564,14 +582,24 @@
 
     private async Task LoadWorkspaceSignalAsync(
         WorkspaceTileState state,
-        Func<CancellationToken, Task<string>> loader,
+        Func<CancellationToken, Task<DataStateResult<string>>> loader,
         CancellationToken cancellationToken)
     {
         try
         {
-            var signalText = await loader(cancellationToken);
+            var signalResult = await loader(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            state.SetLoaded(signalText);
+
+            if (signalResult.CanUseData)
+            {
+                state.SetLoaded(
+                    signalResult.Data!,
+                    GetWorkspaceTileDetailMessage(signalResult),
+                    GetWorkspaceTileDetailColor(signalResult));
+                return;
+            }
+
+            state.ApplyState(signalResult.Status, signalResult.Reason, state.DefaultSignalText);
         }
         catch (OperationCanceledException)
         {
@@ -615,9 +643,9 @@
     {
         var parameters = new List<string>();
 
-        if (_selectedProductId.HasValue)
+        if (_requestedProductId.HasValue)
         {
-            parameters.Add($"productId={_selectedProductId.Value}");
+            parameters.Add($"productId={_requestedProductId.Value}");
         }
 
         if (!string.IsNullOrEmpty(additionalParams))
@@ -708,7 +736,7 @@
             return "Loading signal…";
         }
 
-        return state.HasError ? state.ErrorMessage! : state.SignalText;
+        return state.SignalText;
     }
 
     private static string GetWorkspaceTileAriaText(WorkspaceTileState state)
@@ -728,18 +756,34 @@
             return;
         }
 
-        if (!state.HasError)
+        if (string.IsNullOrWhiteSpace(state.DetailMessage))
         {
             return;
         }
 
         builder.OpenComponent<MudText>(10);
         builder.AddAttribute(11, nameof(MudText.Typo), Typo.caption);
-        builder.AddAttribute(12, nameof(MudText.Color), Color.Error);
+        builder.AddAttribute(12, nameof(MudText.Color), state.DetailColor);
         builder.AddAttribute(13, nameof(MudText.Class), "home-workspace-tile__error");
-        builder.AddContent(14, state.ErrorMessage);
+        builder.AddContent(14, state.DetailMessage);
         builder.CloseComponent();
     };
+
+    private static string? GetWorkspaceTileDetailMessage(DataStateResult<string> result)
+        => result.Status switch
+        {
+            DataStateResultStatus.Invalid or DataStateResultStatus.NotReady or DataStateResultStatus.Failed => result.Reason,
+            _ => null
+        };
+
+    private static Color GetWorkspaceTileDetailColor(DataStateResult<string> result)
+        => result.Status switch
+        {
+            DataStateResultStatus.Invalid => Color.Warning,
+            DataStateResultStatus.NotReady => Color.Info,
+            DataStateResultStatus.Failed => Color.Error,
+            _ => Color.Default
+        };
 
     private void NavigateToHealth()
     {
@@ -834,28 +878,45 @@
 
         public bool IsLoading { get; private set; } = true;
 
-        public string? ErrorMessage { get; private set; }
+        public string? DetailMessage { get; private set; }
 
-        public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
+        public Color DetailColor { get; private set; } = Color.Default;
 
         public void StartLoading()
         {
             SignalText = DefaultSignalText;
-            ErrorMessage = null;
+            DetailMessage = null;
+            DetailColor = Color.Default;
             IsLoading = true;
         }
 
-        public void SetLoaded(string signalText)
+        public void SetLoaded(string signalText, string? detailMessage = null, Color detailColor = Color.Default)
         {
             SignalText = string.IsNullOrWhiteSpace(signalText) ? DefaultSignalText : signalText;
-            ErrorMessage = null;
+            DetailMessage = detailMessage;
+            DetailColor = detailColor;
             IsLoading = false;
         }
 
         public void SetError(string errorMessage)
         {
             SignalText = DefaultSignalText;
-            ErrorMessage = errorMessage;
+            DetailMessage = errorMessage;
+            DetailColor = Color.Error;
+            IsLoading = false;
+        }
+
+        public void ApplyState(DataStateResultStatus status, string? reason, string fallbackSignalText)
+        {
+            SignalText = fallbackSignalText;
+            DetailMessage = status == DataStateResultStatus.Empty ? null : reason;
+            DetailColor = status switch
+            {
+                DataStateResultStatus.Invalid => Color.Warning,
+                DataStateResultStatus.NotReady => Color.Info,
+                DataStateResultStatus.Failed => Color.Error,
+                _ => Color.Default
+            };
             IsLoading = false;
         }
     }

@@ -207,9 +207,10 @@ public sealed class WorkspaceSignalServiceTests
     {
         var service = CreateService();
 
-        var result = await service.GetHealthSignalAsync(CreateProducts(), selectedProductId: 999);
+        var result = await service.GetHealthSignalAsync(CreateProducts(), CreateFilterState(999));
 
-        Assert.AreEqual(WorkspaceSignalSet.Neutral.Health, result);
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        Assert.IsNull(result.Data);
     }
 
     [TestMethod]
@@ -217,9 +218,10 @@ public sealed class WorkspaceSignalServiceTests
     {
         var service = CreateService();
 
-        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), selectedProductId: 999);
+        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), CreateFilterState(999));
 
-        Assert.AreEqual(WorkspaceSignalSet.Neutral.Delivery, result);
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        Assert.IsNull(result.Data);
     }
 
     [TestMethod]
@@ -307,9 +309,10 @@ public sealed class WorkspaceSignalServiceTests
             workItemService,
             NullLogger<WorkspaceSignalService>.Instance);
 
-        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), selectedProductId: null);
+        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), CreateFilterState());
 
-        Assert.AreEqual("4 PBIs may spill over this sprint", result);
+        Assert.IsTrue(result.CanUseData);
+        Assert.AreEqual("4 PBIs may spill over this sprint", result.Data);
         metricsClient.Verify(client => client.GetSprintExecutionAsync(42, 55, 1, It.IsAny<CancellationToken>()), Times.Once);
         metricsClient.Verify(client => client.GetSprintExecutionAsync(42, 55, null, It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -319,9 +322,10 @@ public sealed class WorkspaceSignalServiceTests
     {
         var service = CreateService();
 
-        var result = await service.GetTrendsSignalAsync(42, CreateProducts(), selectedProductId: 999);
+        var result = await service.GetTrendsSignalAsync(42, CreateProducts(), CreateFilterState(999));
 
-        Assert.AreEqual(WorkspaceSignalSet.Neutral.Trends, result);
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        Assert.IsNull(result.Data);
     }
 
     [TestMethod]
@@ -329,9 +333,10 @@ public sealed class WorkspaceSignalServiceTests
     {
         var service = CreateService();
 
-        var result = await service.GetPlanningSignalAsync(42, CreateProducts(), selectedProductId: 999);
+        var result = await service.GetPlanningSignalAsync(42, CreateProducts(), CreateFilterState(999));
 
-        Assert.AreEqual(WorkspaceSignalSet.Neutral.Planning, result);
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        Assert.IsNull(result.Data);
     }
 
     [TestMethod]
@@ -437,7 +442,7 @@ public sealed class WorkspaceSignalServiceTests
             workItemService,
             NullLogger<WorkspaceSignalService>.Instance);
 
-        await service.GetTrendsSignalAsync(42, CreateProducts(), selectedProductId: null);
+        await service.GetTrendsSignalAsync(42, CreateProducts(), CreateFilterState());
 
         Assert.HasCount(2, service.LatestTrendFilterMetadata);
         Assert.IsTrue(service.LatestTrendFilterMetadata.Any(metadata => metadata.Kind == CanonicalFilterKind.Sprint));
@@ -477,6 +482,13 @@ public sealed class WorkspaceSignalServiceTests
             }
         ];
     }
+
+    private static FilterState CreateFilterState(int? productId = null)
+        => new(
+            productId.HasValue ? [productId.Value] : Array.Empty<int>(),
+            Array.Empty<string>(),
+            null,
+            FilterTimeSelection.Snapshot);
 
     private static DeliverySignalContext CreateDeliveryContext(
         int sprintId,

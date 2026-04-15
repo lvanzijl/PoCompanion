@@ -41,7 +41,7 @@ public sealed class HomeProductBarMetricsServiceTests
         Assert.IsNotNull(result.Data);
         Assert.AreEqual(55, result.Data.SprintProgressPercentage);
         Assert.IsNotNull(result.FilterMetadata);
-        CollectionAssert.AreEqual(new[] { 10 }, ((DeliveryFilterContextDto)result.FilterMetadata.RequestedFilter).ProductIds.Values.ToArray());
+        CollectionAssert.AreEqual(new[] { 10 }, ((DeliveryFilterContextDto)result.FilterMetadata!.RequestedFilter).ProductIds.Values.ToArray());
     }
 
     [TestMethod]

@@ -1,5 +1,6 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using System.Net.Http.Json;
 using System.Text.Json;
 using PoTool.Shared.DataState;
@@ -206,6 +207,12 @@ public class WorkItemService
             await _client.GetValidationTriageAsync(productIdsParam, cancellationToken));
     }
 
+    public async Task<DataStateResult<SharedValidationTriageSummaryDto>> GetValidationTriageSummaryResultAsync(
+        int[]? productIds = null,
+        CancellationToken cancellationToken = default)
+        => (await GetValidationTriageSummaryStateAsync(productIds, cancellationToken))
+            .ToDataStateResult();
+
     /// <summary>
     /// Gets the lightweight Health workspace summary for a single product card.
     /// </summary>
@@ -216,6 +223,13 @@ public class WorkItemService
         var response = await _client.GetHealthSummaryAsync(productId, cancellationToken);
         return GeneratedCacheEnvelopeHelper.GetDataOrDefault<HealthWorkspaceProductSummaryDto>(response);
     }
+
+    public async Task<DataStateResult<ProductBacklogStateDto>> GetBacklogStateResultAsync(
+        int productId,
+        CancellationToken cancellationToken = default)
+        => (await _client.GetBacklogStateAsync(productId, cancellationToken))
+            .ToDataStateResponse()
+            .ToDataStateResult();
 
     /// <summary>
     /// Gets the validation queue for a specific category.

@@ -120,8 +120,21 @@
             var prResponse = await prTask;
             var pipelineResponse = await pipelineTask;
 
-            _prMetrics = prResponse.Data.ToList();
-            _pipelineMetrics = pipelineResponse.Data.ToList();
+            _prMetrics = prResponse.CanUseData
+                ? prResponse.Data!.ToList()
+                : new List<PullRequestMetricsDto>();
+            _pipelineMetrics = pipelineResponse.CanUseData
+                ? pipelineResponse.Data!.ToList()
+                : new List<PipelineMetricsDto>();
+
+            var failedResponse = new[] { prResponse.Reason, pipelineResponse.Reason }
+                .FirstOrDefault(reason => !string.IsNullOrWhiteSpace(reason)
+                    && (prResponse.Status is DataStateResultStatus.Failed or DataStateResultStatus.Invalid
+                        || pipelineResponse.Status is DataStateResultStatus.Failed or DataStateResultStatus.Invalid));
+            if (!string.IsNullOrWhiteSpace(failedResponse))
+            {
+                throw new InvalidOperationException(failedResponse);
+            }
         }
         catch (Exception ex)
         {
