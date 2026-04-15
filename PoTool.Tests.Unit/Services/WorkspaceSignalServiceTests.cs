@@ -207,9 +207,10 @@ public sealed class WorkspaceSignalServiceTests
     {
         var service = CreateService();
 
-        var result = await service.GetHealthSignalAsync(CreateProducts(), selectedProductId: 999);
+        var result = await service.GetHealthSignalAsync(CreateProducts(), CreateFilterState(999));
 
-        Assert.AreEqual(WorkspaceSignalSet.Neutral.Health, result);
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        Assert.IsNull(result.Data);
     }
 
     [TestMethod]
@@ -217,9 +218,128 @@ public sealed class WorkspaceSignalServiceTests
     {
         var service = CreateService();
 
-        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), selectedProductId: 999);
+        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), CreateFilterState(999));
 
-        Assert.AreEqual(WorkspaceSignalSet.Neutral.Delivery, result);
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        Assert.IsNull(result.Data);
+    }
+
+    [TestMethod]
+    public async Task GetDeliverySignalAsync_WithInvalidScopedProduct_DoesNotIssueBackendRequests()
+    {
+        var metricsClient = new Mock<IMetricsClient>(MockBehavior.Strict);
+        var pullRequestsClient = new Mock<IPullRequestsClient>(MockBehavior.Strict);
+        var workItemsClient = new Mock<IWorkItemsClient>(MockBehavior.Strict);
+        var sprintsClient = new Mock<ISprintsClient>(MockBehavior.Strict);
+        var sprintService = new SprintService(sprintsClient.Object);
+        var workItemService = new WorkItemService(
+            workItemsClient.Object,
+            TestHttpClient,
+            new WorkItemLoadCoordinatorService(NullLogger<WorkItemLoadCoordinatorService>.Instance));
+        var service = new WorkspaceSignalService(
+            metricsClient.Object,
+            pullRequestsClient.Object,
+            sprintService,
+            workItemService,
+            NullLogger<WorkspaceSignalService>.Instance);
+
+        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), CreateFilterState(999));
+
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        metricsClient.VerifyNoOtherCalls();
+        sprintsClient.VerifyNoOtherCalls();
+    }
+
+    [TestMethod]
+    public async Task GetDeliverySignalAsync_WithAllProducts_UsesExplicitProductScopeForSprintExecution()
+    {
+        var metricsClient = new Mock<IMetricsClient>();
+        var pullRequestsClient = new Mock<IPullRequestsClient>();
+        var workItemsClient = new Mock<IWorkItemsClient>();
+        var sprintsClient = new Mock<ISprintsClient>();
+        var currentSprint = new SprintDto
+        {
+            Id = 55,
+            TeamId = 10,
+            Path = "Team\\Sprint 55",
+            Name = "Sprint 55",
+            StartUtc = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+            EndUtc = new DateTimeOffset(2026, 3, 14, 0, 0, 0, TimeSpan.Zero)
+        };
+
+        sprintsClient
+            .Setup(client => client.GetCurrentSprintForTeamAsync(10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(currentSprint);
+
+        metricsClient
+            .Setup(client => client.GetSprintExecutionAsync(42, 55, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto
+            {
+                State = DataStateDto.Available,
+                Data = new SprintQueryResponseDtoOfSprintExecutionDto
+                {
+                    Data = new SprintExecutionDto
+                    {
+                        SprintId = 55,
+                        SprintName = "Sprint 55",
+                        StartUtc = currentSprint.StartUtc,
+                        EndUtc = currentSprint.EndUtc,
+                        HasData = true,
+                        CompletedPbis = [],
+                        UnfinishedPbis = [],
+                        AddedDuringSprint = [],
+                        RemovedDuringSprint = [],
+                        SpilloverPbis = [],
+                        StarvedPbis = [],
+                        Summary = new SprintExecutionSummaryDto
+                        {
+                            UnfinishedCount = 4
+                        }
+                    },
+                    RequestedFilter = CreateSprintFilter([1], [10]),
+                    EffectiveFilter = CreateSprintFilter([1], [10]),
+                    InvalidFields = [],
+                    ValidationMessages = []
+                }
+            });
+
+        metricsClient
+            .Setup(client => client.GetBacklogHealthAsync("Team\\Sprint 55", 42, It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 1 })), 55, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto
+            {
+                State = DataStateDto.Available,
+                Data = new SprintQueryResponseDtoOfBacklogHealthDto
+                {
+                    Data = new BacklogHealthDto
+                    {
+                        BlockedItems = 0,
+                        WorkItemsWithoutEffort = 0
+                    },
+                    RequestedFilter = CreateSprintFilter([1], [10]),
+                    EffectiveFilter = CreateSprintFilter([1], [10]),
+                    InvalidFields = [],
+                    ValidationMessages = []
+                }
+            });
+
+        var sprintService = new SprintService(sprintsClient.Object);
+        var workItemService = new WorkItemService(
+            workItemsClient.Object,
+            TestHttpClient,
+            new WorkItemLoadCoordinatorService(NullLogger<WorkItemLoadCoordinatorService>.Instance));
+        var service = new WorkspaceSignalService(
+            metricsClient.Object,
+            pullRequestsClient.Object,
+            sprintService,
+            workItemService,
+            NullLogger<WorkspaceSignalService>.Instance);
+
+        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), CreateFilterState());
+
+        Assert.IsTrue(result.CanUseData);
+        Assert.AreEqual("4 PBIs may spill over this sprint", result.Data);
+        metricsClient.Verify(client => client.GetSprintExecutionAsync(42, 55, 1, It.IsAny<CancellationToken>()), Times.Once);
+        metricsClient.Verify(client => client.GetSprintExecutionAsync(42, 55, null, It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [TestMethod]
@@ -227,9 +347,10 @@ public sealed class WorkspaceSignalServiceTests
     {
         var service = CreateService();
 
-        var result = await service.GetTrendsSignalAsync(42, CreateProducts(), selectedProductId: 999);
+        var result = await service.GetTrendsSignalAsync(42, CreateProducts(), CreateFilterState(999));
 
-        Assert.AreEqual(WorkspaceSignalSet.Neutral.Trends, result);
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        Assert.IsNull(result.Data);
     }
 
     [TestMethod]
@@ -237,9 +358,10 @@ public sealed class WorkspaceSignalServiceTests
     {
         var service = CreateService();
 
-        var result = await service.GetPlanningSignalAsync(42, CreateProducts(), selectedProductId: 999);
+        var result = await service.GetPlanningSignalAsync(42, CreateProducts(), CreateFilterState(999));
 
-        Assert.AreEqual(WorkspaceSignalSet.Neutral.Planning, result);
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        Assert.IsNull(result.Data);
     }
 
     [TestMethod]
@@ -340,11 +462,11 @@ public sealed class WorkspaceSignalServiceTests
         var service = new WorkspaceSignalService(
             metricsClient.Object,
             pullRequestsClient.Object,
-            workItemsClient.Object,
             sprintService,
-            workItemService);
+            workItemService,
+            NullLogger<WorkspaceSignalService>.Instance);
 
-        await service.GetTrendsSignalAsync(42, CreateProducts(), selectedProductId: null);
+        await service.GetTrendsSignalAsync(42, CreateProducts(), CreateFilterState());
 
         Assert.HasCount(2, service.LatestTrendFilterMetadata);
         Assert.IsTrue(service.LatestTrendFilterMetadata.Any(metadata => metadata.Kind == CanonicalFilterKind.Sprint));
@@ -366,9 +488,9 @@ public sealed class WorkspaceSignalServiceTests
         return new WorkspaceSignalService(
             metricsClient.Object,
             pullRequestsClient.Object,
-            workItemsClient.Object,
             sprintService,
-            workItemService);
+            workItemService,
+            NullLogger<WorkspaceSignalService>.Instance);
     }
 
     private static IReadOnlyCollection<ProductDto> CreateProducts()
@@ -383,6 +505,13 @@ public sealed class WorkspaceSignalServiceTests
             }
         ];
     }
+
+    private static FilterState CreateFilterState(int? productId = null)
+        => new(
+            productId.HasValue ? [productId.Value] : Array.Empty<int>(),
+            Array.Empty<string>(),
+            null,
+            FilterTimeSelection.Snapshot);
 
     private static DeliverySignalContext CreateDeliveryContext(
         int sprintId,

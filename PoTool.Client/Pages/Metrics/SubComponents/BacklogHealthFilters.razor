@@ -65,7 +65,9 @@
         try
         {
             var areaPaths = await WorkItemService.GetDistinctAreaPathsAsync();
-            _allAreaPaths = areaPaths.ToList();
+            _allAreaPaths = areaPaths.CanUseData
+                ? areaPaths.Data!.ToList()
+                : [];
         }
         catch (Exception ex)
         {

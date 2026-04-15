@@ -34,6 +34,9 @@
     public DataStateDto State { get; set; }
 
     [Parameter]
+    public UiDataState? UiState { get; set; }
+
+    [Parameter]
     public string Title { get; set; } = string.Empty;
 
     [Parameter]
@@ -68,18 +71,19 @@
                     string.IsNullOrWhiteSpace(Message) ? fallback.Message : Message);
             }
 
-            return CacheStatePresentation.Create(Subject, State, Reason);
+            return CacheStatePresentation.Create(Subject, UiState ?? CacheStatePresentation.ToUiDataState(State), Reason);
         }
     }
 
     private Task HandleRecoveryAsync()
         => OnRecovery.InvokeAsync();
 
-    private Severity GetSeverity() => State switch
+    private Severity GetSeverity() => (UiState ?? CacheStatePresentation.ToUiDataState(State)) switch
     {
-        DataStateDto.NotReady => Severity.Info,
-        DataStateDto.Empty => Severity.Info,
-        DataStateDto.Failed => Severity.Error,
+        UiDataState.NotReady => Severity.Info,
+        UiDataState.EmptyButValid => Severity.Info,
+        UiDataState.Invalid => Severity.Warning,
+        UiDataState.Failed => Severity.Error,
         _ => Severity.Normal
     };
 }

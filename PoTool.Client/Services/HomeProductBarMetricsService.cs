@@ -17,22 +17,20 @@ public class HomeProductBarMetricsService
         _metricsClient = metricsClient;
     }
 
-    public async Task<CanonicalClientResponse<HomeProductBarMetricsDto>?> GetAsync(
+    public async Task<DataStateResult<HomeProductBarMetricsDto>> GetAsync(
         int productOwnerId,
         int? productId,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _metricsClient.GetHomeProductBarMetricsAsync(productOwnerId, productId, cancellationToken);
-            var payload = response.GetDataOrDefault();
-            return payload is null
-                ? null
-                : CanonicalClientResponseFactory.Create(payload);
+            return (await _metricsClient.GetHomeProductBarMetricsAsync(productOwnerId, productId, cancellationToken))
+                .ToDataStateResponse()
+                .ToDataStateResult();
         }
         catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {
-            return null;
+            return DataStateResult<HomeProductBarMetricsDto>.Failed("Context metrics unavailable.");
         }
     }
 }

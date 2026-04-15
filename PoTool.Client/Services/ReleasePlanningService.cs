@@ -1,5 +1,6 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using PoTool.Shared.ReleasePlanning;
 
 namespace PoTool.Client.Services;
@@ -23,53 +24,55 @@ public class ReleasePlanningService
     /// <summary>
     /// Gets the complete Release Planning Board state.
     /// </summary>
-    public async Task<ReleasePlanningBoardDto?> GetBoardAsync(CancellationToken cancellationToken = default)
+    public async Task<DataStateResult<ReleasePlanningBoardDto>> GetBoardAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<ReleasePlanningBoardDto>(
+            return GeneratedCacheEnvelopeHelper.ToDataStateResult(
                 await _releasePlanningClient.GetBoardAsync(cancellationToken));
         }
         catch (ApiException ex)
         {
             _logger.LogError(ex, "Error retrieving Release Planning Board");
-            return null;
+            return DataStateResult<ReleasePlanningBoardDto>.Failed(ex.Message);
         }
     }
 
     /// <summary>
     /// Gets all unplanned Epics.
     /// </summary>
-    public async Task<IReadOnlyList<UnplannedEpicDto>?> GetUnplannedEpicsAsync(CancellationToken cancellationToken = default)
+    public async Task<DataStateResult<IReadOnlyList<UnplannedEpicDto>>> GetUnplannedEpicsAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            return (await _releasePlanningClient.GetUnplannedEpicsAsync(cancellationToken))
-                .GetReadOnlyListOrDefault(Array.Empty<UnplannedEpicDto>());
+            return GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                    await _releasePlanningClient.GetUnplannedEpicsAsync(cancellationToken))
+                .Map(static items => (IReadOnlyList<UnplannedEpicDto>)items.ToList());
         }
         catch (ApiException ex)
         {
             _logger.LogError(ex, "Error retrieving unplanned Epics");
-            return null;
+            return DataStateResult<IReadOnlyList<UnplannedEpicDto>>.Failed(ex.Message);
         }
     }
 
     /// <summary>
     /// Gets all Epics for a specific Objective.
     /// </summary>
-    public async Task<IReadOnlyList<ObjectiveEpicDto>?> GetObjectiveEpicsAsync(
+    public async Task<DataStateResult<IReadOnlyList<ObjectiveEpicDto>>> GetObjectiveEpicsAsync(
         int objectiveId,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            return (await _releasePlanningClient.GetObjectiveEpicsAsync(objectiveId, cancellationToken))
-                .GetReadOnlyListOrDefault(Array.Empty<ObjectiveEpicDto>());
+            return GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                    await _releasePlanningClient.GetObjectiveEpicsAsync(objectiveId, cancellationToken))
+                .Map(static items => (IReadOnlyList<ObjectiveEpicDto>)items.ToList());
         }
         catch (ApiException ex)
         {
             _logger.LogError(ex, "Error retrieving Epics for Objective {ObjectiveId}", objectiveId);
-            return null;
+            return DataStateResult<IReadOnlyList<ObjectiveEpicDto>>.Failed(ex.Message);
         }
     }
 
@@ -423,19 +426,20 @@ public class ReleasePlanningService
     /// <summary>
     /// Gets all Features for a specific Epic (for split dialog).
     /// </summary>
-    public async Task<IReadOnlyList<EpicFeatureDto>?> GetEpicFeaturesAsync(
+    public async Task<DataStateResult<IReadOnlyList<EpicFeatureDto>>> GetEpicFeaturesAsync(
         int epicId,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            return (await _releasePlanningClient.GetEpicFeaturesAsync(epicId, cancellationToken))
-                .GetReadOnlyListOrDefault(Array.Empty<EpicFeatureDto>());
+            return GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                    await _releasePlanningClient.GetEpicFeaturesAsync(epicId, cancellationToken))
+                .Map(static items => (IReadOnlyList<EpicFeatureDto>)items.ToList());
         }
         catch (ApiException ex)
         {
             _logger.LogError(ex, "Error retrieving Features for Epic {EpicId}", epicId);
-            return null;
+            return DataStateResult<IReadOnlyList<EpicFeatureDto>>.Failed(ex.Message);
         }
     }
 

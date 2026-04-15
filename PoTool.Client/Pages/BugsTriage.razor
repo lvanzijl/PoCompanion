@@ -394,9 +394,10 @@
                         
                         var refreshedBug = await WorkItemService.GetByTfsIdWithValidationAsync(bugId, productIds);
                         
-                        if (refreshedBug != null)
+                        if (refreshedBug.CanUseData)
                         {
-                            var refreshedSeverity = GetBugSeverity(refreshedBug);
+                            var bug = refreshedBug.Data!;
+                            var refreshedSeverity = GetBugSeverity(bug);
                             Logger.LogInformation("Retrieved refreshed bug {BugId} from API: severity = {Severity}", 
                                 bugId, refreshedSeverity);
                             
@@ -404,14 +405,14 @@
                             var existingBugIndex = _bugs.FindIndex(b => b.TfsId == bugId);
                             if (existingBugIndex >= 0)
                             {
-                                _bugs[existingBugIndex] = refreshedBug;
+                                _bugs[existingBugIndex] = bug;
                                 Logger.LogInformation("Updated bug {BugId} in _bugs list at index {Index}", bugId, existingBugIndex);
                             }
                             
                             // Update selected bug if it's the one being edited
                             if (_selectedBug?.TfsId == bugId)
                             {
-                                _selectedBug = refreshedBug;
+                                _selectedBug = bug;
                                 Logger.LogInformation("Updated _selectedBug reference for bug {BugId}", bugId);
                             }
                             
@@ -483,23 +484,24 @@
                         
                         var refreshedBug = await WorkItemService.GetByTfsIdWithValidationAsync(bugId, productIds);
                         
-                        if (refreshedBug != null)
+                        if (refreshedBug.CanUseData)
                         {
+                            var bug = refreshedBug.Data!;
                             Logger.LogInformation("Retrieved refreshed bug {BugId} from API: tags = {Tags}", 
-                                bugId, string.Join("; ", GetBugTags(refreshedBug)));
+                                bugId, string.Join("; ", GetBugTags(bug)));
                             
                             // Update the bug in local list
                             var existingBugIndex = _bugs.FindIndex(b => b.TfsId == bugId);
                             if (existingBugIndex >= 0)
                             {
-                                _bugs[existingBugIndex] = refreshedBug;
+                                _bugs[existingBugIndex] = bug;
                                 Logger.LogInformation("Updated bug {BugId} in _bugs list at index {Index}", bugId, existingBugIndex);
                             }
                             
                             // Update selected bug if it's the one being edited
                             if (_selectedBug?.TfsId == bugId)
                             {
-                                _selectedBug = refreshedBug;
+                                _selectedBug = bug;
                                 Logger.LogInformation("Updated _selectedBug reference for bug {BugId}", bugId);
                             }
                             

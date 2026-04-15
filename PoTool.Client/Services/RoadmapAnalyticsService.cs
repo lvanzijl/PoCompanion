@@ -1,5 +1,6 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 
 namespace PoTool.Client.Services;
 
@@ -110,21 +111,25 @@ public class RoadmapAnalyticsService
     /// Loads dependency signals for a set of work item IDs using the existing Dependency Graph API.
     /// Returns a set of work item IDs that have dependency relationships (DependsOn or Blocks).
     /// </summary>
-    public async Task<HashSet<int>> LoadDependencySignalsAsync(IEnumerable<int> workItemIds)
+    public async Task<DataStateResult<IReadOnlySet<int>>> LoadDependencySignalsAsync(IEnumerable<int> workItemIds)
     {
         var result = new HashSet<int>();
         try
         {
             var idsParam = string.Join(",", workItemIds);
             if (string.IsNullOrEmpty(idsParam))
-                return result;
+            {
+                return DataStateResult<IReadOnlySet<int>>.Empty("No roadmap epics were available for dependency analysis.");
+            }
 
-            var graphResponse = await _workItemsClient.GetDependencyGraphAsync(null, idsParam, null);
-            var graph = GeneratedCacheEnvelopeHelper.GetDataOrDefault<DependencyGraphDto>(graphResponse);
-            if (graph?.Nodes == null)
-                return result;
+            var graphResponse = GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await _workItemsClient.GetDependencyGraphAsync(null, idsParam, null));
+            if (!graphResponse.CanUseData || graphResponse.Data?.Nodes == null)
+            {
+                return graphResponse.Map(_ => (IReadOnlySet<int>)result);
+            }
 
-            foreach (var node in graph.Nodes)
+            foreach (var node in graphResponse.Data.Nodes)
             {
                 if (node.DependencyCount > 0 || node.DependentCount > 0)
                 {
@@ -132,12 +137,12 @@ public class RoadmapAnalyticsService
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Dependency data unavailable — skip gracefully
+            return DataStateResult<IReadOnlySet<int>>.Failed(ex.Message);
         }
 
-        return result;
+        return DataStateResult<IReadOnlySet<int>>.Ready(result);
     }
 
     /// <summary>
@@ -145,14 +150,18 @@ public class RoadmapAnalyticsService
     /// Reuses the same calculation as the Planning workspace.
     /// Returns null if forecast data is unavailable for this epic.
     /// </summary>
-    public async Task<EpicForecastAnalytics?> LoadForecastAsync(int epicTfsId)
+    public async Task<DataStateResult<EpicForecastAnalytics>> LoadForecastAsync(int epicTfsId)
     {
         try
         {
-            var forecastResponse = await _metricsClient.GetEpicForecastAsync(epicTfsId, 5);
-            var forecast = GeneratedCacheEnvelopeHelper.GetDataOrDefault<EpicCompletionForecastDto>(forecastResponse);
-            if (forecast == null)
-                return null;
+            var forecastResponse = GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await _metricsClient.GetEpicForecastAsync(epicTfsId, 5));
+            if (!forecastResponse.CanUseData || forecastResponse.Data is null)
+            {
+                return forecastResponse.Map(_ => new EpicForecastAnalytics(0, false, 0));
+            }
+
+            var forecast = forecastResponse.Data;
 
             // Reuse the same threshold as PlanningWorkspace:
             // Epic is "at risk" if it needs more than 3 sprints or exceeds 3x velocity
@@ -160,15 +169,14 @@ public class RoadmapAnalyticsService
                                   (forecast.EstimatedVelocity > 0 &&
                                    forecast.RemainingStoryPoints > forecast.EstimatedVelocity * 3);
 
-            return new EpicForecastAnalytics(
+            return DataStateResult<EpicForecastAnalytics>.Ready(new EpicForecastAnalytics(
                 forecast.SprintsRemaining,
                 exceedsVelocity,
-                forecast.Confidence);
+                forecast.Confidence));
         }
-        catch
+        catch (Exception ex)
         {
-            // Forecast unavailable — skip gracefully
-            return null;
+            return DataStateResult<EpicForecastAnalytics>.Failed(ex.Message);
         }
     }
 
@@ -177,17 +185,19 @@ public class RoadmapAnalyticsService
     /// Backlog State API endpoint. Returns a dictionary keyed by epic TFS ID.
     /// Reuses the same refinement scoring as the Health workspace.
     /// </summary>
-    public async Task<Dictionary<int, EpicHealthAnalytics>> LoadBacklogHealthAsync(int productId)
+    public async Task<DataStateResult<IReadOnlyDictionary<int, EpicHealthAnalytics>>> LoadBacklogHealthAsync(int productId)
     {
         var result = new Dictionary<int, EpicHealthAnalytics>();
         try
         {
-            var backlogStateResponse = await _workItemsClient.GetBacklogStateAsync(productId);
-            var backlogState = GeneratedCacheEnvelopeHelper.GetDataOrDefault<ProductBacklogStateDto>(backlogStateResponse);
-            if (backlogState?.Epics == null)
-                return result;
+            var backlogStateResponse = GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await _workItemsClient.GetBacklogStateAsync(productId));
+            if (!backlogStateResponse.CanUseData || backlogStateResponse.Data?.Epics == null)
+            {
+                return backlogStateResponse.Map(_ => (IReadOnlyDictionary<int, EpicHealthAnalytics>)result);
+            }
 
-            foreach (var epic in backlogState.Epics)
+            foreach (var epic in backlogStateResponse.Data.Epics)
             {
                 var hasRefinementBlockers = !epic.HasDescription;
                 var validationIssueCount = epic.Features
@@ -200,12 +210,12 @@ public class RoadmapAnalyticsService
                     validationIssueCount > 0);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Backlog health unavailable — skip gracefully
+            return DataStateResult<IReadOnlyDictionary<int, EpicHealthAnalytics>>.Failed(ex.Message);
         }
 
-        return result;
+        return DataStateResult<IReadOnlyDictionary<int, EpicHealthAnalytics>>.Ready(result);
     }
 
     private static bool IsTerminalState(string state) =>

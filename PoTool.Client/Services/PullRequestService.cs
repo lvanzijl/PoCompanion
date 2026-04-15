@@ -21,25 +21,23 @@ public class PullRequestService
     /// <summary>
     /// Gets all cached pull requests.
     /// </summary>
-    public async Task<IEnumerable<PullRequestDto>> GetAllAsync()
-    {
-        var response = await _pullRequestsClient.GetAllAsync();
-        return response.GetReadOnlyListOrDefault(Array.Empty<PullRequestDto>());
-    }
+    public async Task<DataStateResult<IReadOnlyList<PullRequestDto>>> GetAllAsync()
+        => GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _pullRequestsClient.GetAllAsync());
 
     /// <summary>
     /// Gets a specific pull request by ID.
     /// </summary>
-    public async Task<PullRequestDto?> GetByIdAsync(int id)
+    public async Task<DataStateResult<PullRequestDto>> GetByIdAsync(int id)
     {
         try
         {
-            var response = await _pullRequestsClient.GetByIdAsync(id);
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<PullRequestDto>(response);
+            return GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await _pullRequestsClient.GetByIdAsync(id));
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
-            return null;
+            return DataStateResult<PullRequestDto>.Empty("The requested pull request was not found.");
         }
     }
 
@@ -48,20 +46,18 @@ public class PullRequestService
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
     /// <param name="fromDate">Optional start date filter</param>
-    public async Task<CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
+    public async Task<DataStateResult<IReadOnlyList<SharedPullRequestMetricsDto>>> GetMetricsAsync(string? productIds = null, DateTimeOffset? fromDate = null)
     {
-        var response = await _pullRequestsClient.GetMetricsAsync(productIds, fromDate, CancellationToken.None);
-        var payload = response.GetDataOrDefault();
-        return payload is null
-            ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestMetricsDto>>(Array.Empty<SharedPullRequestMetricsDto>())
-            : CanonicalClientResponseFactory.Create(payload);
+        return (await _pullRequestsClient.GetMetricsAsync(productIds, fromDate, CancellationToken.None))
+            .ToDataStateResponse()
+            .ToDataStateResult();
     }
 
     /// <summary>
     /// Gets filtered pull requests.
     /// </summary>
     /// <param name="productIds">Optional comma-separated product IDs to filter by</param>
-    public async Task<CanonicalClientResponse<IReadOnlyList<SharedPullRequestDto>>> GetFilteredAsync(
+    public async Task<DataStateResult<IReadOnlyList<SharedPullRequestDto>>> GetFilteredAsync(
         string? productIds = null,
         string? iterationPath = null,
         string? createdBy = null,
@@ -69,49 +65,47 @@ public class PullRequestService
         DateTimeOffset? toDate = null,
         string? status = null)
     {
-        var response = await _pullRequestsClient.GetFilteredAsync(
+        return (await _pullRequestsClient.GetFilteredAsync(
             productIds,
             iterationPath,
             createdBy,
             fromDate,
             toDate,
             status,
-            CancellationToken.None);
-        var payload = response.GetDataOrDefault();
-        return payload is null
-            ? new CanonicalClientResponse<IReadOnlyList<SharedPullRequestDto>>(Array.Empty<SharedPullRequestDto>())
-            : CanonicalClientResponseFactory.Create(payload);
+            CancellationToken.None))
+            .ToDataStateResponse()
+            .ToDataStateResult();
     }
 
     /// <summary>
     /// Gets comments for a specific pull request.
     /// </summary>
-    public async Task<IEnumerable<PullRequestCommentDto>> GetCommentsAsync(int pullRequestId)
+    public async Task<DataStateResult<IReadOnlyList<PullRequestCommentDto>>> GetCommentsAsync(int pullRequestId)
     {
         try
         {
-            var response = await _pullRequestsClient.GetCommentsAsync(pullRequestId);
-            return response.GetReadOnlyListOrDefault(Array.Empty<PullRequestCommentDto>());
+            return GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+                await _pullRequestsClient.GetCommentsAsync(pullRequestId));
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
-            return Array.Empty<PullRequestCommentDto>();
+            return DataStateResult<IReadOnlyList<PullRequestCommentDto>>.Empty("No comments were found for the requested pull request.");
         }
     }
 
     /// <summary>
     /// Gets iterations for a specific pull request.
     /// </summary>
-    public async Task<IEnumerable<PullRequestIterationDto>> GetIterationsAsync(int pullRequestId)
+    public async Task<DataStateResult<IReadOnlyList<PullRequestIterationDto>>> GetIterationsAsync(int pullRequestId)
     {
         try
         {
-            var response = await _pullRequestsClient.GetIterationsAsync(pullRequestId);
-            return response.GetReadOnlyListOrDefault(Array.Empty<PullRequestIterationDto>());
+            return GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+                await _pullRequestsClient.GetIterationsAsync(pullRequestId));
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
-            return Array.Empty<PullRequestIterationDto>();
+            return DataStateResult<IReadOnlyList<PullRequestIterationDto>>.Empty("No iterations were found for the requested pull request.");
         }
     }
 }

@@ -1275,11 +1275,13 @@
                 recompute: false,
                 includeDetails: false,
                 cancellationToken: cancellationTokenSource.Token);
-            _summaryFilterMetadata = response.FilterMetadata;
+            _summaryFilterMetadata = response.Metadata.FirstOrDefault();
 
-            if (!response.Data.Success || response.Data.Metrics is null)
+            if (!response.CanUseData || !response.Data!.Success || response.Data.Metrics is null)
             {
-                _summaryErrorMessage = response.Data.ErrorMessage ?? "Sprint summary unavailable right now.";
+                _summaryErrorMessage = response.Status == DataStateResultStatus.Empty
+                    ? "Sprint summary unavailable right now."
+                    : response.Reason ?? response.Data?.ErrorMessage ?? "Sprint summary unavailable right now.";
                 return;
             }
 
@@ -1427,11 +1429,13 @@
                 recompute: false,
                 includeDetails: true,
                 cancellationToken: cancellationTokenSource.Token);
-            _detailsFilterMetadata = response.FilterMetadata;
+            _detailsFilterMetadata = response.Metadata.FirstOrDefault();
 
-            if (!response.Data.Success)
+            if (!response.CanUseData || !response.Data!.Success)
             {
-                _detailsErrorMessage = response.Data.ErrorMessage ?? "Sprint drilldown unavailable right now.";
+                _detailsErrorMessage = response.Status == DataStateResultStatus.Empty
+                    ? "Sprint drilldown unavailable right now."
+                    : response.Reason ?? response.Data?.ErrorMessage ?? "Sprint drilldown unavailable right now.";
                 return;
             }
 

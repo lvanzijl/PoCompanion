@@ -1,4 +1,5 @@
 using PoTool.Shared.DataState;
+using PoTool.Client.Models;
 
 namespace PoTool.Client.Helpers;
 
@@ -9,7 +10,8 @@ public enum UiDataState
     Ready,
     NotReady,
     Failed,
-    EmptyButValid
+    EmptyButValid,
+    Invalid
 }
 
 public sealed record CacheStateDisplayContent(string Title, string Message);
@@ -27,18 +29,39 @@ public static class CacheStatePresentation
             _ => UiDataState.NotRequested
         };
 
+    public static UiDataState ToUiDataState(DataStateResultStatus status)
+        => status switch
+        {
+            DataStateResultStatus.Ready => UiDataState.Ready,
+            DataStateResultStatus.Empty => UiDataState.EmptyButValid,
+            DataStateResultStatus.NotReady => UiDataState.NotReady,
+            DataStateResultStatus.Invalid => UiDataState.Invalid,
+            DataStateResultStatus.Failed => UiDataState.Failed,
+            DataStateResultStatus.Loading => UiDataState.Loading,
+            _ => UiDataState.NotRequested
+        };
+
+    public static UiDataState ToUiDataState<T>(DataStateResult<T> result)
+        => ToUiDataState(result.Status);
+
     public static CacheStateDisplayContent Create(string? subject, DataStateDto state, string? reason = null)
+        => Create(subject, ToUiDataState(state), reason);
+
+    public static CacheStateDisplayContent Create(string? subject, UiDataState state, string? reason = null)
     {
         var normalizedSubject = NormalizeSubject(subject);
         var normalizedReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
 
-        return ToUiDataState(state) switch
+        return state switch
         {
             UiDataState.NotReady => new CacheStateDisplayContent(
                 "Data not ready",
                 normalizedReason is null
                     ? $"{normalizedSubject} is waiting for cached data. Cache not built yet for this view."
                     : $"{normalizedReason} Cache not built yet for this view."),
+            UiDataState.Invalid => new CacheStateDisplayContent(
+                "Filter needs attention",
+                normalizedReason ?? $"{normalizedSubject} could not be loaded for the current filter selection."),
             UiDataState.Failed => new CacheStateDisplayContent(
                 "Data unavailable",
                 normalizedReason ?? $"{normalizedSubject} could not be loaded right now."),

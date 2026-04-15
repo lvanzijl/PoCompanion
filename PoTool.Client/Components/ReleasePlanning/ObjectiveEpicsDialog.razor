@@ -101,7 +101,8 @@
 
         try
         {
-            _epics = await ReleasePlanningService.GetObjectiveEpicsAsync(ObjectiveId);
+            var epicsResult = await ReleasePlanningService.GetObjectiveEpicsAsync(ObjectiveId);
+            _epics = epicsResult.CanUseData ? epicsResult.Data : [];
         }
         catch (Exception ex)
         {

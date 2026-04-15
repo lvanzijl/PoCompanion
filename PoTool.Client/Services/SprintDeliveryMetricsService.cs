@@ -17,7 +17,7 @@ public class SprintDeliveryMetricsService
         _metricsClient = metricsClient;
     }
 
-    public async Task<CanonicalClientResponse<GetSprintTrendMetricsResponse>> GetSprintTrendMetricsAsync(
+    public async Task<DataStateResult<GetSprintTrendMetricsResponse>> GetSprintTrendMetricsAsync(
         int productOwnerId,
         IEnumerable<int> sprintIds,
         IEnumerable<int>? productIds = null,
@@ -30,47 +30,32 @@ public class SprintDeliveryMetricsService
         var sprintIdList = sprintIds.ToList();
         if (sprintIdList.Count == 0)
         {
-            return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(
-                new GetSprintTrendMetricsResponse
-                {
-                    Success = false,
-                    ErrorMessage = "At least one sprint ID is required."
-                });
+            return DataStateResult<GetSprintTrendMetricsResponse>.Invalid("At least one sprint ID is required.");
         }
 
         try
         {
-            var response = await _metricsClient.GetSprintTrendMetricsAsync(
+            return (await _metricsClient.GetSprintTrendMetricsAsync(
                 productOwnerId,
                 sprintIdList,
                 productIds,
                 recompute,
                 includeDetails,
-                cancellationToken);
-
-            var envelope = response.GetDataOrDefault();
-            if (envelope is null)
-            {
-                return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(
-                    new GetSprintTrendMetricsResponse
-                    {
-                        Success = false,
-                        ErrorMessage = "Sprint metrics are not currently available from the cache-backed endpoint."
-                    });
-            }
-
-            return CanonicalClientResponseFactory.Create(envelope);
+                cancellationToken))
+                .ToDataStateResponse()
+                .ToDataStateResult();
         }
         catch (ApiException ex)
         {
-            return new CanonicalClientResponse<GetSprintTrendMetricsResponse>(
-                new GetSprintTrendMetricsResponse
-                {
-                    Success = false,
-                    ErrorMessage = string.IsNullOrWhiteSpace(ex.Response)
+            return ex.StatusCode == 400
+                ? DataStateResult<GetSprintTrendMetricsResponse>.Invalid(
+                    string.IsNullOrWhiteSpace(ex.Response)
+                        ? "Sprint metrics request was rejected by the server."
+                        : ex.Response)
+                : DataStateResult<GetSprintTrendMetricsResponse>.Failed(
+                    string.IsNullOrWhiteSpace(ex.Response)
                         ? $"Sprint metrics request failed with HTTP {ex.StatusCode}."
-                        : ex.Response
-                });
+                        : ex.Response);
         }
     }
 }

@@ -144,8 +144,15 @@ else if (!_isLoading && !_hasAttemptedLoad)
         try
         {
             ClearError();
-            var response = await WorkItemsClient.GetStateTimelineAsync(_selectedWorkItemId.Value);
-            _timelineData = GeneratedCacheEnvelopeHelper.GetDataOrDefault<WorkItemStateTimelineDto>(response);
+            var response = GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await WorkItemsClient.GetStateTimelineAsync(_selectedWorkItemId.Value));
+            _timelineData = response.CanUseData ? response.Data : null;
+            if (!response.CanUseData && !string.IsNullOrWhiteSpace(response.Reason))
+            {
+                _errorResponse = ErrorMessageService.GetErrorResponse(
+                    new InvalidOperationException(response.Reason),
+                    "Timeline unavailable");
+            }
         }
         catch (Exception ex)
         {

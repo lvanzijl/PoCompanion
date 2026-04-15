@@ -48,7 +48,8 @@ public class WorkItemFilteringServiceClientTests
 
         // Act
         var result = await _service.FilterByValidationWithAncestorsAsync(workItems, targetIds);
-        var resultList = result.ToList();
+        Assert.IsTrue(result.CanUseData);
+        var resultList = result.Data!.ToList();
 
         // Assert
         Assert.HasCount(3, resultList);
@@ -87,7 +88,8 @@ public class WorkItemFilteringServiceClientTests
         var result = await _service.GetWorkItemIdsByValidationFilterAsync(workItems, filterId);
 
         // Assert
-        var resultList = result.ToList();
+        Assert.IsTrue(result.CanUseData);
+        var resultList = result.Data!.ToList();
         Assert.HasCount(2, resultList);
         Assert.Contains(1, resultList);
         Assert.Contains(2, resultList);
@@ -123,7 +125,8 @@ public class WorkItemFilteringServiceClientTests
         var result = await _service.CountWorkItemsByValidationFilterAsync(workItems, filterId);
 
         // Assert
-        Assert.AreEqual(2, result);
+        Assert.IsTrue(result.CanUseData);
+        Assert.AreEqual(2, result.Data);
 
         _mockFilteringClient.Verify(x => x.CountWorkItemsByValidationFilterAsync(
             It.Is<CountWorkItemsByValidationFilterRequest>(r => r.FilterId == filterId)),
@@ -208,7 +211,8 @@ public class WorkItemFilteringServiceClientTests
         var result = await _service.IsDescendantOfGoalsAsync(item, goalIds, allWorkItems);
 
         // Assert
-        Assert.IsTrue(result);
+        Assert.IsTrue(result.CanUseData);
+        Assert.IsTrue(result.Data);
 
         _mockFilteringClient.Verify(x => x.IsDescendantOfGoalsAsync(
             It.Is<IsDescendantOfGoalsRequest>(r => r.WorkItemId == 3 && r.GoalIds.SequenceEqual(goalIds))),

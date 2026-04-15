@@ -222,7 +222,9 @@
         try
         {
             var areaPaths = await WorkItemService.GetDistinctAreaPathsAsync();
-            _availableAreaPaths = areaPaths.ToList();
+            _availableAreaPaths = areaPaths.CanUseData
+                ? areaPaths.Data!.ToList()
+                : new List<string>();
         }
         catch (Exception ex)
         {
@@ -250,15 +252,16 @@
                 ? string.Join(",", _selectedAreaPaths) 
                 : null;
 
-            var response = await WorkItemsClient.GetValidationHistoryAsync(
+            var response = GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await WorkItemsClient.GetValidationHistoryAsync(
                 areaPathFilter, 
                 startDateOffset, 
                 endDateOffset, 
-                null);
-            _historyRecords = GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-                response,
-                static data => data.ToReadOnlyList(),
-                Array.Empty<ValidationViolationHistoryDto>()).ToList();
+                null),
+                static data => (IReadOnlyList<ValidationViolationHistoryDto>)data.ToReadOnlyList());
+            _historyRecords = response.CanUseData
+                ? response.Data!.ToList()
+                : new List<ValidationViolationHistoryDto>();
 
             if (_historyRecords?.Count == 0)
             {
