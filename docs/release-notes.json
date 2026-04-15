@@ -3,7 +3,7 @@
     "date": "2026-04-15",
     "type": "Fixed",
     "title": "Trend pages now distinguish invalid filters, empty periods, and load failures",
-    "impact": "Trend-facing pages and workspace signals now use one shared trend-state pattern so unresolved or rejected filters show an explicit invalid-filter state, valid zero-result periods show a no-data state, and backend or network failures show a failed-load state instead of collapsing everything into generic unavailable messaging.",
+    "impact": "Trend-facing pages and workspace signals now use one shared trend-state pattern so unresolved or rejected filters show an explicit invalid-filter state with highlighted global filter controls, valid zero-result periods show a no-data state, cache-not-ready responses normalize into loading instead of a separate UI state, partial pipeline sections no longer downgrade the whole page to empty, and backend/effective-filter divergences are logged in development instead of collapsing everything into generic unavailable messaging.",
     "area": "Trends / Delivery / Pull Requests / Pipelines",
     "link": "/home/trends"
   },
