@@ -120,6 +120,8 @@ public sealed record DataStateResult<T>(
         T? data = default,
         int? retryAfterSeconds = null,
         IReadOnlyList<CanonicalFilterMetadata>? filterMetadata = null)
+        // Invalid means the requested filter scope needs attention. Some callers still receive corrected data,
+        // so the underlying DataState stays Available when data exists and Failed when nothing usable remains.
         => new(DataStateResultStatus.Invalid, data is null ? DataStateDto.Failed : DataStateDto.Available, data, reason, retryAfterSeconds, filterMetadata);
 
     public DataStateResult<TMapped> Map<TMapped>(Func<T, TMapped> map)

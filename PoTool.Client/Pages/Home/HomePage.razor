@@ -511,6 +511,8 @@
             {
                 if (metricsResponse.Status == DataStateResultStatus.Empty)
                 {
+                    // Empty is a neutral home-state: keep the compact metric line with dashes/zeroes instead of
+                    // surfacing a red error message for a valid no-data result.
                     return;
                 }
 

@@ -35,7 +35,6 @@ public sealed class WorkspaceSignalService
     public WorkspaceSignalService(
         IMetricsClient metricsClient,
         IPullRequestsClient pullRequestsClient,
-        IWorkItemsClient workItemsClient,
         SprintService sprintService,
         WorkItemService workItemService,
         ILogger<WorkspaceSignalService> logger)
@@ -486,6 +485,8 @@ public sealed class WorkspaceSignalService
 
         var contexts = new List<DataStateResult<DeliverySignalContext>>(combinations.Length);
 
+        // Home delivery signals normally fan out across a small set of current team sprints and scoped products.
+        // Batch execution limits concurrent requests while still allowing explicit per-product scope resolution.
         foreach (var batch in combinations.Chunk(DeliveryContextBatchSize))
         {
             contexts.AddRange(await Task.WhenAll(batch.Select(scope =>

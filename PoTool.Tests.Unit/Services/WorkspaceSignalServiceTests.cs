@@ -239,7 +239,6 @@ public sealed class WorkspaceSignalServiceTests
         var service = new WorkspaceSignalService(
             metricsClient.Object,
             pullRequestsClient.Object,
-            workItemsClient.Object,
             sprintService,
             workItemService,
             NullLogger<WorkspaceSignalService>.Instance);
@@ -331,7 +330,6 @@ public sealed class WorkspaceSignalServiceTests
         var service = new WorkspaceSignalService(
             metricsClient.Object,
             pullRequestsClient.Object,
-            workItemsClient.Object,
             sprintService,
             workItemService,
             NullLogger<WorkspaceSignalService>.Instance);
@@ -464,7 +462,6 @@ public sealed class WorkspaceSignalServiceTests
         var service = new WorkspaceSignalService(
             metricsClient.Object,
             pullRequestsClient.Object,
-            workItemsClient.Object,
             sprintService,
             workItemService,
             NullLogger<WorkspaceSignalService>.Instance);
@@ -491,7 +488,6 @@ public sealed class WorkspaceSignalServiceTests
         return new WorkspaceSignalService(
             metricsClient.Object,
             pullRequestsClient.Object,
-            workItemsClient.Object,
             sprintService,
             workItemService,
             NullLogger<WorkspaceSignalService>.Instance);
