@@ -140,8 +140,10 @@
 
         try
         {
-            var features = await ReleasePlanningService.GetEpicFeaturesAsync(EpicId);
-            _features = features?.ToList() ?? new List<EpicFeatureDto>();
+            var featuresResult = await ReleasePlanningService.GetEpicFeaturesAsync(EpicId);
+            _features = featuresResult.CanUseData
+                ? featuresResult.Data!.ToList()
+                : new List<EpicFeatureDto>();
         }
         finally
         {

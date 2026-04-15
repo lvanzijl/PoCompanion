@@ -856,8 +856,10 @@
             {
                 try
                 {
-                     var workItems = await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray());
-                     var workItemList = workItems.ToList();
+                     var workItemsResult = await WorkItemService.GetByRootIdsAsync(product.BacklogRootWorkItemIds.ToArray());
+                     var workItemList = workItemsResult.CanUseData
+                         ? workItemsResult.Data!.ToList()
+                         : new List<WorkItemDto>();
                      var discovery = RoadmapEpicDiscoveryAnalysis.Analyze(product.BacklogRootWorkItemIds, workItemList);
 
                       // Find the root Objective work item to get its BacklogPriority for lane ordering
@@ -881,7 +883,10 @@
                      }
 
                     // Load backlog health signals for all epics in one call
-                     var healthLookup = await AnalyticsService.LoadBacklogHealthAsync(product.Id);
+                     var healthLookupResult = await AnalyticsService.LoadBacklogHealthAsync(product.Id);
+                     var healthLookup = healthLookupResult.CanUseData
+                         ? healthLookupResult.Data!
+                         : new Dictionary<int, EpicHealthAnalytics>();
 
                     var orderNumber = 1;
                     foreach (var epic in roadmapEpics)
@@ -920,7 +925,10 @@
                      var sprintCadence = ResolveSprintCadence();
                      await Task.WhenAll(dependencyTask, projectionTask);
 
-                     var epicIdsWithDependencies = await dependencyTask;
+                     var dependencyResult = await dependencyTask;
+                     var epicIdsWithDependencies = dependencyResult.CanUseData
+                         ? dependencyResult.Data!
+                         : new HashSet<int>();
                      var projections = await projectionTask;
                      lane.SprintCadence = sprintCadence;
                      var projectionsByEpicId = projections.ToDictionary(projection => projection.EpicId);

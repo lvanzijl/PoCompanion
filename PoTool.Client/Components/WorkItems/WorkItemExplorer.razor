@@ -226,7 +226,10 @@
 
             // Load work items with validation, filtered by product IDs
             // Backend will only load hierarchies for the specified products
-            var allWorkItems = (await WorkItemService.GetAllWithValidationAsync(productIds)).ToList();
+            var workItemsResult = await WorkItemService.GetAllWithValidationAsync(productIds);
+            var allWorkItems = workItemsResult.CanUseData
+                ? workItemsResult.Data!.ToList()
+                : new List<WorkItemWithValidationDto>();
             Console.WriteLine($"[WorkItemExplorer] Loaded {allWorkItems.Count} total work items from product hierarchies");
 
             // Apply Home filters if provided
@@ -319,7 +322,8 @@
     {
         foreach (var filter in _validationFilters)
         {
-            filter.Count = await FilteringService.CountWorkItemsByValidationFilterAsync(_workItemsWithValidation, filter.Id);
+            var countResult = await FilteringService.CountWorkItemsByValidationFilterAsync(_workItemsWithValidation, filter.Id);
+            filter.Count = countResult.CanUseData ? countResult.Data : 0;
         }
     }
 

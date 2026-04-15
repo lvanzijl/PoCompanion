@@ -29,8 +29,8 @@ public static class CacheStatePresentation
             _ => UiDataState.NotRequested
         };
 
-    public static UiDataState ToUiDataState<T>(DataStateResult<T> result)
-        => result.Status switch
+    public static UiDataState ToUiDataState(DataStateResultStatus status)
+        => status switch
         {
             DataStateResultStatus.Ready => UiDataState.Ready,
             DataStateResultStatus.Empty => UiDataState.EmptyButValid,
@@ -41,12 +41,18 @@ public static class CacheStatePresentation
             _ => UiDataState.NotRequested
         };
 
+    public static UiDataState ToUiDataState<T>(DataStateResult<T> result)
+        => ToUiDataState(result.Status);
+
     public static CacheStateDisplayContent Create(string? subject, DataStateDto state, string? reason = null)
+        => Create(subject, ToUiDataState(state), reason);
+
+    public static CacheStateDisplayContent Create(string? subject, UiDataState state, string? reason = null)
     {
         var normalizedSubject = NormalizeSubject(subject);
         var normalizedReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
 
-        return ToUiDataState(state) switch
+        return state switch
         {
             UiDataState.NotReady => new CacheStateDisplayContent(
                 "Data not ready",

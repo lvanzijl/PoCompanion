@@ -38,6 +38,29 @@ public static class GeneratedCacheEnvelopeHelper
         return CreateDataStateResponse(envelope, mapper);
     }
 
+    public static DataStateResult<TData> ToDataStateResult<TData>(
+        IGeneratedDataStateEnvelope<TData> envelope)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+        return ToDataStateResponse(envelope).ToDataStateResult();
+    }
+
+    public static DataStateResult<TMapped> ToDataStateResult<TData, TMapped>(
+        IGeneratedDataStateEnvelope<TData> envelope,
+        Func<TData, TMapped?> mapper)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+        ArgumentNullException.ThrowIfNull(mapper);
+        return ToDataStateResponse(envelope, mapper).ToDataStateResult();
+    }
+
+    public static DataStateResult<IReadOnlyList<TItem>> ToReadOnlyListDataStateResult<TItem>(
+        IGeneratedDataStateEnvelope<ICollection<TItem>> envelope)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+        return ToDataStateResponse(envelope, static data => data.ToReadOnlyList()).ToDataStateResult();
+    }
+
     public static TData GetDataOrDefault<TData>(
         IGeneratedDataStateEnvelope<TData> envelope,
         TData defaultValue)

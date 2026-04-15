@@ -25,22 +25,26 @@ public class WorkItemFilteringService
     /// <param name="items">Work items to filter.</param>
     /// <param name="targetIds">IDs of work items with validation issues to include.</param>
     /// <returns>Filtered work items including ancestors.</returns>
-    public async Task<IEnumerable<WorkItemWithValidationDto>> FilterByValidationWithAncestorsAsync(
+    public async Task<DataStateResult<IReadOnlyList<WorkItemWithValidationDto>>> FilterByValidationWithAncestorsAsync(
         IEnumerable<WorkItemWithValidationDto> items,
         HashSet<int> targetIds)
     {
         // Call API to get filtered IDs
         var request = new FilterByValidationRequest { TargetIds = targetIds };
-        var response = await _filteringClient.FilterByValidationWithAncestorsAsync(request);
-        var payload = GeneratedCacheEnvelopeHelper.GetDataOrDefault<FilterByValidationResponse>(response);
-        if (payload is null)
+        var response = GeneratedCacheEnvelopeHelper.ToDataStateResult(
+            await _filteringClient.FilterByValidationWithAncestorsAsync(request));
+        if (!response.CanUseData)
         {
-            return Enumerable.Empty<WorkItemWithValidationDto>();
+            return response.Map(_ => (IReadOnlyList<WorkItemWithValidationDto>)Array.Empty<WorkItemWithValidationDto>());
         }
 
         // Return work items matching the filtered IDs
-        var filteredIds = new HashSet<int>(payload.WorkItemIds);
-        return items.Where(item => filteredIds.Contains(item.TfsId));
+        var filteredIds = new HashSet<int>(response.Data!.WorkItemIds);
+        return DataStateResult<IReadOnlyList<WorkItemWithValidationDto>>.Ready(
+            items.Where(item => filteredIds.Contains(item.TfsId)).ToList(),
+            response.Metadata,
+            response.Reason,
+            response.RetryAfterSeconds);
     }
 
     /// <summary>
@@ -49,15 +53,15 @@ public class WorkItemFilteringService
     /// <param name="workItems">Work items to search.</param>
     /// <param name="filterId">Filter identifier (e.g., "parentProgress", "missingEffort").</param>
     /// <returns>IDs of work items matching the filter.</returns>
-    public async Task<IEnumerable<int>> GetWorkItemIdsByValidationFilterAsync(
+    public async Task<DataStateResult<IReadOnlyList<int>>> GetWorkItemIdsByValidationFilterAsync(
         IEnumerable<WorkItemWithValidationDto> workItems,
         string filterId)
     {
         // Call API to get work item IDs by filter
         var request = new GetWorkItemIdsByValidationFilterRequest { FilterId = filterId };
-        var response = await _filteringClient.GetWorkItemIdsByValidationFilterAsync(request);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<GetWorkItemIdsByValidationFilterResponse>(response)?.WorkItemIds
-            ?? Enumerable.Empty<int>();
+        return GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await _filteringClient.GetWorkItemIdsByValidationFilterAsync(request))
+            .Map(static payload => (IReadOnlyList<int>)payload.WorkItemIds.ToList());
     }
 
     /// <summary>
@@ -66,14 +70,15 @@ public class WorkItemFilteringService
     /// <param name="workItems">Work items to count.</param>
     /// <param name="filterId">Filter identifier.</param>
     /// <returns>Count of matching work items.</returns>
-    public async Task<int> CountWorkItemsByValidationFilterAsync(
+    public async Task<DataStateResult<int>> CountWorkItemsByValidationFilterAsync(
         IEnumerable<WorkItemWithValidationDto> workItems,
         string filterId)
     {
         // Call API to count work items by filter
         var request = new CountWorkItemsByValidationFilterRequest { FilterId = filterId };
-        var response = await _filteringClient.CountWorkItemsByValidationFilterAsync(request);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<CountWorkItemsByValidationFilterResponse>(response)?.Count ?? 0;
+        return GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await _filteringClient.CountWorkItemsByValidationFilterAsync(request))
+            .Map(static payload => payload.Count);
     }
 
     /// <summary>
@@ -99,14 +104,15 @@ public class WorkItemFilteringService
             foreach (var filterId in validationFilterList)
             {
                 var filterInvalidIds = await GetWorkItemIdsByValidationFilterAsync(workItems, filterId);
-                foreach (var id in filterInvalidIds)
+                foreach (var id in filterInvalidIds.CanUseData ? filterInvalidIds.Data! : Array.Empty<int>())
                 {
                     invalidIds.Add(id);
                 }
             }
 
             // Include invalid items and their ancestors
-            filteredItems = await FilterByValidationWithAncestorsAsync(filteredItems, invalidIds);
+            var filteredResult = await FilterByValidationWithAncestorsAsync(filteredItems, invalidIds);
+            filteredItems = filteredResult.CanUseData ? filteredResult.Data! : Array.Empty<WorkItemWithValidationDto>();
         }
 
         // Then apply text filter if present
@@ -129,7 +135,7 @@ public class WorkItemFilteringService
     /// <param name="goalIds">List of goal IDs.</param>
     /// <param name="allWorkItems">All work items for lookup.</param>
     /// <returns>True if item is a goal or descendant of a goal.</returns>
-    public async Task<bool> IsDescendantOfGoalsAsync(
+    public async Task<DataStateResult<bool>> IsDescendantOfGoalsAsync(
         WorkItemWithValidationDto item,
         List<int> goalIds,
         IEnumerable<WorkItemWithValidationDto> allWorkItems)
@@ -140,8 +146,9 @@ public class WorkItemFilteringService
             WorkItemId = item.TfsId,
             GoalIds = goalIds
         };
-        var response = await _filteringClient.IsDescendantOfGoalsAsync(request);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<IsDescendantOfGoalsResponse>(response)?.IsDescendant ?? false;
+        return GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await _filteringClient.IsDescendantOfGoalsAsync(request))
+            .Map(static payload => payload.IsDescendant);
     }
 
     /// <summary>
@@ -150,14 +157,13 @@ public class WorkItemFilteringService
     /// </summary>
     /// <param name="goalIds">List of goal IDs to filter by.</param>
     /// <returns>Set of work item IDs that are goals or descendants of goals.</returns>
-    public async Task<HashSet<int>> FilterByGoalsAsync(List<int> goalIds)
+    public async Task<DataStateResult<IReadOnlySet<int>>> FilterByGoalsAsync(List<int> goalIds)
     {
         // Call API to get filtered IDs in a single batch operation
         var request = new FilterByGoalsRequest { GoalIds = goalIds };
-        var response = await _filteringClient.FilterByGoalsAsync(request);
-        return new HashSet<int>(
-            GeneratedCacheEnvelopeHelper.GetDataOrDefault<FilterByGoalsResponse>(response)?.WorkItemIds
-            ?? Enumerable.Empty<int>());
+        return GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await _filteringClient.FilterByGoalsAsync(request))
+            .Map(static payload => (IReadOnlySet<int>)new HashSet<int>(payload.WorkItemIds));
     }
 
     private static WorkItemDto ConvertToWorkItemDto(WorkItemWithValidationDto item)

@@ -1,14 +1,16 @@
 @typeparam TData
 @using PoTool.Client.Models
+@using PoTool.Client.Helpers
 @using PoTool.Shared.DataState
 
-@if (IsLoading || State.State == DataStateDto.Loading)
+@if (IsLoading || State.UiState == UiDataState.Loading)
 {
     <LoadingIndicator IsLoading="true" />
 }
-else if (State.State == DataStateDto.NotReady)
+else if (State.UiState == UiDataState.NotReady)
 {
     <DataStatePanel State="DataStateDto.NotReady"
+                    UiState="UiDataState.NotReady"
                     Subject="@Subject"
                     Reason="@State.Reason"
                     Title="@NotReadyTitle"
@@ -17,9 +19,20 @@ else if (State.State == DataStateDto.NotReady)
                     RecoveryActionText="@RecoveryActionText"
                     OnRecovery="@OnRecovery" />
 }
-else if (State.State == DataStateDto.Failed)
+else if (State.UiState == UiDataState.Invalid)
+{
+    <DataStatePanel State="@State.State"
+                    UiState="UiDataState.Invalid"
+                    Subject="@Subject"
+                    Reason="@State.Reason"
+                    ProductOwnerId="@ProductOwnerId"
+                    RecoveryActionText="@RecoveryActionText"
+                    OnRecovery="@OnRecovery" />
+}
+else if (State.UiState == UiDataState.Failed)
 {
     <DataStatePanel State="DataStateDto.Failed"
+                    UiState="UiDataState.Failed"
                     Subject="@Subject"
                     Reason="@State.Reason"
                     Title="@FailedTitle"
@@ -28,12 +41,12 @@ else if (State.State == DataStateDto.Failed)
                     RecoveryActionText="@RecoveryActionText"
                     OnRecovery="@OnRecovery" />
 }
-else if (State.State == DataStateDto.Empty)
+else if (State.UiState == UiDataState.EmptyButValid)
 {
     <EmptyStateDisplay Title="@EmptyTitle"
                       Message="@(State.Reason ?? EmptyMessage)" />
 }
-else if (State.State == DataStateDto.Available && State.Data is not null)
+else if (State.UiState == UiDataState.Ready && State.Data is not null)
 {
     @ChildContent(State.Data)
 }

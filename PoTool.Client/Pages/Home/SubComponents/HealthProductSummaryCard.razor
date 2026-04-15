@@ -137,7 +137,15 @@
 
         try
         {
-            _summary = await WorkItemService.GetHealthWorkspaceProductSummaryAsync(Product.Id, _loadCts.Token);
+            var summaryResult = await WorkItemService.GetHealthWorkspaceProductSummaryAsync(Product.Id, _loadCts.Token);
+            if (summaryResult.CanUseData)
+            {
+                _summary = summaryResult.Data;
+                return;
+            }
+
+            _summary = null;
+            _loadError = summaryResult.Reason ?? $"Summary unavailable for {Product.Name.ToLowerInvariant()}.";
         }
         catch (OperationCanceledException)
         {

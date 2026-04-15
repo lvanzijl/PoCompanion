@@ -619,7 +619,10 @@
         if (_product == null || _product.BacklogRootWorkItemIds.Count == 0)
             return;
 
-        var workItemList = (await WorkItemService.GetByRootIdsAsync(_product.BacklogRootWorkItemIds.ToArray())).ToList();
+        var workItemsResult = await WorkItemService.GetByRootIdsAsync(_product.BacklogRootWorkItemIds.ToArray());
+        var workItemList = workItemsResult.CanUseData
+            ? workItemsResult.Data!.ToList()
+            : new List<WorkItemDto>();
         var discovery = RoadmapEpicDiscoveryAnalysis.Analyze(_product.BacklogRootWorkItemIds, workItemList);
 
         _roadmapEpics = discovery.RoadmapEpicItems.ToList();

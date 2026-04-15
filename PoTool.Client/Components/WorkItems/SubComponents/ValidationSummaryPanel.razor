@@ -262,8 +262,9 @@
             _isProcessingFixes = true;
             StateHasChanged();
 
-            var response = await WorkItemsClient.GetValidationImpactAnalysisAsync(null, null);
-            _impactAnalysis = GeneratedCacheEnvelopeHelper.GetDataOrDefault<ValidationImpactAnalysisDto>(response);
+            var response = GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await WorkItemsClient.GetValidationImpactAnalysisAsync(null, null));
+            _impactAnalysis = response.CanUseData ? response.Data : null;
             IsExpanded = true;
 
             if (_impactAnalysis is null || _impactAnalysis.Violations.Count == 0)

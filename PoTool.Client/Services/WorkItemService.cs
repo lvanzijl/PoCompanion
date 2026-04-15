@@ -51,11 +51,9 @@ public class WorkItemService
     /// <summary>
     /// Gets all cached work items.
     /// </summary>
-    public async Task<IEnumerable<WorkItemDto>> GetAllAsync()
-    {
-        var response = await _client.GetAllAsync();
-        return response.GetReadOnlyListOrDefault(Array.Empty<WorkItemDto>());
-    }
+    public async Task<DataStateResult<IReadOnlyList<WorkItemDto>>> GetAllAsync()
+        => GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _client.GetAllAsync());
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetAllStateAsync(
         CancellationToken cancellationToken = default)
@@ -64,18 +62,16 @@ public class WorkItemService
     /// <summary>
     /// Gets filtered work items.
     /// </summary>
-    public async Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter)
-    {
-        var response = await _client.GetFilteredAsync(filter);
-        return response.GetReadOnlyListOrDefault(Array.Empty<WorkItemDto>());
-    }
+    public async Task<DataStateResult<IReadOnlyList<WorkItemDto>>> GetFilteredAsync(string filter)
+        => GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _client.GetFilteredAsync(filter));
 
     /// <summary>
     /// Gets a specific work item with validation by TFS ID from cache.
     /// This retrieves a single work item from the cached data efficiently via a dedicated endpoint.
     /// Much more efficient than fetching all work items and filtering client-side.
     /// </summary>
-    public async Task<WorkItemWithValidationDto?> GetByTfsIdWithValidationAsync(int tfsId, int[]? productIds = null)
+    public async Task<DataStateResult<WorkItemWithValidationDto>> GetByTfsIdWithValidationAsync(int tfsId, int[]? productIds = null)
     {
         try
         {
@@ -86,7 +82,7 @@ public class WorkItemService
             }
 
             var response = await _client.GetByIdWithValidationAsync(tfsId, productIdsParam);
-            return GeneratedCacheEnvelopeHelper.GetDataOrDefault<WorkItemWithValidationDto>(response);
+            return GeneratedCacheEnvelopeHelper.ToDataStateResult(response);
         }
         catch (Exception ex)
         {
@@ -118,51 +114,47 @@ public class WorkItemService
     /// <summary>
     /// Gets all goals (work items of type Goal).
     /// </summary>
-    public async Task<IEnumerable<WorkItemDto>> GetAllGoalsAsync()
-    {
-        var response = await _client.GetAllGoalsAsync();
-        return response.GetReadOnlyListOrDefault(Array.Empty<WorkItemDto>());
-    }
+    public async Task<DataStateResult<IReadOnlyList<WorkItemDto>>> GetAllGoalsAsync()
+        => GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _client.GetAllGoalsAsync());
 
     /// <summary>
     /// Gets work items for specific Goal IDs (full hierarchy).
     /// </summary>
-    public async Task<IEnumerable<WorkItemDto>> GetGoalHierarchyAsync(List<int> goalIds)
+    public async Task<DataStateResult<IReadOnlyList<WorkItemDto>>> GetGoalHierarchyAsync(List<int> goalIds)
     {
         var goalIdsParam = string.Join(",", goalIds);
-        var response = await _client.GetGoalHierarchyAsync(goalIdsParam);
-        return response.GetReadOnlyListOrDefault(Array.Empty<WorkItemDto>());
+        return GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _client.GetGoalHierarchyAsync(goalIdsParam));
     }
 
     /// <summary>
     /// Gets all cached work items with validation results.
     /// </summary>
-    public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync()
-    {
-        var response = await _client.GetAllWithValidationAsync(null);
-        return response.GetReadOnlyListOrDefault(Array.Empty<WorkItemWithValidationDto>());
-    }
+    public async Task<DataStateResult<IReadOnlyList<WorkItemWithValidationDto>>> GetAllWithValidationAsync()
+        => GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _client.GetAllWithValidationAsync(null));
 
     /// <summary>
     /// Gets cached work items with validation results filtered by product IDs.
     /// </summary>
     /// <param name="productIds">Optional list of product IDs to filter by. If null or empty, loads all products for the active profile.</param>
-    public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync(int[]? productIds)
+    public async Task<DataStateResult<IReadOnlyList<WorkItemWithValidationDto>>> GetAllWithValidationAsync(int[]? productIds)
     {
         string? productIdsParam = null;
         if (productIds != null && productIds.Length > 0)
         {
             productIdsParam = string.Join(",", productIds);
         }
-        var response = await _client.GetAllWithValidationAsync(productIdsParam);
-        return response.GetReadOnlyListOrDefault(Array.Empty<WorkItemWithValidationDto>());
+        return GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _client.GetAllWithValidationAsync(productIdsParam));
     }
 
     /// <summary>
     /// Gets cached work items with validation results filtered by product IDs.
     /// Supports cancellation for progressively loaded dashboard widgets.
     /// </summary>
-    public async Task<IEnumerable<WorkItemWithValidationDto>> GetAllWithValidationAsync(
+    public async Task<DataStateResult<IReadOnlyList<WorkItemWithValidationDto>>> GetAllWithValidationAsync(
         int[]? productIds,
         CancellationToken cancellationToken)
     {
@@ -172,8 +164,8 @@ public class WorkItemService
             productIdsParam = string.Join(",", productIds);
         }
 
-        var response = await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken);
-        return response.GetReadOnlyListOrDefault(Array.Empty<WorkItemWithValidationDto>());
+        return GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _client.GetAllWithValidationAsync(productIdsParam, cancellationToken));
     }
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemWithValidationDto>>?> GetAllWithValidationStateAsync(
@@ -189,14 +181,11 @@ public class WorkItemService
     /// Returns per-category item counts and top rule groups (SI, RR, RC, EFF).
     /// </summary>
     /// <param name="productIds">Optional list of product IDs to filter by.</param>
-    public async Task<SharedValidationTriageSummaryDto?> GetValidationTriageSummaryAsync(
+    public async Task<DataStateResult<SharedValidationTriageSummaryDto>> GetValidationTriageSummaryAsync(
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
-    {
-        var productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
-        var response = await _client.GetValidationTriageAsync(productIdsParam, cancellationToken);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<SharedValidationTriageSummaryDto>(response);
-    }
+        => (await GetValidationTriageSummaryStateAsync(productIds, cancellationToken))
+            .ToDataStateResult();
 
     public async Task<DataStateResponseDto<SharedValidationTriageSummaryDto>?> GetValidationTriageSummaryStateAsync(
         int[]? productIds = null,
@@ -210,19 +199,16 @@ public class WorkItemService
     public async Task<DataStateResult<SharedValidationTriageSummaryDto>> GetValidationTriageSummaryResultAsync(
         int[]? productIds = null,
         CancellationToken cancellationToken = default)
-        => (await GetValidationTriageSummaryStateAsync(productIds, cancellationToken))
-            .ToDataStateResult();
+        => await GetValidationTriageSummaryAsync(productIds, cancellationToken);
 
     /// <summary>
     /// Gets the lightweight Health workspace summary for a single product card.
     /// </summary>
-    public async Task<HealthWorkspaceProductSummaryDto?> GetHealthWorkspaceProductSummaryAsync(
+    public async Task<DataStateResult<HealthWorkspaceProductSummaryDto>> GetHealthWorkspaceProductSummaryAsync(
         int productId,
         CancellationToken cancellationToken = default)
-    {
-        var response = await _client.GetHealthSummaryAsync(productId, cancellationToken);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<HealthWorkspaceProductSummaryDto>(response);
-    }
+        => GeneratedCacheEnvelopeHelper.ToDataStateResult(
+            await _client.GetHealthSummaryAsync(productId, cancellationToken));
 
     public async Task<DataStateResult<ProductBacklogStateDto>> GetBacklogStateResultAsync(
         int productId,
@@ -238,12 +224,17 @@ public class WorkItemService
     /// </summary>
     /// <param name="categoryKey">Category key: "SI", "RR", "RC", or "EFF".</param>
     /// <param name="productIds">Optional list of product IDs to filter by.</param>
-    public async Task<SharedValidationQueueDto?> GetValidationQueueAsync(string categoryKey, int[]? productIds = null)
+    public async Task<DataStateResult<SharedValidationQueueDto>> GetValidationQueueAsync(string categoryKey, int[]? productIds = null)
     {
-        var productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
-        var response = await _client.GetValidationQueueAsync(categoryKey, productIdsParam);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<SharedValidationQueueDto>(response);
+        return await GetValidationQueueAsync(categoryKey, productIds, CancellationToken.None);
     }
+
+    public async Task<DataStateResult<SharedValidationQueueDto>> GetValidationQueueAsync(
+        string categoryKey,
+        int[]? productIds,
+        CancellationToken cancellationToken)
+        => (await GetValidationQueueStateAsync(categoryKey, productIds, cancellationToken))
+            .ToDataStateResult();
 
     public async Task<DataStateResponseDto<SharedValidationQueueDto>?> GetValidationQueueStateAsync(
         string categoryKey,
@@ -263,13 +254,17 @@ public class WorkItemService
     /// <param name="ruleId">Rule identifier (e.g. "SI-1", "RC-2").</param>
     /// <param name="categoryKey">Category key: "SI", "RR", "RC", or "EFF".</param>
     /// <param name="productIds">Optional list of product IDs to filter by.</param>
-    public async Task<SharedValidationFixSessionDto?> GetValidationFixSessionAsync(
+    public async Task<DataStateResult<SharedValidationFixSessionDto>> GetValidationFixSessionAsync(
         string ruleId, string categoryKey, int[]? productIds = null)
-    {
-        var productIdsParam = productIds != null && productIds.Length > 0 ? string.Join(",", productIds) : null;
-        var response = await _client.GetValidationFixSessionAsync(ruleId, categoryKey, productIdsParam);
-        return GeneratedCacheEnvelopeHelper.GetDataOrDefault<SharedValidationFixSessionDto>(response);
-    }
+        => await GetValidationFixSessionAsync(ruleId, categoryKey, productIds, CancellationToken.None);
+
+    public async Task<DataStateResult<SharedValidationFixSessionDto>> GetValidationFixSessionAsync(
+        string ruleId,
+        string categoryKey,
+        int[]? productIds,
+        CancellationToken cancellationToken)
+        => (await GetValidationFixSessionStateAsync(ruleId, categoryKey, productIds, cancellationToken))
+            .ToDataStateResult();
 
     public async Task<DataStateResponseDto<SharedValidationFixSessionDto>?> GetValidationFixSessionStateAsync(
         string ruleId,
@@ -285,11 +280,9 @@ public class WorkItemService
     /// <summary>
     /// Gets the revision history for a specific work item.
     /// </summary>
-    public async Task<IEnumerable<WorkItemRevisionDto>> GetRevisionsAsync(int workItemId)
-    {
-        var response = await _client.GetWorkItemRevisionsAsync(workItemId);
-        return response.GetReadOnlyListOrDefault(Array.Empty<WorkItemRevisionDto>());
-    }
+    public async Task<DataStateResult<IReadOnlyList<WorkItemRevisionDto>>> GetRevisionsAsync(int workItemId)
+        => GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _client.GetWorkItemRevisionsAsync(workItemId));
 
     /// <summary>
     /// Re-fetches a work item from TFS and updates the local DB cache.
@@ -391,15 +384,14 @@ public class WorkItemService
     /// <summary>
     /// Gets all distinct area paths from cached work items.
     /// </summary>
-    public async Task<IEnumerable<string>> GetDistinctAreaPathsAsync()
+    public async Task<DataStateResult<IReadOnlyList<string>>> GetDistinctAreaPathsAsync()
     {
-        var allWorkItems = await _client.GetAllAsync();
-        var availableWorkItems = allWorkItems.GetReadOnlyListOrDefault(Array.Empty<WorkItemDto>());
-        return availableWorkItems
+        var allWorkItems = await GetAllAsync();
+        return allWorkItems.Map(workItems => (IReadOnlyList<string>)workItems
             .Select(wi => wi.AreaPath)
             .Distinct()
             .OrderBy(ap => ap)
-            .ToList();
+            .ToList());
     }
 
     /// <summary>
@@ -436,16 +428,16 @@ public class WorkItemService
     /// </summary>
     /// <param name="rootIds">The root work item IDs to load hierarchies from.</param>
     /// <returns>Collection of work items including roots and their descendants.</returns>
-    public async Task<IEnumerable<WorkItemDto>> GetByRootIdsAsync(int[] rootIds)
+    public async Task<DataStateResult<IReadOnlyList<WorkItemDto>>> GetByRootIdsAsync(int[] rootIds)
     {
         if (rootIds == null || rootIds.Length == 0)
         {
-            return Enumerable.Empty<WorkItemDto>();
+            return DataStateResult<IReadOnlyList<WorkItemDto>>.Empty("No root work items were provided.");
         }
 
         var rootIdsParam = string.Join(",", rootIds);
-        var response = await _client.GetByRootIdsAsync(rootIdsParam);
-        return response.GetReadOnlyListOrDefault(Array.Empty<WorkItemDto>());
+        return GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _client.GetByRootIdsAsync(rootIdsParam));
     }
 
     public async Task<DataStateResponseDto<IReadOnlyList<WorkItemDto>>?> GetByRootIdsStateAsync(
@@ -473,14 +465,14 @@ public class WorkItemService
     /// </summary>
     /// <param name="rootIds">The root work item IDs to load hierarchies from.</param>
     /// <returns>Collection of loaded work items.</returns>
-    public async Task<IEnumerable<WorkItemDto>> EnsureLoadedForRootsAsync(int[] rootIds)
+    public async Task<DataStateResult<IReadOnlyList<WorkItemDto>>> EnsureLoadedForRootsAsync(int[] rootIds)
     {
         if (rootIds == null || rootIds.Length == 0)
         {
-            return Enumerable.Empty<WorkItemDto>();
+            return DataStateResult<IReadOnlyList<WorkItemDto>>.Empty("No root work items were provided.");
         }
 
-        IEnumerable<WorkItemDto>? loadedItems = null;
+        DataStateResult<IReadOnlyList<WorkItemDto>>? loadedItems = null;
 
         await _loadCoordinator.EnsureLoadedAsync(rootIds, async () =>
         {

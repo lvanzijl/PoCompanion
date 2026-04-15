@@ -402,7 +402,7 @@ else if (SelectedWorkItem != null)
         try
         {
             var revisions = await WorkItemService.GetRevisionsAsync(SelectedWorkItem.TfsId);
-            _revisions = revisions.ToList();
+            _revisions = revisions.CanUseData ? revisions.Data!.ToList() : [];
         }
         catch (Exception ex)
         {

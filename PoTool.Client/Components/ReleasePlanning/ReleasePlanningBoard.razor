@@ -328,8 +328,11 @@
 
         try
         {
-            _board = await ReleasePlanningService.GetBoardAsync();
-            _unplannedEpics = await ReleasePlanningService.GetUnplannedEpicsAsync();
+            var boardResult = await ReleasePlanningService.GetBoardAsync();
+            var unplannedResult = await ReleasePlanningService.GetUnplannedEpicsAsync();
+
+            _board = boardResult.CanUseData ? boardResult.Data : null;
+            _unplannedEpics = unplannedResult.CanUseData ? unplannedResult.Data?.ToList() : null;
         }
         catch (Exception ex)
         {

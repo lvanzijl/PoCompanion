@@ -150,11 +150,18 @@ else if (!_isLoading && !_hasAttemptedLoad)
         try
         {
             ClearError();
-            var response = await WorkItemsClient.GetDependencyGraphAsync(
+            var response = GeneratedCacheEnvelopeHelper.ToDataStateResult(
+                await WorkItemsClient.GetDependencyGraphAsync(
                 areaPathFilter: _areaPathFilter, 
                 workItemIds: _workItemIdsFilter,
-                workItemTypes: _workItemTypesFilter);
-            _graphData = GeneratedCacheEnvelopeHelper.GetDataOrDefault<DependencyGraphDto>(response);
+                workItemTypes: _workItemTypesFilter));
+            _graphData = response.CanUseData ? response.Data : null;
+            if (!response.CanUseData && !string.IsNullOrWhiteSpace(response.Reason))
+            {
+                _errorResponse = ErrorMessageService.GetErrorResponse(
+                    new InvalidOperationException(response.Reason),
+                    "Dependency graph unavailable");
+            }
         }
         catch (Exception ex)
         {

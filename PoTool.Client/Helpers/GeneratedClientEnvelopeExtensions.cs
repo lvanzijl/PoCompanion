@@ -16,25 +16,18 @@ public static class GeneratedClientEnvelopeExtensions
     public static DataStateResponseDto<TData> ToDataStateResponse<TData>(this IGeneratedDataStateEnvelope<TData> envelope)
         => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope);
 
-    public static TData GetDataOrDefault<TData>(this IGeneratedDataStateEnvelope<TData> envelope, TData defaultValue)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, defaultValue);
-
-    public static TData? GetDataOrDefault<TData>(this IGeneratedDataStateEnvelope<TData> envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope);
-
-    public static IReadOnlyList<TItem> GetReadOnlyListOrDefault<TItem>(
-        this IGeneratedDataStateEnvelope<ICollection<TItem>> envelope,
-        IReadOnlyCollection<TItem>? defaultValue = null)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(
-            envelope,
-            static data => data.ToReadOnlyList(),
-            defaultValue is null ? Array.Empty<TItem>() : defaultValue.ToList());
+    public static DataStateResult<TData> ToDataStateResult<TData>(this IGeneratedDataStateEnvelope<TData> envelope)
+        => GeneratedCacheEnvelopeHelper.ToDataStateResult(envelope);
 
     public static DataStateResponseDto<IReadOnlyList<TItem>> ToReadOnlyListDataStateResponse<TItem>(
         this IGeneratedDataStateEnvelope<ICollection<TItem>> envelope)
         => GeneratedCacheEnvelopeHelper.ToDataStateResponse(
             envelope,
             static data => data.ToReadOnlyList());
+
+    public static DataStateResult<IReadOnlyList<TItem>> ToReadOnlyListDataStateResult<TItem>(
+        this IGeneratedDataStateEnvelope<ICollection<TItem>> envelope)
+        => GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(envelope);
 
     public static CacheBackedClientResult<DeliveryQueryResponseDto<BuildQualityPageDto>> ToCacheBackedResult(
         this DataStateResponseDtoOfDeliveryQueryResponseDtoOfBuildQualityPageDto envelope)
@@ -188,51 +181,4 @@ public static class GeneratedClientEnvelopeExtensions
         this DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto envelope)
         => GeneratedCacheEnvelopeHelper.ToDataStateResponse(envelope, static data => data.ToShared());
 
-    public static DeliveryQueryResponseDto<PortfolioProgressTrendDto>? GetDataOrDefault(
-        this DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioProgressTrendDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static DeliveryQueryResponseDto<PortfolioDeliveryDto>? GetDataOrDefault(
-        this DataStateResponseDtoOfDeliveryQueryResponseDtoOfPortfolioDeliveryDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static DeliveryQueryResponseDto<HomeProductBarMetricsDto>? GetDataOrDefault(
-        this DataStateResponseDtoOfDeliveryQueryResponseDtoOfHomeProductBarMetricsDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static SprintQueryResponseDto<GetSprintTrendMetricsResponse>? GetDataOrDefault(
-        this DataStateResponseDtoOfSprintQueryResponseDtoOfGetSprintTrendMetricsResponse envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static SprintQueryResponseDto<BacklogHealthDto>? GetDataOrDefault(
-        this DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static SprintQueryResponseDto<SprintExecutionDto>? GetDataOrDefault(
-        this DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static PullRequestQueryResponseDto<GetPrSprintTrendsResponse>? GetDataOrDefault(
-        this DataStateResponseDtoOfPullRequestQueryResponseDtoOfGetPrSprintTrendsResponse envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static DeliveryQueryResponseDto<CapacityCalibrationDto>? GetDataOrDefault(
-        this DataStateResponseDtoOfDeliveryQueryResponseDtoOfCapacityCalibrationDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static PullRequestQueryResponseDto<IReadOnlyList<PullRequestMetricsDto>>? GetDataOrDefault(
-        this DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestMetricsDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static PullRequestQueryResponseDto<IReadOnlyList<PullRequestDto>>? GetDataOrDefault(
-        this DataStateResponseDtoOfPullRequestQueryResponseDtoOfIReadOnlyListOfPullRequestDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static PipelineQueryResponseDto<IReadOnlyList<PipelineMetricsDto>>? GetDataOrDefault(
-        this DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineMetricsDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
-
-    public static PipelineQueryResponseDto<IReadOnlyList<PipelineRunDto>>? GetDataOrDefault(
-        this DataStateResponseDtoOfPipelineQueryResponseDtoOfIReadOnlyListOfPipelineRunDto envelope)
-        => GeneratedCacheEnvelopeHelper.GetDataOrDefault(envelope, static data => data.ToShared());
 }

@@ -7,9 +7,12 @@ public sealed record DataStateViewModel<T>(
     DataStateDto State,
     T? Data = default,
     string? Reason = null,
-    int? RetryAfterSeconds = null)
+    int? RetryAfterSeconds = null,
+    DataStateResultStatus? ResultStatus = null)
 {
-    public UiDataState UiState => CacheStatePresentation.ToUiDataState(State);
+    public UiDataState UiState => ResultStatus.HasValue
+        ? CacheStatePresentation.ToUiDataState(ResultStatus.Value)
+        : CacheStatePresentation.ToUiDataState(State);
 
     public static DataStateViewModel<T> NotRequested()
         => new(DataStateDto.NotRequested);
@@ -30,9 +33,54 @@ public sealed record DataStateViewModel<T>(
     {
         if (response is null)
         {
-            return Failed(failureReason);
+            return new DataStateViewModel<T>(DataStateDto.Failed, Reason: failureReason, ResultStatus: DataStateResultStatus.Failed);
         }
 
-        return new DataStateViewModel<T>(response.State, response.Data, response.Reason, response.RetryAfterSeconds);
+        return new DataStateViewModel<T>(
+            response.State,
+            response.Data,
+            response.Reason,
+            response.RetryAfterSeconds,
+            DetermineResultStatus(response));
+    }
+
+    public static DataStateViewModel<T> FromResult(DataStateResult<T> result)
+        => new(result.State, result.Data, result.Reason, result.RetryAfterSeconds, result.Status);
+
+    private static DataStateResultStatus DetermineResultStatus(DataStateResponseDto<T> response)
+    {
+        if (response.State == DataStateDto.Available && HasInvalidFilter(response.Data))
+        {
+            return DataStateResultStatus.Invalid;
+        }
+
+        return response.State switch
+        {
+            DataStateDto.Available => DataStateResultStatus.Ready,
+            DataStateDto.Empty => DataStateResultStatus.Empty,
+            DataStateDto.NotReady => DataStateResultStatus.NotReady,
+            DataStateDto.Failed => DataStateResultStatus.Failed,
+            DataStateDto.Loading => DataStateResultStatus.Loading,
+            _ => DataStateResultStatus.NotRequested
+        };
+    }
+
+    private static bool HasInvalidFilter(T? data)
+    {
+        if (data is null)
+        {
+            return false;
+        }
+
+        var invalidFieldsProperty = data.GetType().GetProperty("InvalidFields");
+        if (invalidFieldsProperty?.GetValue(data) is System.Collections.IEnumerable invalidFields)
+        {
+            foreach (var _ in invalidFields)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

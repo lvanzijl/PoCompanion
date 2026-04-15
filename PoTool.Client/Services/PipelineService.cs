@@ -19,11 +19,9 @@ public class PipelineService
     /// <summary>
     /// Gets all cached pipelines.
     /// </summary>
-    public async Task<IEnumerable<PipelineDto>> GetAllAsync()
-    {
-        var response = await _pipelinesClient.GetAllAsync();
-        return response.GetReadOnlyListOrDefault(Array.Empty<PipelineDto>());
-    }
+    public async Task<DataStateResult<IReadOnlyList<PipelineDto>>> GetAllAsync()
+        => GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _pipelinesClient.GetAllAsync());
 
     /// <summary>
     /// Gets aggregated metrics for pipelines, optionally filtered by products.
@@ -42,11 +40,9 @@ public class PipelineService
     /// <summary>
     /// Gets runs for a specific pipeline.
     /// </summary>
-    public async Task<IEnumerable<PipelineRunDto>> GetRunsAsync(int pipelineId, int top = 100)
-    {
-        var response = await _pipelinesClient.GetRunsAsync(pipelineId, top);
-        return response.GetReadOnlyListOrDefault(Array.Empty<PipelineRunDto>());
-    }
+    public async Task<DataStateResult<IReadOnlyList<PipelineRunDto>>> GetRunsAsync(int pipelineId, int top = 100)
+        => GeneratedCacheEnvelopeHelper.ToReadOnlyListDataStateResult(
+            await _pipelinesClient.GetRunsAsync(pipelineId, top));
 
     /// <summary>
     /// Gets all pipeline runs for specified products (last 6 months, main branch).
