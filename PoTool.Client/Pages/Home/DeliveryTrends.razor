@@ -1,6 +1,7 @@
 @page "/home/trends/delivery"
 @using PoTool.Client.Components.Analytical
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using PoTool.Client.Services
 @using PoTool.Client.Pages.Home.Components
 @using PoTool.Client.Models
@@ -424,13 +425,12 @@
             if (!_profileId.HasValue || _currentSprint == null)
                 return;
 
-            var sprintIds = GetSelectedSprintIds();
-
-            if (sprintIds.Count == 0)
+            var timeRange = GlobalFilterTrendRequestMapper.ResolveRange(GlobalFilterStore.GetState(), _filteredSprints);
+            if (!timeRange.IsResolved || timeRange.SprintIds.Count == 0)
                 return;
 
             _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.Loading();
-            var response = await MetricsStateService.GetSprintTrendMetricsStateAsync(_profileId.Value, sprintIds, _selectedProductId, _selectedTeamId, CancellationToken.None);
+            var response = await MetricsStateService.GetSprintTrendMetricsStateAsync(_profileId.Value, timeRange, _selectedProductId, _selectedTeamId, CancellationToken.None);
             _dataState = DataStateViewModel<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>.FromResponse(response, "Delivery trends could not be loaded right now.");
             if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
             {

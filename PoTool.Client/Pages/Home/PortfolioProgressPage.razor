@@ -452,8 +452,8 @@
 
         if (!_profileId.HasValue) return;
 
-        var sprintIds = GetSelectedSprintIds();
-        if (sprintIds.Count == 0)
+        var timeRange = GlobalFilterTrendRequestMapper.ResolveRange(GlobalFilterStore.GetState(), _sprints);
+        if (!timeRange.IsResolved || timeRange.SprintIds.Count == 0)
         {
             _trendData = null;
             _filterNotice = null;
@@ -472,7 +472,7 @@
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.Loading();
             var response = await MetricsStateService.GetPortfolioProgressTrendStateAsync(
                 _profileId.Value,
-                sprintIds,
+                timeRange,
                 productFilter,
                 CancellationToken.None);
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.FromResponse(response, "Portfolio flow could not be loaded right now.");

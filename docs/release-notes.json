@@ -2,6 +2,14 @@
   {
     "date": "2026-04-15",
     "type": "Fixed",
+    "title": "Trend pages now carry the shared sprint-range filter into backend trend reads consistently",
+    "impact": "Delivery Trends, Portfolio Delivery, Portfolio Flow Trend, and shared PR trend reads now translate the resolved global From/To sprint selection through one shared client mapper before calling backend trend endpoints, so multi-sprint requests keep the intended sprint window instead of dropping the range and drifting to unrelated sprint data.",
+    "area": "Trends / Delivery / Pull Requests",
+    "link": "/home/trends"
+  },
+  {
+    "date": "2026-04-15",
+    "type": "Fixed",
     "title": "Shared collapsible filters now expand directly below their summary header",
     "impact": "Managed pages that use the shared global filter chrome now render the expanded filter body immediately under the filter summary instead of dropping it after the main page content, preserving the existing filter state, summary chips, and collapse/expand behavior across delivery, trends, planning, health, bug, and work-item pages.",
     "area": "Home / Delivery / Trends / Planning / Health / Bugs / Work Items",

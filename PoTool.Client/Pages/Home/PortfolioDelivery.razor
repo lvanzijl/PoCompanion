@@ -463,8 +463,9 @@
         }
 
         // Build sprint ID list from the from/to range
-        _selectedSprintIds = BuildSprintRange(_fromSprintId, _toSprintId);
-        if (_selectedSprintIds.Count == 0)
+        var timeRange = GlobalFilterTrendRequestMapper.ResolveRange(GlobalFilterStore.GetState(), _sprints);
+        _selectedSprintIds = timeRange.SprintIds.ToList();
+        if (!timeRange.IsResolved || _selectedSprintIds.Count == 0)
         {
             _data = null;
             _filterNotice = null;
@@ -480,7 +481,7 @@
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.Loading();
             var response = await MetricsStateService.GetPortfolioDeliveryStateAsync(
                 _profileId.Value,
-                _selectedSprintIds,
+                timeRange,
                 GlobalFilterStore.GetState().ProductIds.Count > 0 ? GlobalFilterStore.GetState().ProductIds : null,
                 CancellationToken.None);
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.FromResponse(response, "Portfolio delivery data could not be loaded right now.");

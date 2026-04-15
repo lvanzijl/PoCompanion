@@ -562,26 +562,8 @@
 
         try
         {
-            var fromSprint = _sprints.FirstOrDefault(s => s.Id == _selectedFromSprintId.Value);
-            var toSprint = _sprints.FirstOrDefault(s => s.Id == _selectedToSprintId.Value);
-
-            if (fromSprint == null || toSprint == null)
-            {
-                _prTrendSignal = null;
-                return;
-            }
-
-            if (fromSprint.StartUtc > toSprint.StartUtc)
-            {
-                (fromSprint, toSprint) = (toSprint, fromSprint);
-            }
-
-            var selectedSprintIds = _sprints
-                .Where(s => s.StartUtc >= fromSprint.StartUtc && s.StartUtc <= toSprint.StartUtc)
-                .Select(s => s.Id)
-                .ToList();
-
-            if (selectedSprintIds.Count == 0)
+            var timeRange = GlobalFilterTrendRequestMapper.ResolveRange(GlobalFilterStore.GetState(), _sprints);
+            if (!timeRange.IsResolved || timeRange.SprintIds.Count == 0)
             {
                 _prTrendSignal = null;
                 return;
@@ -589,7 +571,7 @@
 
             _prTrendState = DataStateViewModel<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>.Loading();
             var response = await PullRequestStateService.GetSprintTrendsStateAsync(
-                selectedSprintIds,
+                timeRange,
                 productIds: null,
                 teamId: _selectedTeamId,
                 cancellationToken);

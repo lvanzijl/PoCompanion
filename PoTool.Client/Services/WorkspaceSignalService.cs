@@ -159,15 +159,17 @@ public sealed class WorkspaceSignalService
             .Distinct()
             .ToArray();
 
-        var recentSprints = await LoadRecentSprintsAsync(teamIds);
-        var trendSprintIds = recentSprints
-            .Take(TrendSprintCount)
-            .Select(sprint => sprint.Id)
-            .ToArray();
+        var trendRequest = await ResolveTrendRequestAsync(requestedState, teamIds, cancellationToken);
+        if (!trendRequest.IsResolved || trendRequest.SprintIds.Count == 0)
+        {
+            LatestTrendFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
+            return DataStateResult<string>.Invalid(trendRequest.FailureReason ?? "Trend requests require a valid sprint range.");
+        }
+
         var productIdsCsv = string.Join(",", productIds);
 
-        var sprintTrendTask = LoadSprintTrendsAsync(productOwnerId, trendSprintIds, cancellationToken);
-        var prTrendTask = LoadPrTrendsAsync(trendSprintIds, productIdsCsv, cancellationToken);
+        var sprintTrendTask = LoadSprintTrendsAsync(productOwnerId, trendRequest.SprintIds, cancellationToken);
+        var prTrendTask = LoadPrTrendsAsync(trendRequest.SprintIds, productIdsCsv, cancellationToken);
 
         await Task.WhenAll(sprintTrendTask, prTrendTask);
 
@@ -465,6 +467,35 @@ public sealed class WorkspaceSignalService
             .ThenByDescending(sprint => sprint.EndUtc ?? DateTimeOffset.MinValue)
             .ThenByDescending(sprint => sprint.Id)
             .ToList();
+    }
+
+    private async Task<TrendSprintRangeRequest> ResolveTrendRequestAsync(
+        FilterState requestedState,
+        IReadOnlyCollection<int> teamIds,
+        CancellationToken cancellationToken)
+    {
+        if (requestedState.Time.Mode == FilterTimeMode.Range)
+        {
+            if (!requestedState.TeamId.HasValue)
+            {
+                return TrendSprintRangeRequest.Unresolved("Trend requests require a resolved team when using a sprint range.");
+            }
+
+            var teamSprints = await _sprintService.GetSprintsForTeamAsync(requestedState.TeamId.Value, cancellationToken);
+            return GlobalFilterTrendRequestMapper.ResolveRange(requestedState, teamSprints);
+        }
+
+        var recentSprints = await LoadRecentSprintsAsync(teamIds);
+        var recentSprintIds = recentSprints
+            .Take(TrendSprintCount)
+            .Select(static sprint => sprint.Id)
+            .ToArray();
+        if (recentSprintIds.Length == 0)
+        {
+            return TrendSprintRangeRequest.Unresolved("No recent sprint data is available for the current trend scope.");
+        }
+
+        return TrendSprintRangeRequest.Resolved(recentSprintIds, null, null);
     }
 
     private async Task<DataStateResult<IReadOnlyList<DeliverySignalContext>>> LoadDeliveryContextsAsync(

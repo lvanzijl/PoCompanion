@@ -1,5 +1,6 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using PoTool.Shared.DataState;
 using PoTool.Shared.PullRequests;
 
@@ -30,11 +31,11 @@ public sealed class PullRequestStateService
         => GetDeliveryInsightsStateCoreAsync(teamId, sprintId, cancellationToken);
 
     public Task<DataStateResponseDto<PullRequestQueryResponseDto<GetPrSprintTrendsResponse>>?> GetSprintTrendsStateAsync(
-        IEnumerable<int> sprintIds,
+        TrendSprintRangeRequest timeRange,
         IEnumerable<int>? productIds,
         int? teamId,
         CancellationToken cancellationToken = default)
-        => GetSprintTrendsStateCoreAsync(sprintIds, productIds, teamId, cancellationToken);
+        => GetSprintTrendsStateCoreAsync(timeRange.SprintIds, productIds, teamId, cancellationToken);
 
     private async Task<DataStateResponseDto<PullRequestQueryResponseDto<PullRequestInsightsDto>>?> GetInsightsStateCoreAsync(
         int? teamId,

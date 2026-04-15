@@ -1,5 +1,6 @@
 using PoTool.Client.ApiClient;
 using PoTool.Client.Helpers;
+using PoTool.Client.Models;
 using PoTool.Shared.DataState;
 using PoTool.Shared.Metrics;
 
@@ -46,21 +47,21 @@ public sealed class MetricsStateService
 
     public Task<DataStateResponseDto<DeliveryQueryResponseDto<PortfolioDeliveryDto>>?> GetPortfolioDeliveryStateAsync(
         int productOwnerId,
-        IEnumerable<int> sprintIds,
+        TrendSprintRangeRequest timeRange,
         IEnumerable<int>? productIds,
         CancellationToken cancellationToken = default)
-        => GetPortfolioDeliveryStateCoreAsync(productOwnerId, sprintIds, productIds, cancellationToken);
+        => GetPortfolioDeliveryStateCoreAsync(productOwnerId, timeRange.SprintIds, productIds, cancellationToken);
 
     public Task<DataStateResponseDto<SprintQueryResponseDto<GetSprintTrendMetricsResponse>>?> GetSprintTrendMetricsStateAsync(
         int productOwnerId,
-        IEnumerable<int> sprintIds,
+        TrendSprintRangeRequest timeRange,
         int? productId,
         int? teamId,
         CancellationToken cancellationToken = default)
         => GetSprintTrendMetricsStateCoreAsync(
             _metricsClient.GetSprintTrendMetricsAsync(
                 productOwnerId,
-                sprintIds,
+                timeRange.SprintIds,
                 productId.HasValue ? [productId.Value] : null,
                 recompute: null,
                 includeDetails: null,
@@ -229,11 +230,11 @@ public sealed class MetricsStateService
 
     public async Task<DataStateResponseDto<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>?> GetPortfolioProgressTrendStateAsync(
         int productOwnerId,
-        IEnumerable<int> sprintIds,
+        TrendSprintRangeRequest timeRange,
         IEnumerable<int>? productIds,
         CancellationToken cancellationToken = default)
     {
-        var response = await _metricsClient.GetPortfolioProgressTrendAsync(productOwnerId, sprintIds, productIds, cancellationToken);
+        var response = await _metricsClient.GetPortfolioProgressTrendAsync(productOwnerId, timeRange.SprintIds, productIds, cancellationToken);
         return response.ToDataStateResponse();
     }
 

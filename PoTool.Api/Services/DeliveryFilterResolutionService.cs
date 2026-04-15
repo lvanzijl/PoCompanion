@@ -44,6 +44,7 @@ public sealed class DeliveryFilterResolutionService
     {
         var requestedFilter = MapRequestedFilter(request);
         var issues = new List<FilterValidationIssue>();
+        ValidateBoundaryRequest(request, issues);
         ValidateRequestedFilter(requestedFilter, issues);
 
         var ownerProductIds = await LoadOwnerProductIdsAsync(request.ProductOwnerId, cancellationToken);
@@ -80,18 +81,7 @@ public sealed class DeliveryFilterResolutionService
             CollectSprintIds(requestedFilter.Time, effectiveFilter.Context.Time, effectiveFilter),
             cancellationToken);
 
-        _logger.LogInformation(
-            "Resolved delivery filter for {Boundary}. RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}; OwnerDerivedProductIds: {@OwnerDerivedProductIds}; FinalProductScope: {@FinalProductScope}; TimeRange: {RangeStartUtc} - {RangeEndUtc}; SprintScope: {SprintId}; SprintRange: {@SprintIds}",
-            boundaryName,
-            requestedFilter,
-            effectiveFilter,
-            validation.InvalidFields,
-            ownerProductIds,
-            effectiveFilter.Context.ProductIds.IsAll ? "ALL" : effectiveFilter.Context.ProductIds.Values,
-            effectiveFilter.RangeStartUtc,
-            effectiveFilter.RangeEndUtc,
-            effectiveFilter.SprintId,
-            effectiveFilter.SprintIds);
+        LogResolution(boundaryName, request, requestedFilter, effectiveFilter, validation, ownerProductIds);
 
         return new DeliveryFilterResolution(
             requestedFilter,
@@ -204,6 +194,61 @@ public sealed class DeliveryFilterResolutionService
                 issues.Add(new FilterValidationIssue(nameof(DeliveryFilterContext.Time), "Unsupported delivery time filter."));
                 break;
         }
+    }
+
+    private static void ValidateBoundaryRequest(
+        DeliveryFilterBoundaryRequest request,
+        ICollection<FilterValidationIssue> issues)
+    {
+        if (request.SprintIds is { Count: 0 }
+            && !request.SprintId.HasValue
+            && !request.RangeStartUtc.HasValue
+            && !request.RangeEndUtc.HasValue)
+        {
+            issues.Add(new FilterValidationIssue(nameof(DeliveryFilterContext.Time), "Multi-sprint delivery requests must include sprint identifiers or explicit range boundaries."));
+        }
+    }
+
+    private void LogResolution(
+        string boundaryName,
+        DeliveryFilterBoundaryRequest request,
+        DeliveryFilterContext requestedFilter,
+        DeliveryEffectiveFilter effectiveFilter,
+        FilterValidationResult validation,
+        IReadOnlyList<int> ownerProductIds)
+    {
+        var hasTimeMismatch = requestedFilter.Time.Mode != effectiveFilter.Context.Time.Mode
+            || (requestedFilter.Time.Mode == FilterTimeSelectionMode.MultiSprint && effectiveFilter.SprintIds.Count == 0);
+        if (!validation.IsValid || hasTimeMismatch)
+        {
+            _logger.LogWarning(
+                "Delivery filter mismatch for {Boundary}. RequestedTimeInput: SprintId={RequestedSprintId}, SprintIds={@RequestedSprintIds}, Range={RequestedRangeStartUtc}-{RequestedRangeEndUtc}; RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}",
+                boundaryName,
+                request.SprintId,
+                request.SprintIds,
+                request.RangeStartUtc,
+                request.RangeEndUtc,
+                requestedFilter,
+                effectiveFilter,
+                validation.InvalidFields);
+        }
+
+        _logger.LogInformation(
+            "Resolved delivery filter for {Boundary}. RequestedTimeInput: SprintId={RequestedSprintId}, SprintIds={@RequestedSprintIds}, Range={RequestedRangeStartUtc}-{RequestedRangeEndUtc}; RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}; OwnerDerivedProductIds: {@OwnerDerivedProductIds}; FinalProductScope: {@FinalProductScope}; TimeRange: {RangeStartUtc} - {RangeEndUtc}; SprintScope: {SprintId}; SprintRange: {@SprintIds}",
+            boundaryName,
+            request.SprintId,
+            request.SprintIds,
+            request.RangeStartUtc,
+            request.RangeEndUtc,
+            requestedFilter,
+            effectiveFilter,
+            validation.InvalidFields,
+            ownerProductIds,
+            effectiveFilter.Context.ProductIds.IsAll ? "ALL" : effectiveFilter.Context.ProductIds.Values,
+            effectiveFilter.RangeStartUtc,
+            effectiveFilter.RangeEndUtc,
+            effectiveFilter.SprintId,
+            effectiveFilter.SprintIds);
     }
 
     private async Task<IReadOnlyList<int>> LoadOwnerProductIdsAsync(int? productOwnerId, CancellationToken cancellationToken)
