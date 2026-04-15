@@ -59,21 +59,38 @@ public class HomeProductBarMetricsService
     }
 }
 
+/// <summary>
+/// Home dashboard product-bar load result, preserving the cache-backed data state
+/// and any backend reason text alongside the mapped metrics payload.
+/// </summary>
 public sealed record HomeProductBarMetricsResult(
     DataStateDto State,
     HomeProductBarMetricsDto? Data = null,
     CanonicalFilterMetadata? FilterMetadata = null,
     string? Reason = null)
 {
+    /// <summary>
+    /// Creates a successful result with mapped metrics data and canonical filter metadata.
+    /// </summary>
     public static HomeProductBarMetricsResult Available(CanonicalClientResponse<HomeProductBarMetricsDto> response)
         => new(DataStateDto.Available, response.Data, response.FilterMetadata);
 
+    /// <summary>
+    /// Creates an empty-state result when the backend completed successfully but no scoped metrics were available.
+    /// </summary>
     public static HomeProductBarMetricsResult Empty(string reason)
         => new(DataStateDto.Empty, Reason: reason);
 
+    /// <summary>
+    /// Creates a not-ready result when the cache-backed backend response indicates data is still warming.
+    /// The reason should be shown to users instead of a generic unavailable message.
+    /// </summary>
     public static HomeProductBarMetricsResult NotReady(string reason)
         => new(DataStateDto.NotReady, Reason: reason);
 
+    /// <summary>
+    /// Creates a failed result when the request could not be completed and the page should surface the failure reason.
+    /// </summary>
     public static HomeProductBarMetricsResult Failed(string reason)
         => new(DataStateDto.Failed, Reason: reason);
 }

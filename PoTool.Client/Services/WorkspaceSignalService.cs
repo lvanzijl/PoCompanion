@@ -13,6 +13,7 @@ public sealed class WorkspaceSignalService
     private const int TrendSprintCount = 2;
     private const int CapacitySprintCount = 6;
     private const int PlanningReadyPbiThreshold = 3;
+    private const int DeliveryContextBatchSize = 8;
     private static readonly WorkspaceSignalSet NeutralSignals = new(
         "Confirm backlog is healthy",
         "Confirm delivery is on track",
@@ -445,18 +446,18 @@ public sealed class WorkspaceSignalService
         IReadOnlyCollection<SprintDto> currentSprints,
         CancellationToken cancellationToken)
     {
-        var contexts = await Task.WhenAll(currentSprints.SelectMany(sprint =>
-        {
-            var sprintProducts = scopedProducts
+        var combinations = currentSprints
+            .SelectMany(sprint => scopedProducts
                 .Where(product => product.TeamIds.Contains(sprint.TeamId))
-                .ToArray();
-            if (sprintProducts.Length == 0)
-            {
-                return Array.Empty<Task<DeliverySignalContext?>>();
-            }
+                .Select(product => (Sprint: sprint, ProductId: product.Id)))
+            .ToArray();
+        var contexts = new List<DeliverySignalContext?>(combinations.Length);
 
-            return sprintProducts.Select(product => LoadDeliveryContextAsync(productOwnerId, sprint, product.Id, cancellationToken));
-        }));
+        foreach (var batch in combinations.Chunk(DeliveryContextBatchSize))
+        {
+            contexts.AddRange(await Task.WhenAll(batch.Select(scope =>
+                LoadDeliveryContextAsync(productOwnerId, scope.Sprint, scope.ProductId, cancellationToken))));
+        }
 
         return contexts
             .Where(context => context is not null)
