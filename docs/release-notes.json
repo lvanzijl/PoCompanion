@@ -2,6 +2,14 @@
   {
     "date": "2026-04-15",
     "type": "Fixed",
+    "title": "Client-side cache-backed reads now keep one explicit DataState model through shared services and UI fallbacks",
+    "impact": "Work item, pull request, pipeline, release-planning, roadmap, and health/backlog client reads now preserve explicit Not Ready, Empty, Failed, and Invalid states instead of collapsing cache-backed responses into nulls or empty payloads, and shared DataState views now surface invalid filter scope as a warning state instead of treating corrected responses as ready success.",
+    "area": "Home / Planning / Health / Work Items / Delivery",
+    "link": "/home"
+  },
+  {
+    "date": "2026-04-15",
+    "type": "Fixed",
     "title": "Cache-backed client services now preserve data-state and filter corrections",
     "impact": "Home and other cache-backed client flows now keep explicit Not Ready, Empty, Failed, and filter-correction states instead of collapsing them into null/default payloads, and Home workspace signals now reject invalid product scope before calling sprint-scoped endpoints while still using effective scoped products for all-products aggregation.",
     "area": "Home / Delivery / Trends / Health",

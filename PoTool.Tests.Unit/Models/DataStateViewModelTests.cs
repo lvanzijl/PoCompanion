@@ -11,22 +11,16 @@ public sealed class DataStateViewModelTests
     [TestMethod]
     public void FromResponse_WhenCanonicalEnvelopeContainsInvalidFields_MapsToInvalidUiState()
     {
-        var response = new DataStateResponseDto<DeliveryQueryResponseDto<CapacityCalibrationDto>>
+        var response = new DataStateResponseDto<FakeInvalidPayload>
         {
             State = DataStateDto.Available,
-            Data = new DeliveryQueryResponseDto<CapacityCalibrationDto>
+            Data = new FakeInvalidPayload
             {
-                Data = new CapacityCalibrationDto(),
-                RequestedFilter = new DeliveryFilterContextDto(),
-                EffectiveFilter = new DeliveryFilterContextDto(),
-                InvalidFields = ["productIds"],
-                ValidationMessages = [new FilterValidationIssueDto { Field = "productIds", Message = "Scope corrected." }],
-                SprintLabels = new Dictionary<int, string>(),
-                TeamLabels = new Dictionary<int, string>()
+                InvalidFields = ["productIds"]
             }
         };
 
-        var viewModel = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.FromResponse(
+        var viewModel = DataStateViewModel<FakeInvalidPayload>.FromResponse(
             response,
             "Capacity calibration unavailable.");
 
@@ -42,5 +36,10 @@ public sealed class DataStateViewModelTests
 
         Assert.AreEqual(UiDataState.Invalid, viewModel.UiState);
         Assert.AreEqual("Selected team does not belong to the current product.", viewModel.Reason);
+    }
+
+    private sealed class FakeInvalidPayload
+    {
+        public IReadOnlyList<string> InvalidFields { get; init; } = [];
     }
 }

@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using PoTool.Client.ApiClient;
+using PoTool.Client.Models;
 using PoTool.Client.Services;
 using PoTool.Shared.DataState;
 using PoTool.Shared.Pipelines;
@@ -111,7 +112,8 @@ public sealed class GeneratedClientStateServiceTests
 
         var response = await service.GetBoardAsync();
 
-        Assert.IsNull(response);
+        Assert.AreEqual(DataStateResultStatus.NotReady, response.Status);
+        Assert.AreEqual("Board cache not ready", response.Reason);
     }
 
     private static HttpClient CreateHttpClient(string json)

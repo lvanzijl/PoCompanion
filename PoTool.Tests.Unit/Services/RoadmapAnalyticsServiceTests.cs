@@ -1,5 +1,6 @@
 using Moq;
 using PoTool.Client.ApiClient;
+using PoTool.Client.Models;
 using PoTool.Client.Services;
 using PoTool.Shared.DataState;
 using PoTool.Shared.Health;
@@ -185,10 +186,10 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = await _service.LoadForecastAsync(100);
 
-        Assert.IsNotNull(result);
-        Assert.AreEqual(4, result.SprintsRemaining);
-        Assert.IsTrue(result.ExceedsVelocity); // >3 sprints
-        Assert.AreEqual(ForecastConfidence.High, result.Confidence);
+        Assert.IsTrue(result.CanUseData);
+        Assert.AreEqual(4, result.Data!.SprintsRemaining);
+        Assert.IsTrue(result.Data.ExceedsVelocity); // >3 sprints
+        Assert.AreEqual(ForecastConfidence.High, result.Data.Confidence);
     }
 
     [TestMethod]
@@ -218,13 +219,13 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = await _service.LoadForecastAsync(100);
 
-        Assert.IsNotNull(result);
-        Assert.AreEqual(1, result.SprintsRemaining);
-        Assert.IsFalse(result.ExceedsVelocity);
+        Assert.IsTrue(result.CanUseData);
+        Assert.AreEqual(1, result.Data!.SprintsRemaining);
+        Assert.IsFalse(result.Data.ExceedsVelocity);
     }
 
     [TestMethod]
-    public async Task LoadForecastAsync_ApiThrows_ReturnsNull()
+    public async Task LoadForecastAsync_ApiThrows_ReturnsFailedResult()
     {
         _metricsClientMock
             .Setup(m => m.GetEpicForecastAsync(It.IsAny<int>(), It.IsAny<int?>()))
@@ -232,7 +233,7 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = await _service.LoadForecastAsync(100);
 
-        Assert.IsNull(result);
+        Assert.AreEqual(DataStateResultStatus.Failed, result.Status);
     }
 
     #endregion
@@ -280,11 +281,12 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = await _service.LoadBacklogHealthAsync(1);
 
-        Assert.HasCount(1, result);
-        Assert.IsTrue(result.ContainsKey(100));
-        Assert.AreEqual(80, result[100].RefinementScore);
-        Assert.IsFalse(result[100].HasRefinementBlockers);
-        Assert.IsTrue(result[100].HasValidationIssues); // PBI 202 has score < 100
+        Assert.IsTrue(result.CanUseData);
+        Assert.HasCount(1, result.Data!);
+        Assert.IsTrue(result.Data!.ContainsKey(100));
+        Assert.AreEqual(80, result.Data[100].RefinementScore);
+        Assert.IsFalse(result.Data[100].HasRefinementBlockers);
+        Assert.IsTrue(result.Data[100].HasValidationIssues); // PBI 202 has score < 100
     }
 
     [TestMethod]
@@ -314,11 +316,12 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = await _service.LoadBacklogHealthAsync(1);
 
-        Assert.IsTrue(result[100].HasRefinementBlockers);
+        Assert.IsTrue(result.CanUseData);
+        Assert.IsTrue(result.Data![100].HasRefinementBlockers);
     }
 
     [TestMethod]
-    public async Task LoadBacklogHealthAsync_ApiThrows_ReturnsEmptyDictionary()
+    public async Task LoadBacklogHealthAsync_ApiThrows_ReturnsFailedResult()
     {
         _workItemsClientMock
             .Setup(m => m.GetBacklogStateAsync(It.IsAny<int>()))
@@ -326,7 +329,7 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = await _service.LoadBacklogHealthAsync(1);
 
-        Assert.IsEmpty(result);
+        Assert.AreEqual(DataStateResultStatus.Failed, result.Status);
     }
 
     #endregion
@@ -358,13 +361,14 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = await _service.LoadDependencySignalsAsync(new[] { 100, 200 });
 
-        Assert.HasCount(1, result);
-        CollectionAssert.Contains(result.ToList(), 100);
-        CollectionAssert.DoesNotContain(result.ToList(), 200);
+        Assert.IsTrue(result.CanUseData);
+        Assert.HasCount(1, result.Data!);
+        CollectionAssert.Contains(result.Data!.ToList(), 100);
+        CollectionAssert.DoesNotContain(result.Data!.ToList(), 200);
     }
 
     [TestMethod]
-    public async Task LoadDependencySignalsAsync_ApiThrows_ReturnsEmptySet()
+    public async Task LoadDependencySignalsAsync_ApiThrows_ReturnsFailedResult()
     {
         _workItemsClientMock
             .Setup(m => m.GetDependencyGraphAsync(It.IsAny<string?>(), It.IsAny<string?>(), It.IsAny<string?>()))
@@ -372,15 +376,15 @@ public sealed class RoadmapAnalyticsServiceTests
 
         var result = await _service.LoadDependencySignalsAsync(new[] { 100 });
 
-        Assert.IsEmpty(result);
+        Assert.AreEqual(DataStateResultStatus.Failed, result.Status);
     }
 
     [TestMethod]
-    public async Task LoadDependencySignalsAsync_EmptyIds_ReturnsEmptySet()
+    public async Task LoadDependencySignalsAsync_EmptyIds_ReturnsEmptyResult()
     {
         var result = await _service.LoadDependencySignalsAsync(Array.Empty<int>());
 
-        Assert.IsEmpty(result);
+        Assert.AreEqual(DataStateResultStatus.Empty, result.Status);
     }
 
     #endregion

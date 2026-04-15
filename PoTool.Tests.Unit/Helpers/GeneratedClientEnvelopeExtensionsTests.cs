@@ -73,12 +73,13 @@ public sealed class GeneratedClientEnvelopeExtensionsTests
             ]
         };
 
-        var data = envelope.GetReadOnlyListOrDefault();
+        var dataResult = envelope.ToReadOnlyListDataStateResult();
         var stateResponse = envelope.ToReadOnlyListDataStateResponse();
 
-        Assert.HasCount(2, data);
+        Assert.IsTrue(dataResult.CanUseData);
+        Assert.HasCount(2, dataResult.Data!);
         Assert.HasCount(2, stateResponse.Data ?? Array.Empty<WorkItemDto>());
-        Assert.AreEqual(11, data[0].TfsId);
+        Assert.AreEqual(11, dataResult.Data![0].TfsId);
     }
 
     private static DeliveryFilterContextDto CreateDeliveryFilter()
