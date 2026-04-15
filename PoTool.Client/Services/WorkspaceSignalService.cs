@@ -108,7 +108,7 @@ public sealed class WorkspaceSignalService
         var currentSprints = await LoadCurrentSprintsAsync(teamIds);
         var deliveryContexts = await LoadDeliveryContextsAsync(
             productOwnerId,
-            selectedProductId,
+            scopedProducts,
             currentSprints,
             cancellationToken);
         LatestDeliveryFilterMetadata = deliveryContexts
@@ -441,61 +441,78 @@ public sealed class WorkspaceSignalService
 
     private async Task<IReadOnlyList<DeliverySignalContext>> LoadDeliveryContextsAsync(
         int productOwnerId,
-        int? selectedProductId,
+        IReadOnlyCollection<ProductDto> scopedProducts,
         IReadOnlyCollection<SprintDto> currentSprints,
         CancellationToken cancellationToken)
     {
-        var contexts = await Task.WhenAll(currentSprints.Select(async sprint =>
+        var contexts = await Task.WhenAll(currentSprints.SelectMany(sprint =>
         {
-            try
+            var sprintProducts = scopedProducts
+                .Where(product => product.TeamIds.Contains(sprint.TeamId))
+                .ToArray();
+            if (sprintProducts.Length == 0)
             {
-                var sprintExecutionEnvelopeTask = _metricsClient.GetSprintExecutionAsync(
-                    productOwnerId,
-                    sprint.Id,
-                    selectedProductId,
-                    cancellationToken);
-                var backlogHealthEnvelopeTask = _metricsClient.GetBacklogHealthAsync(
-                    sprint.Path,
-                    productOwnerId,
-                    selectedProductId.HasValue ? [selectedProductId.Value] : null,
-                    sprint.Id,
-                    cancellationToken);
-
-                await Task.WhenAll(sprintExecutionEnvelopeTask, backlogHealthEnvelopeTask);
-
-                var sprintExecutionEnvelope = (await sprintExecutionEnvelopeTask).GetDataOrDefault();
-                var backlogHealthEnvelope = (await backlogHealthEnvelopeTask).GetDataOrDefault();
-                if (sprintExecutionEnvelope is null || backlogHealthEnvelope is null)
-                {
-                    return null;
-                }
-
-                var sprintExecutionResponse = CanonicalClientResponseFactory.Create<SprintExecutionDto>(sprintExecutionEnvelope);
-                var backlogHealthResponse = CanonicalClientResponseFactory.Create<BacklogHealthDto>(backlogHealthEnvelope);
-
-                return new DeliverySignalContext(
-                    sprint,
-                    sprintExecutionResponse.Data,
-                    backlogHealthResponse.Data,
-                    new[]
-                        {
-                            sprintExecutionResponse.FilterMetadata,
-                            backlogHealthResponse.FilterMetadata
-                        }
-                        .Where(metadata => metadata is not null)
-                        .Cast<CanonicalFilterMetadata>()
-                        .ToList());
+                return Array.Empty<Task<DeliverySignalContext?>>();
             }
-            catch (ApiException ex) when (ex.StatusCode == 404)
-            {
-                return null;
-            }
+
+            return sprintProducts.Select(product => LoadDeliveryContextAsync(productOwnerId, sprint, product.Id, cancellationToken));
         }));
 
         return contexts
             .Where(context => context is not null)
             .Cast<DeliverySignalContext>()
             .ToList();
+    }
+
+    private async Task<DeliverySignalContext?> LoadDeliveryContextAsync(
+        int productOwnerId,
+        SprintDto sprint,
+        int productId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var sprintExecutionEnvelopeTask = _metricsClient.GetSprintExecutionAsync(
+                productOwnerId,
+                sprint.Id,
+                productId,
+                cancellationToken);
+            var backlogHealthEnvelopeTask = _metricsClient.GetBacklogHealthAsync(
+                sprint.Path,
+                productOwnerId,
+                [productId],
+                sprint.Id,
+                cancellationToken);
+
+            await Task.WhenAll(sprintExecutionEnvelopeTask, backlogHealthEnvelopeTask);
+
+            var sprintExecutionEnvelope = (await sprintExecutionEnvelopeTask).GetDataOrDefault();
+            var backlogHealthEnvelope = (await backlogHealthEnvelopeTask).GetDataOrDefault();
+            if (sprintExecutionEnvelope is null || backlogHealthEnvelope is null)
+            {
+                return null;
+            }
+
+            var sprintExecutionResponse = CanonicalClientResponseFactory.Create<SprintExecutionDto>(sprintExecutionEnvelope);
+            var backlogHealthResponse = CanonicalClientResponseFactory.Create<BacklogHealthDto>(backlogHealthEnvelope);
+
+            return new DeliverySignalContext(
+                sprint,
+                sprintExecutionResponse.Data,
+                backlogHealthResponse.Data,
+                new[]
+                    {
+                        sprintExecutionResponse.FilterMetadata,
+                        backlogHealthResponse.FilterMetadata
+                    }
+                    .Where(metadata => metadata is not null)
+                    .Cast<CanonicalFilterMetadata>()
+                    .ToList());
+        }
+        catch (ApiException ex) when (ex.StatusCode == 400 || ex.StatusCode == 404)
+        {
+            return null;
+        }
     }
 
     private async Task<CanonicalClientResponse<GetSprintTrendMetricsResponse>?> LoadSprintTrendsAsync(

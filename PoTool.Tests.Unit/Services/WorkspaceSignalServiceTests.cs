@@ -223,6 +223,97 @@ public sealed class WorkspaceSignalServiceTests
     }
 
     [TestMethod]
+    public async Task GetDeliverySignalAsync_WithAllProducts_UsesExplicitProductScopeForSprintExecution()
+    {
+        var metricsClient = new Mock<IMetricsClient>();
+        var pullRequestsClient = new Mock<IPullRequestsClient>();
+        var workItemsClient = new Mock<IWorkItemsClient>();
+        var sprintsClient = new Mock<ISprintsClient>();
+        var currentSprint = new SprintDto
+        {
+            Id = 55,
+            TeamId = 10,
+            Path = "Team\\Sprint 55",
+            Name = "Sprint 55",
+            StartUtc = new DateTimeOffset(2026, 3, 1, 0, 0, 0, TimeSpan.Zero),
+            EndUtc = new DateTimeOffset(2026, 3, 14, 0, 0, 0, TimeSpan.Zero)
+        };
+
+        sprintsClient
+            .Setup(client => client.GetCurrentSprintForTeamAsync(10, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(currentSprint);
+
+        metricsClient
+            .Setup(client => client.GetSprintExecutionAsync(42, 55, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DataStateResponseDtoOfSprintQueryResponseDtoOfSprintExecutionDto
+            {
+                State = DataStateDto.Available,
+                Data = new SprintQueryResponseDtoOfSprintExecutionDto
+                {
+                    Data = new SprintExecutionDto
+                    {
+                        SprintId = 55,
+                        SprintName = "Sprint 55",
+                        StartUtc = currentSprint.StartUtc,
+                        EndUtc = currentSprint.EndUtc,
+                        HasData = true,
+                        CompletedPbis = [],
+                        UnfinishedPbis = [],
+                        AddedDuringSprint = [],
+                        RemovedDuringSprint = [],
+                        SpilloverPbis = [],
+                        StarvedPbis = [],
+                        Summary = new SprintExecutionSummaryDto
+                        {
+                            UnfinishedCount = 4
+                        }
+                    },
+                    RequestedFilter = CreateSprintFilter([1], [10]),
+                    EffectiveFilter = CreateSprintFilter([1], [10]),
+                    InvalidFields = [],
+                    ValidationMessages = []
+                }
+            });
+
+        metricsClient
+            .Setup(client => client.GetBacklogHealthAsync("Team\\Sprint 55", 42, It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 1 })), 55, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DataStateResponseDtoOfSprintQueryResponseDtoOfBacklogHealthDto
+            {
+                State = DataStateDto.Available,
+                Data = new SprintQueryResponseDtoOfBacklogHealthDto
+                {
+                    Data = new BacklogHealthDto
+                    {
+                        BlockedItems = 0,
+                        WorkItemsWithoutEffort = 0
+                    },
+                    RequestedFilter = CreateSprintFilter([1], [10]),
+                    EffectiveFilter = CreateSprintFilter([1], [10]),
+                    InvalidFields = [],
+                    ValidationMessages = []
+                }
+            });
+
+        var sprintService = new SprintService(sprintsClient.Object);
+        var workItemService = new WorkItemService(
+            workItemsClient.Object,
+            TestHttpClient,
+            new WorkItemLoadCoordinatorService(NullLogger<WorkItemLoadCoordinatorService>.Instance));
+        var service = new WorkspaceSignalService(
+            metricsClient.Object,
+            pullRequestsClient.Object,
+            workItemsClient.Object,
+            sprintService,
+            workItemService);
+
+        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), selectedProductId: null);
+
+        Assert.AreEqual("4 PBIs may spill over this sprint", result);
+        metricsClient.Verify(client => client.GetSprintExecutionAsync(42, 55, 1, It.IsAny<CancellationToken>()), Times.Once);
+        metricsClient.Verify(client => client.GetSprintExecutionAsync(42, 55, null, It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [TestMethod]
     public async Task GetTrendsSignalAsync_WithNoScopedProducts_ReturnsNeutralSignal()
     {
         var service = CreateService();

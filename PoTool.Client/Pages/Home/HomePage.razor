@@ -494,9 +494,11 @@
 
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (metricsResponse == null)
+            if (metricsResponse.State != PoTool.Shared.DataState.DataStateDto.Available)
             {
-                _productMetricsError = ProductMetricsUnavailableMessage;
+                _productMetricsError = string.IsNullOrWhiteSpace(metricsResponse.Reason)
+                    ? ProductMetricsUnavailableMessage
+                    : metricsResponse.Reason;
                 return;
             }
 
