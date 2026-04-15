@@ -225,6 +225,33 @@ public sealed class WorkspaceSignalServiceTests
     }
 
     [TestMethod]
+    public async Task GetDeliverySignalAsync_WithInvalidScopedProduct_DoesNotIssueBackendRequests()
+    {
+        var metricsClient = new Mock<IMetricsClient>(MockBehavior.Strict);
+        var pullRequestsClient = new Mock<IPullRequestsClient>(MockBehavior.Strict);
+        var workItemsClient = new Mock<IWorkItemsClient>(MockBehavior.Strict);
+        var sprintsClient = new Mock<ISprintsClient>(MockBehavior.Strict);
+        var sprintService = new SprintService(sprintsClient.Object);
+        var workItemService = new WorkItemService(
+            workItemsClient.Object,
+            TestHttpClient,
+            new WorkItemLoadCoordinatorService(NullLogger<WorkItemLoadCoordinatorService>.Instance));
+        var service = new WorkspaceSignalService(
+            metricsClient.Object,
+            pullRequestsClient.Object,
+            workItemsClient.Object,
+            sprintService,
+            workItemService,
+            NullLogger<WorkspaceSignalService>.Instance);
+
+        var result = await service.GetDeliverySignalAsync(42, CreateProducts(), CreateFilterState(999));
+
+        Assert.AreEqual(DataStateResultStatus.Invalid, result.Status);
+        metricsClient.VerifyNoOtherCalls();
+        sprintsClient.VerifyNoOtherCalls();
+    }
+
+    [TestMethod]
     public async Task GetDeliverySignalAsync_WithAllProducts_UsesExplicitProductScopeForSprintExecution()
     {
         var metricsClient = new Mock<IMetricsClient>();
