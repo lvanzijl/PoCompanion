@@ -30,6 +30,7 @@ public sealed record DataStateResult<T>(
     private static readonly IReadOnlyList<CanonicalFilterMetadata> EmptyFilterMetadata = Array.Empty<CanonicalFilterMetadata>();
     private static readonly IReadOnlyList<string> EmptyInvalidFields = Array.Empty<string>();
     private static readonly IReadOnlyList<FilterValidationIssueDto> EmptyValidationMessages = Array.Empty<FilterValidationIssueDto>();
+    private static readonly FilterValidationIssueIdentityComparer ValidationIssueComparer = new();
 
     public DataStateDto State => DataState;
 
@@ -56,8 +57,7 @@ public sealed record DataStateResult<T>(
         ? EmptyValidationMessages
         : Metadata
             .SelectMany(item => item.ValidationMessages)
-            .GroupBy(message => $"{message.Field}\u001F{message.Message}", StringComparer.Ordinal)
-            .Select(group => group.First())
+            .Distinct(ValidationIssueComparer)
             .ToArray();
 
     public static DataStateResult<T> NotRequested(string? reason = null)
@@ -151,5 +151,15 @@ public sealed record DataStateResult<T>(
             DataStateDto.Loading => DataStateResultStatus.Loading,
             _ => DataStateResultStatus.NotRequested
         };
+    }
+
+    private sealed class FilterValidationIssueIdentityComparer : IEqualityComparer<FilterValidationIssueDto>
+    {
+        public bool Equals(FilterValidationIssueDto? x, FilterValidationIssueDto? y)
+            => string.Equals(x?.Field, y?.Field, StringComparison.Ordinal)
+               && string.Equals(x?.Message, y?.Message, StringComparison.Ordinal);
+
+        public int GetHashCode(FilterValidationIssueDto obj)
+            => HashCode.Combine(obj.Field, obj.Message);
     }
 }

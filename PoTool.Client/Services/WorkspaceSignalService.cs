@@ -13,7 +13,7 @@ public sealed class WorkspaceSignalService
     private const int TrendSprintCount = 2;
     private const int CapacitySprintCount = 6;
     private const int PlanningReadyPbiThreshold = 3;
-    private const int DeliveryContextBatchSize = 8;
+    private const int DeliveryContextLoadBatchSize = 8;
     private static readonly WorkspaceSignalSet NeutralSignals = new(
         "Confirm backlog is healthy",
         "Confirm delivery is on track",
@@ -486,8 +486,9 @@ public sealed class WorkspaceSignalService
         var contexts = new List<DataStateResult<DeliverySignalContext>>(combinations.Length);
 
         // Home delivery signals normally fan out across a small set of current team sprints and scoped products.
-        // Batch execution limits concurrent requests while still allowing explicit per-product scope resolution.
-        foreach (var batch in combinations.Chunk(DeliveryContextBatchSize))
+        // Each batch caps concurrent request execution at 8 contexts; larger fan-out shapes are processed in
+        // subsequent batches so the browser and API are not hit with the full combination count at once.
+        foreach (var batch in combinations.Chunk(DeliveryContextLoadBatchSize))
         {
             contexts.AddRange(await Task.WhenAll(batch.Select(scope =>
                 LoadDeliveryContextAsync(productOwnerId, scope.Sprint, scope.ProductId, cancellationToken))));
@@ -592,8 +593,10 @@ public sealed class WorkspaceSignalService
                 sprint.Id,
                 productId);
             return ex.StatusCode == 400
-                ? DataStateResult<DeliverySignalContext>.Invalid("The sprint delivery scope was rejected for one product context.")
-                : DataStateResult<DeliverySignalContext>.Empty("No sprint delivery context was available for one product.");
+                ? DataStateResult<DeliverySignalContext>.Invalid(
+                    $"Sprint '{sprint.Id}' rejected product '{productId}' for delivery signal scope.")
+                : DataStateResult<DeliverySignalContext>.Empty(
+                    $"No sprint delivery context was available for sprint '{sprint.Id}' and product '{productId}'.");
         }
     }
 

@@ -127,10 +127,11 @@
                 ? pipelineResponse.Data!.ToList()
                 : new List<PipelineMetricsDto>();
 
-            var failedResponse = new[] { prResponse.Reason, pipelineResponse.Reason }
-                .FirstOrDefault(reason => !string.IsNullOrWhiteSpace(reason)
-                    && (prResponse.Status is DataStateResultStatus.Failed or DataStateResultStatus.Invalid
-                        || pipelineResponse.Status is DataStateResultStatus.Failed or DataStateResultStatus.Invalid));
+            var failedResponse = prResponse.Status is DataStateResultStatus.Failed or DataStateResultStatus.Invalid
+                ? prResponse.Reason
+                : pipelineResponse.Status is DataStateResultStatus.Failed or DataStateResultStatus.Invalid
+                    ? pipelineResponse.Reason
+                    : null;
             if (!string.IsNullOrWhiteSpace(failedResponse))
             {
                 throw new InvalidOperationException(failedResponse);

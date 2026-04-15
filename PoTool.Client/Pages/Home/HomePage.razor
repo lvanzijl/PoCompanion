@@ -594,10 +594,11 @@
 
             if (signalResult.CanUseData)
             {
+                var detailState = GetWorkspaceTileDetailState(signalResult);
                 state.SetLoaded(
                     signalResult.Data!,
-                    GetWorkspaceTileDetailMessage(signalResult),
-                    GetWorkspaceTileDetailColor(signalResult));
+                    detailState.Message,
+                    detailState.Color);
                 return;
             }
 
@@ -771,20 +772,13 @@
         builder.CloseComponent();
     };
 
-    private static string? GetWorkspaceTileDetailMessage(DataStateResult<string> result)
+    private static (string? Message, Color Color) GetWorkspaceTileDetailState(DataStateResult<string> result)
         => result.Status switch
         {
-            DataStateResultStatus.Invalid or DataStateResultStatus.NotReady or DataStateResultStatus.Failed => result.Reason,
-            _ => null
-        };
-
-    private static Color GetWorkspaceTileDetailColor(DataStateResult<string> result)
-        => result.Status switch
-        {
-            DataStateResultStatus.Invalid => Color.Warning,
-            DataStateResultStatus.NotReady => Color.Info,
-            DataStateResultStatus.Failed => Color.Error,
-            _ => Color.Default
+            DataStateResultStatus.Invalid => (result.Reason, Color.Warning),
+            DataStateResultStatus.NotReady => (result.Reason, Color.Info),
+            DataStateResultStatus.Failed => (result.Reason, Color.Error),
+            _ => (null, Color.Default)
         };
 
     private void NavigateToHealth()
