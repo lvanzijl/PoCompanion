@@ -12,6 +12,8 @@ namespace PoTool.Tests.Unit.Audits;
 public sealed class DataSourceRouteClassificationAuditTests
 {
     private static readonly Assembly ApiAssembly = typeof(WorkItemsController).Assembly;
+    private const string IntegerRouteSample = "123";
+    private const string DefaultRouteSample = "sample";
 
     [TestMethod]
     public void ManagedControllerRoutes_AreExplicitlyClassified()
@@ -69,7 +71,7 @@ public sealed class DataSourceRouteClassificationAuditTests
         normalized = Regex.Replace(
             normalized,
             @"\{([^}:]+)(?::([^}]+))?\}",
-            match => string.Equals(match.Groups[2].Value, "int", StringComparison.OrdinalIgnoreCase) ? "123" : "sample",
+            match => string.Equals(match.Groups[2].Value, "int", StringComparison.OrdinalIgnoreCase) ? IntegerRouteSample : DefaultRouteSample,
             RegexOptions.None,
             TimeSpan.FromSeconds(1));
 

@@ -19,11 +19,11 @@ The classifier matches whole route segments, so `/api/startup-state` does not ma
 
 ## Exact files changed
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Api/Configuration/DataSourceModeConfiguration.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Configuration/DataSourceModeConfigurationTests.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Middleware/DataSourceModeMiddlewareTests.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Audits/DataSourceRouteClassificationAuditTests.cs`
-- `/home/runner/work/PoCompanion/PoCompanion/docs/release-notes.json`
+- `PoTool.Api/Configuration/DataSourceModeConfiguration.cs`
+- `PoTool.Tests.Unit/Configuration/DataSourceModeConfigurationTests.cs`
+- `PoTool.Tests.Unit/Middleware/DataSourceModeMiddlewareTests.cs`
+- `PoTool.Tests.Unit/Audits/DataSourceRouteClassificationAuditTests.cs`
+- `docs/release-notes.json`
 
 ## Tests added/updated
 
