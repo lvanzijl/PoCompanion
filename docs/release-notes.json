@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-16",
+    "type": "Fixed",
+    "title": "Startup routing now revalidates profile selection and sync readiness before opening workspace pages",
+    "impact": "The app now resolves startup navigation through one central gate before any workspace route renders, so fresh sessions and deep links no longer fall through to /home when the browser has not validated a selected profile or when the selected profile still needs its first sync; invalid cached profile selections are cleared safely and users are routed into Profiles or Sync Gate with a preserved return path.",
+    "area": "Startup / Profiles / Sync",
+    "link": "/"
+  },
+  {
+    "date": "2026-04-16",
     "type": "Changed",
     "title": "Core analytics read surfaces now enforce canonical data-state rendering systemically",
     "impact": "Pipeline Insights, PR Delivery Insights, Pull Request Insights, Portfolio Flow Trend, Sprint Execution, Product Roadmaps, and shared effort/capacity/flow/forecast panels now route read-state loading, empty, invalid-filter, and failure behavior through governed canonical data-state rendering instead of page-local fallback UI, and the read-surface governance audit now discovers covered pages and panels by pattern with explicit mutation-flow exclusions instead of relying on a fixed file allowlist.",

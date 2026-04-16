@@ -9,13 +9,23 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class StartupOrchestratorService : IStartupOrchestratorService
 {
+    private const string ActiveProfilePreferenceKey = "ActiveProfileId";
+
     private readonly IStartupClient _startupClient;
     private readonly ICacheSyncService _cacheSyncService;
+    private readonly IProfileService _profileService;
+    private readonly IPreferencesService _preferencesService;
 
-    public StartupOrchestratorService(IStartupClient startupClient, ICacheSyncService cacheSyncService)
+    public StartupOrchestratorService(
+        IStartupClient startupClient,
+        ICacheSyncService cacheSyncService,
+        IProfileService profileService,
+        IPreferencesService preferencesService)
     {
         _startupClient = startupClient;
         _cacheSyncService = cacheSyncService;
+        _profileService = profileService;
+        _preferencesService = preferencesService;
     }
 
     /// <inheritdoc />
@@ -24,7 +34,8 @@ public class StartupOrchestratorService : IStartupOrchestratorService
         try
         {
             var readiness = MapReadiness(await _startupClient.GetStartupReadinessAsync(cancellationToken));
-            return await ClassifyReadinessAsync(readiness, cancellationToken);
+            var normalizedReadiness = await NormalizeActiveProfileSelectionAsync(readiness, cancellationToken);
+            return await ClassifyReadinessAsync(normalizedReadiness, cancellationToken);
         }
         catch (HttpRequestException)
         {
@@ -179,6 +190,59 @@ public class StartupOrchestratorService : IStartupOrchestratorService
             readiness,
             "Startup checks passed.",
             "You can continue to the workspace.");
+    }
+
+    private async Task<StartupReadinessDto> NormalizeActiveProfileSelectionAsync(
+        StartupReadinessDto readiness,
+        CancellationToken cancellationToken)
+    {
+        if (!readiness.HasAnyProfile)
+        {
+            _profileService.SetCachedActiveProfileId(null);
+            return readiness with { ActiveProfileId = null };
+        }
+
+        var cachedProfileId = await _preferencesService.GetIntAsync(ActiveProfilePreferenceKey);
+        if (!cachedProfileId.HasValue)
+        {
+            await ResetPersistedActiveProfileSelectionAsync(readiness.ActiveProfileId, cancellationToken);
+            return readiness with { ActiveProfileId = null };
+        }
+
+        var profile = await _profileService.GetProfileByIdAsync(cachedProfileId.Value, cancellationToken);
+        if (profile == null)
+        {
+            await _preferencesService.RemoveAsync(ActiveProfilePreferenceKey);
+            await ResetPersistedActiveProfileSelectionAsync(readiness.ActiveProfileId, cancellationToken);
+            return readiness with { ActiveProfileId = null };
+        }
+
+        if (readiness.ActiveProfileId != cachedProfileId.Value)
+        {
+            await _profileService.SetActiveProfileAsync(cachedProfileId.Value, cancellationToken);
+        }
+
+        _profileService.SetCachedActiveProfileId(cachedProfileId.Value);
+        return readiness with { ActiveProfileId = cachedProfileId.Value };
+    }
+
+    private async Task ResetPersistedActiveProfileSelectionAsync(int? persistedActiveProfileId, CancellationToken cancellationToken)
+    {
+        _profileService.SetCachedActiveProfileId(null);
+
+        if (!persistedActiveProfileId.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            await _profileService.SetActiveProfileAsync(null, cancellationToken);
+        }
+        catch
+        {
+            // Ignore cleanup failures; startup classification still treats the profile as unselected locally.
+        }
     }
 
     private static bool RequiresSetup(StartupReadinessDto readiness)

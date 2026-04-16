@@ -13,16 +13,23 @@ namespace PoTool.Tests.Unit.Services;
 [TestClass]
 public class StartupOrchestratorServiceTests
 {
-    private StartupOrchestratorService CreateService(Func<HttpRequestMessage, HttpResponseMessage> handler)
+    private StartupOrchestratorService CreateService(
+        Func<HttpRequestMessage, HttpResponseMessage> handler,
+        int? cachedProfileId = null,
+        ProfileDto? cachedProfile = null)
     {
         var httpClient = new HttpClient(new StubHttpMessageHandler(handler))
         {
             BaseAddress = new Uri("http://localhost")
         };
+        var preferencesService = new StubPreferencesService(cachedProfileId);
+        var profileService = new StubProfileService(cachedProfile, cachedProfileId);
 
         return new StartupOrchestratorService(
             new StartupClient(httpClient),
-            new CacheSyncService(httpClient, new CacheSyncClient(httpClient)));
+            new CacheSyncService(httpClient, new CacheSyncClient(httpClient)),
+            profileService,
+            preferencesService);
     }
 
     [TestMethod]
@@ -67,12 +74,113 @@ public class StartupOrchestratorServiceTests
                 "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
                 _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
             };
-        });
+        }, cachedProfileId: 7, cachedProfile: CreateProfile(7, "Marina"));
 
         var result = await service.GetStartupReadinessAsync();
 
         Assert.AreEqual(StartupReadinessState.SyncRequired, result.State);
         Assert.IsNotNull(result.Readiness);
+    }
+
+    [TestMethod]
+    public async Task GetStartupReadinessAsync_MissingCachedProfileSelection_ReturnsNotReady()
+    {
+        var readinessJson = """
+            {
+              "isMockDataEnabled": false,
+              "hasSavedTfsConfig": true,
+              "hasTestedConnectionSuccessfully": true,
+              "hasVerifiedTfsApiSuccessfully": true,
+              "hasAnyProfile": true,
+              "activeProfileId": 7,
+              "missingRequirementMessage": null
+            }
+            """;
+
+        var service = CreateService(
+            request => request.RequestUri!.AbsolutePath switch
+            {
+                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
+                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
+            });
+
+        var result = await service.GetStartupReadinessAsync();
+
+        Assert.AreEqual(StartupReadinessState.NotReady, result.State);
+        Assert.IsNotNull(result.Readiness);
+        Assert.IsNull(result.Readiness.ActiveProfileId);
+    }
+
+    [TestMethod]
+    public async Task GetStartupReadinessAsync_InvalidCachedProfileSelection_ClearsAndReturnsNotReady()
+    {
+        var readinessJson = """
+            {
+              "isMockDataEnabled": false,
+              "hasSavedTfsConfig": true,
+              "hasTestedConnectionSuccessfully": true,
+              "hasVerifiedTfsApiSuccessfully": true,
+              "hasAnyProfile": true,
+              "activeProfileId": 7,
+              "missingRequirementMessage": null
+            }
+            """;
+
+        var service = CreateService(
+            request => request.RequestUri!.AbsolutePath switch
+            {
+                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
+                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
+            },
+            cachedProfileId: 42,
+            cachedProfile: null);
+
+        var result = await service.GetStartupReadinessAsync();
+
+        Assert.AreEqual(StartupReadinessState.NotReady, result.State);
+        Assert.IsNotNull(result.Readiness);
+        Assert.IsNull(result.Readiness.ActiveProfileId);
+    }
+
+    [TestMethod]
+    public async Task GetStartupReadinessAsync_ValidCachedProfileSelection_RestoresServerSelection()
+    {
+        var readinessJson = """
+            {
+              "isMockDataEnabled": false,
+              "hasSavedTfsConfig": true,
+              "hasTestedConnectionSuccessfully": true,
+              "hasVerifiedTfsApiSuccessfully": true,
+              "hasAnyProfile": true,
+              "activeProfileId": null,
+              "missingRequirementMessage": null
+            }
+            """;
+        var cacheJson = """
+            {
+              "productOwnerId": 7,
+              "syncStatus": 1,
+              "lastSuccessfulSync": "2026-04-16T07:15:00Z",
+              "lastErrorMessage": null
+            }
+            """;
+
+        var cachedProfile = CreateProfile(7, "Marina");
+        var service = CreateService(
+            request => request.RequestUri!.AbsolutePath switch
+            {
+                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
+                "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
+                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
+            },
+            cachedProfileId: 7,
+            cachedProfile: cachedProfile);
+
+        var result = await service.GetStartupReadinessAsync();
+
+        Assert.AreEqual(StartupReadinessState.Ready, result.State);
+        Assert.IsNotNull(result.Readiness);
+        Assert.AreEqual(7, result.Readiness.ActiveProfileId);
     }
 
     [TestMethod]
@@ -306,6 +414,19 @@ public class StartupOrchestratorServiceTests
         };
     }
 
+    private static ProfileDto CreateProfile(int id, string name)
+    {
+        return new ProfileDto(
+            id,
+            name,
+            [],
+            ProfilePictureType.Default,
+            0,
+            null,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+    }
+
     private sealed class StubHttpMessageHandler : HttpMessageHandler
     {
         private readonly Func<HttpRequestMessage, HttpResponseMessage> _handler;
@@ -318,6 +439,83 @@ public class StartupOrchestratorServiceTests
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             return Task.FromResult(_handler(request));
+        }
+    }
+
+    private sealed class StubPreferencesService : IPreferencesService
+    {
+        public StubPreferencesService(int? storedIntValue)
+        {
+            StoredIntValue = storedIntValue;
+        }
+
+        public int? StoredIntValue { get; private set; }
+
+        public Task<bool> GetBoolAsync(string key, bool defaultValue) => Task.FromResult(defaultValue);
+
+        public Task SetBoolAsync(string key, bool value) => Task.CompletedTask;
+
+        public Task<int?> GetIntAsync(string key) => Task.FromResult(StoredIntValue);
+
+        public Task SetIntAsync(string key, int value)
+        {
+            StoredIntValue = value;
+            return Task.CompletedTask;
+        }
+
+        public Task RemoveAsync(string key)
+        {
+            StoredIntValue = null;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class StubProfileService : IProfileService
+    {
+        public StubProfileService(ProfileDto? profile, int? cachedProfileId)
+        {
+            Profile = profile;
+            CachedActiveProfileId = cachedProfileId;
+        }
+
+        public ProfileDto? Profile { get; }
+
+        public int? CachedActiveProfileId { get; private set; }
+
+        public Task<IEnumerable<ProfileDto>> GetAllProfilesAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<ProfileDto>>(Profile is null ? [] : [Profile]);
+
+        public Task<ProfileDto?> GetProfileByIdAsync(int id, CancellationToken cancellationToken = default)
+            => Task.FromResult(Profile?.Id == id ? Profile : null);
+
+        public Task<ProfileDto?> GetActiveProfileAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(Profile?.Id == CachedActiveProfileId ? Profile : null);
+
+        public Task<ProfileDto> CreateProfileAsync(string name, List<int> goalIds, ProfilePictureType pictureType = ProfilePictureType.Default, int? defaultPictureId = null, string? customPicturePath = null, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<ProfileDto> UpdateProfileAsync(int id, string name, List<int> goalIds, ProfilePictureType? pictureType = null, int? defaultPictureId = null, string? customPicturePath = null, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<bool> DeleteProfileAsync(int id, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<SettingsDto> SetActiveProfileAsync(int? profileId, CancellationToken cancellationToken = default)
+        {
+            CachedActiveProfileId = profileId;
+            return Task.FromResult(new SettingsDto(1, profileId, DateTimeOffset.UtcNow));
+        }
+
+        public Task<ProfileDto> CreateAndActivateProfileAsync(string name, List<int> goalIds, ProfilePictureType pictureType = ProfilePictureType.Default, int? defaultPictureId = null, string? customPicturePath = null, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public int? GetActiveProfileId() => CachedActiveProfileId;
+
+        public bool IsActiveProfileValid() => CachedActiveProfileId.HasValue;
+
+        public void SetCachedActiveProfileId(int? profileId)
+        {
+            CachedActiveProfileId = profileId;
         }
     }
 }

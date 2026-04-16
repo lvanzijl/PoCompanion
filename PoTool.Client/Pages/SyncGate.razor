@@ -149,8 +149,14 @@
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
             {
-                // No profile selected, redirect to profiles page
-                NavigationManager.NavigateTo("/profiles", replace: true);
+                var profilesUrl = StartupNavigationTargetResolver.GetTargetUri(
+                    new StartupRoutingResult(
+                        StartupRoute.ProfilesHome,
+                        "Profile selection required.",
+                        "Select a profile to continue.",
+                        IsBlocking: false),
+                    _returnUrl);
+                NavigationManager.NavigateTo(profilesUrl, replace: true);
                 return;
             }
             
@@ -370,43 +376,8 @@
 
     private void NavigateToTarget()
     {
-        // Navigate to return URL if valid, otherwise to home
-        var targetUrl = "/home";
-        if (!string.IsNullOrEmpty(_returnUrl) && IsValidReturnUrl(_returnUrl))
-        {
-            targetUrl = _returnUrl;
-        }
+        var targetUrl = StartupReturnUrlHelper.NormalizeOrDefault(_returnUrl);
         NavigationManager.NavigateTo(targetUrl, replace: true);
-    }
-    
-    /// <summary>
-    /// Validates return URL to prevent open redirect vulnerabilities.
-    /// Only allows relative paths starting with "/" that don't contain dangerous patterns.
-    /// </summary>
-    private static bool IsValidReturnUrl(string url)
-    {
-        // Must be a relative path starting with "/"
-        if (!url.StartsWith("/"))
-            return false;
-        
-        // Must not contain "//" after the first character (could be a protocol like "//evil.com")
-        // Using IndexOf to specifically check for "//" after position 0
-        if (url.IndexOf("//", 1, StringComparison.Ordinal) >= 0)
-            return false;
-        
-        // Must not contain backslash which could be interpreted as "/\evil.com"
-        if (url.Contains('\\'))
-            return false;
-        
-        // Must not contain a colon (could be a protocol like "/https://evil.com")
-        if (url.Contains(':'))
-            return false;
-        
-        // Use Uri.TryCreate as additional validation
-        if (!Uri.TryCreate(url, UriKind.Relative, out _))
-            return false;
-        
-        return true;
     }
 
     private string GetStatusTitle()

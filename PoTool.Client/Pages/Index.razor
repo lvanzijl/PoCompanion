@@ -1,38 +1,4 @@
 @page "/"
-@using PoTool.Client.Services
-@inject IOnboardingService OnboardingService
-@inject IStartupOrchestratorService StartupOrchestrator
-@inject NavigationManager NavigationManager
-
 <MudContainer Class="d-flex justify-center align-center" Style="height: 100vh;">
     <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
 </MudContainer>
-
-@code {
-    protected override async Task OnInitializedAsync()
-    {
-        var readiness = await StartupOrchestrator.GetStartupReadinessAsync();
-        if (readiness.State is StartupReadinessState.Error or StartupReadinessState.Unavailable)
-        {
-            var errorRoute = StartupOrchestrator.DetermineRoute(readiness);
-            NavigationManager.NavigateTo(StartupNavigationTargetResolver.GetTargetUri(errorRoute), replace: true);
-            return;
-        }
-
-        if (readiness.Readiness?.HasSavedTfsConfig == false)
-        {
-            await OnboardingService.ResetOnboardingAsync();
-        }
-
-        var onboardingCompleted = await OnboardingService.HasCompletedOnboardingAsync();
-
-        if (!onboardingCompleted && readiness.State == StartupReadinessState.SetupRequired)
-        {
-            NavigationManager.NavigateTo("/onboarding", replace: true);
-            return;
-        }
-
-        var routingResult = StartupOrchestrator.DetermineRoute(readiness);
-        NavigationManager.NavigateTo(StartupNavigationTargetResolver.GetTargetUri(routingResult), replace: true);
-    }
-}

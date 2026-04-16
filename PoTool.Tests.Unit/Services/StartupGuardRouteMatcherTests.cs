@@ -39,6 +39,20 @@ public class StartupGuardRouteMatcherTests
     }
 
     [TestMethod]
+    public void GetTargetUri_ProfilesRoute_PreservesDeepLinkReturnUrl()
+    {
+        var route = new StartupRoutingResult(
+            StartupRoute.ProfilesHome,
+            "Profile selection required",
+            "Select a profile.",
+            IsBlocking: false);
+
+        var target = StartupNavigationTargetResolver.GetTargetUri(route, "/home/delivery/execution?sprintId=7");
+
+        Assert.AreEqual("/profiles?returnUrl=%2Fhome%2Fdelivery%2Fexecution%3FsprintId%3D7", target);
+    }
+
+    [TestMethod]
     public void GetTargetUri_BlockingRoute_UsesStartupBlockedPage()
     {
         var route = new StartupRoutingResult(
@@ -51,5 +65,13 @@ public class StartupGuardRouteMatcherTests
 
         StringAssert.StartsWith(target, "/startup-blocked?message=");
         StringAssert.Contains(target, "hint=");
+    }
+
+    [TestMethod]
+    public void NormalizeReturnUrl_InvalidUrl_FallsBackToHome()
+    {
+        var normalized = StartupReturnUrlHelper.NormalizeOrDefault("//evil.example");
+
+        Assert.AreEqual("/home", normalized);
     }
 }
