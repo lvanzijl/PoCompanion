@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-16",
+    "type": "Changed",
+    "title": "Startup routing now consumes one authoritative backend startup-state contract",
+    "impact": "The root startup gate now calls a single /api/startup-state endpoint that validates the requested route, reconciles any browser profile hint on the server, evaluates sync validity server-side, and returns the final startup route directly, so the client no longer infers readiness from local profile or cache state and deep links remain preserved through one deterministic backend contract.",
+    "area": "Startup / Profiles / Sync",
+    "link": "/"
+  },
+  {
+    "date": "2026-04-16",
     "type": "Fixed",
     "title": "Startup now resolves one deterministic profile-and-sync gate before any route renders",
     "impact": "The client now withholds Router initialization behind one central startup gate, reconciles browser profile hints against the authoritative server selection before deciding readiness, and routes only after an atomic startup state resolution decides between Profiles, Sync Gate, the requested deep link, or a blocked startup page. Partially valid sync states such as warning-only or stale cache attempts no longer qualify as ready.",
