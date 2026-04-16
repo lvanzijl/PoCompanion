@@ -22,8 +22,8 @@ public static class StartupReturnUrlHelper
         if (!candidate.StartsWith("/", StringComparison.Ordinal)
             || candidate.StartsWith("//", StringComparison.Ordinal)
             || candidate.IndexOf("//", 2, StringComparison.Ordinal) >= 0
-            || candidate.Contains('\\', StringComparison.Ordinal)
-            || candidate.Contains(':', StringComparison.Ordinal)
+            || candidate.Contains('\\')
+            || candidate.Contains(':')
             || !Uri.TryCreate(candidate, UriKind.Relative, out _))
         {
             return false;
