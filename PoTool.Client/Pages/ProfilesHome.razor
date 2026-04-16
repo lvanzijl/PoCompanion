@@ -11,7 +11,7 @@
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject ErrorMessageService ErrorMessageService
-@inject IPreferencesService PreferencesService
+@inject StartupGateNotificationService StartupGateNotificationService
 
 <PageTitle>Profiles Home</PageTitle>
 
@@ -110,20 +110,9 @@
     private int? _activeProfileId;
     private bool _isLoading = true;
     private ErrorResponse? _errorResponse;
-    private string? _returnUrl;
-
     protected override async Task OnInitializedAsync()
     {
-        // Parse return URL from query parameters
-        ParseQueryParameters();
         await LoadProfilesAsync();
-    }
-    
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-        _returnUrl = queryParams["returnUrl"];
     }
 
     private async Task LoadProfilesAsync()
@@ -155,22 +144,8 @@
             Console.WriteLine($"[ProfilesHome] Selecting profile: {profile.Name} (ID: {profile.Id})");
             await ProfileService.SetActiveProfileAsync(profile.Id);
             _activeProfileId = profile.Id;
-            
-            // Persist profile ID to localStorage for recovery on page refresh
-            await PreferencesService.SetIntAsync("ActiveProfileId", profile.Id);
-            
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
-            
-            // Navigate to sync-gate which will ensure cache is ready before redirecting to home
-            // Pass the return URL so sync-gate can redirect there after cache is ready
-            var returnUrl = "/home";
-            if (!string.IsNullOrEmpty(_returnUrl) && IsValidReturnUrl(_returnUrl))
-            {
-                returnUrl = _returnUrl;
-            }
-            var syncGateUrl = $"/sync-gate?returnUrl={Uri.EscapeDataString(returnUrl)}";
-            Console.WriteLine($"[ProfilesHome] Navigating to {syncGateUrl} for profile: {profile.Name}");
-            NavigationManager.NavigateTo(syncGateUrl);
+            StartupGateNotificationService.RequestReevaluation();
         }
         catch (Exception ex)
         {
@@ -179,27 +154,6 @@
         }
     }
     
-    /// <summary>
-    /// Validates return URL to prevent open redirect vulnerabilities.
-    /// Only allows relative paths starting with "/" that don't contain "//" (protocol).
-    /// </summary>
-    private static bool IsValidReturnUrl(string url)
-    {
-        // Must be a relative path starting with "/"
-        if (!url.StartsWith("/"))
-            return false;
-        
-        // Must not contain "//" after the first character (could be a protocol like "//evil.com")
-        if (url.Length > 1 && url.Contains("//"))
-            return false;
-        
-        // Must not contain a colon (could be a protocol like "/https://evil.com")
-        if (url.Contains(':'))
-            return false;
-        
-        return true;
-    }
-
     private void OpenAddProfileDialog()
     {
         // Navigate to the edit page in "new" mode (no profile ID)

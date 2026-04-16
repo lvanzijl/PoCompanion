@@ -1,4 +1,3 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.Services;
 
 namespace PoTool.Tests.Unit.Services;
@@ -25,31 +24,28 @@ public class StartupGuardRouteMatcherTests
     }
 
     [TestMethod]
-    public void GetTargetUri_SyncRoute_UsesSyncGate()
+    public void IsCurrentTarget_MatchingRoute_ReturnsTrue()
     {
-        var route = new StartupRoutingResult(
-            StartupRoute.SyncGate,
-            "Sync required",
-            "Open sync gate.",
-            IsBlocking: false);
+        var isCurrentTarget = StartupNavigationTargetResolver.IsCurrentTarget(
+            "/sync-gate?returnUrl=%2Fhome",
+            "/sync-gate?returnUrl=%2Fhome");
 
-        var target = StartupNavigationTargetResolver.GetTargetUri(route);
-
-        Assert.AreEqual("/sync-gate?returnUrl=%2Fhome", target);
+        Assert.IsTrue(isCurrentTarget);
     }
 
     [TestMethod]
-    public void GetTargetUri_BlockingRoute_UsesStartupBlockedPage()
+    public void IsCurrentTarget_DifferentQuery_ReturnsFalse()
     {
-        var route = new StartupRoutingResult(
-            StartupRoute.BlockingError,
-            "Startup failed",
-            "Retry startup.",
-            IsBlocking: true);
+        var isCurrentTarget = StartupNavigationTargetResolver.IsCurrentTarget(
+            "/profiles?returnUrl=%2Fhome",
+            "/profiles?returnUrl=%2Fhome%2Fdelivery");
 
-        var target = StartupNavigationTargetResolver.GetTargetUri(route);
+        Assert.IsFalse(isCurrentTarget);
+    }
 
-        StringAssert.StartsWith(target, "/startup-blocked?message=");
-        StringAssert.Contains(target, "hint=");
+    [TestMethod]
+    public void GetBlockingRoute_ReturnsStartupBlocked()
+    {
+        Assert.AreEqual("/startup-blocked", StartupNavigationTargetResolver.GetBlockingRoute());
     }
 }

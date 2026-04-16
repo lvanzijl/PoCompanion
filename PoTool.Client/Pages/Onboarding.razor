@@ -1,8 +1,7 @@
 @page "/onboarding"
 @using PoTool.Client.Services
 @inject IDialogService DialogService
-@inject NavigationManager NavigationManager
-@inject IOnboardingService OnboardingService
+@inject StartupGateNotificationService StartupGateNotificationService
 
 <MudContainer MaxWidth="MaxWidth.False" Style="height: 100vh; display: flex; align-items: center; justify-content: center;">
     <!-- Wizard will be shown as dialog automatically -->
@@ -28,10 +27,7 @@
         };
         
         var dialogReference = await DialogService.ShowAsync<PoTool.Client.Components.Onboarding.OnboardingWizard>("Getting Started", options);
-        var result = await dialogReference.Result;
-        
-        // Navigate based on dialog result
-        // After completing onboarding, go to sync-gate which ensures cache is ready before showing home
-        NavigationManager.NavigateTo("/sync-gate?returnUrl=%2Fhome", replace: true);
+        await dialogReference.Result;
+        StartupGateNotificationService.RequestReevaluation();
     }
 }

@@ -1,213 +1,154 @@
+using System.Net.Http;
 using PoTool.Client.ApiClient;
-using SharedStartupReadinessDto = PoTool.Shared.Settings.StartupReadinessDto;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Client.Services;
 
 /// <summary>
-/// Service that orchestrates startup routing based on TFS configuration and profile state.
-/// Implements the decision tree from User_landing_v2.md.
+/// Thin startup adapter that delegates readiness authority to the backend startup-state endpoint.
 /// </summary>
-public class StartupOrchestratorService : IStartupOrchestratorService
+public sealed class StartupOrchestratorService : IStartupOrchestratorService
 {
-    private readonly IStartupClient _startupClient;
-    private readonly ICacheSyncService _cacheSyncService;
+    private const string ActiveProfilePreferenceKey = "ActiveProfileId";
 
-    public StartupOrchestratorService(IStartupClient startupClient, ICacheSyncService cacheSyncService)
+    private readonly IStartupClient _startupClient;
+    private readonly IPreferencesService _preferencesService;
+    private readonly IProfileService _profileService;
+
+    public StartupOrchestratorService(
+        IStartupClient startupClient,
+        IPreferencesService preferencesService,
+        IProfileService profileService)
     {
         _startupClient = startupClient;
-        _cacheSyncService = cacheSyncService;
+        _preferencesService = preferencesService;
+        _profileService = profileService;
     }
 
-    /// <inheritdoc />
-    public async Task<StartupReadinessResult> GetStartupReadinessAsync(CancellationToken cancellationToken = default)
+    public async Task<StartupStateResolution> ResolveStartupStateAsync(
+        string? currentRelativeUri,
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var readiness = MapReadiness(await _startupClient.GetStartupReadinessAsync(cancellationToken));
-            return await ClassifyReadinessAsync(readiness, cancellationToken);
+            var profileHintId = await _preferencesService.GetIntAsync(ActiveProfilePreferenceKey);
+            var contract = await _startupClient.GetStartupStateAsync(currentRelativeUri, profileHintId, cancellationToken);
+
+            await SynchronizeClientHintAsync(contract);
+
+            return new StartupStateResolution(
+                Contract: contract,
+                TargetUri: contract.TargetRoute,
+                ShouldRenderCurrentRoute: StartupNavigationTargetResolver.IsCurrentTarget(currentRelativeUri, contract.TargetRoute),
+                Reason: ResolveReason(contract),
+                RecoveryHint: ResolveRecoveryHint(contract));
         }
         catch (HttpRequestException)
         {
-            return new StartupReadinessResult(
-                StartupReadinessState.Unavailable,
-                Readiness: null,
-                Reason: "Startup readiness could not reach the backend service.",
-                RecoveryHint: "Start the backend or verify the configured API base URL, then retry.");
+            return BuildTransportFailureResolution(
+                currentRelativeUri,
+                "Startup readiness could not reach the backend service.",
+                "Retry after confirming the backend is available.");
         }
         catch (TaskCanceledException)
         {
-            return new StartupReadinessResult(
-                StartupReadinessState.Unavailable,
-                Readiness: null,
-                Reason: "Startup readiness timed out before the backend responded.",
-                RecoveryHint: "Retry startup after confirming the backend is responsive.");
+            return BuildTransportFailureResolution(
+                currentRelativeUri,
+                "Startup readiness timed out before the backend responded.",
+                "Retry after confirming the backend is responsive.");
         }
         catch (ApiException ex) when (GeneratedClientErrorTranslator.IsSuccessfulEmptyResponse(ex))
         {
-            return new StartupReadinessResult(
-                StartupReadinessState.Error,
-                Readiness: null,
-                Reason: "Startup readiness returned an empty response.",
-                RecoveryHint: "Retry startup. If the problem persists, check the API response contract.");
+            return BuildTransportFailureResolution(
+                currentRelativeUri,
+                "Startup readiness returned an empty response.",
+                "Retry startup. If the problem persists, inspect the startup API contract.");
         }
         catch (ApiException ex) when (GeneratedClientErrorTranslator.IsSuccessfulDeserializationFailure(ex))
         {
-            return new StartupReadinessResult(
-                StartupReadinessState.Error,
-                Readiness: null,
-                Reason: "Startup readiness returned an invalid response payload.",
-                RecoveryHint: "Check the backend startup endpoint contract, then retry.");
+            return BuildTransportFailureResolution(
+                currentRelativeUri,
+                "Startup readiness returned an invalid response payload.",
+                "Retry startup. If the problem persists, inspect the startup API contract.");
         }
         catch (ApiException ex)
         {
-            return new StartupReadinessResult(
-                StartupReadinessState.Unavailable,
-                Readiness: null,
-                Reason: $"Startup readiness is unavailable (HTTP {ex.StatusCode}).",
-                RecoveryHint: "Confirm the backend is running, then retry startup.");
+            return BuildTransportFailureResolution(
+                currentRelativeUri,
+                $"Startup readiness is unavailable (HTTP {ex.StatusCode}).",
+                "Retry after confirming the backend is available.");
         }
         catch (Exception)
         {
-            return new StartupReadinessResult(
-                StartupReadinessState.Error,
-                Readiness: null,
-                Reason: "Startup readiness failed unexpectedly.",
-                RecoveryHint: "Retry startup. If the problem persists, inspect the client and API logs.");
+            return BuildTransportFailureResolution(
+                currentRelativeUri,
+                "Startup readiness failed unexpectedly.",
+                "Retry startup. If the problem persists, inspect the client and API logs.");
         }
     }
 
-    /// <inheritdoc />
-    public StartupRoutingResult DetermineRoute(StartupReadinessResult readiness)
+    private async Task SynchronizeClientHintAsync(StartupStateResponseDto contract)
     {
-        return readiness.State switch
+        _profileService.SetCachedActiveProfileId(contract.ActiveProfileId);
+
+        if (contract.ActiveProfileId.HasValue)
         {
-            StartupReadinessState.Ready => new StartupRoutingResult(
-                StartupRoute.Home,
-                readiness.Reason,
-                readiness.RecoveryHint,
-                IsBlocking: false),
+            await _preferencesService.SetIntAsync(ActiveProfilePreferenceKey, contract.ActiveProfileId.Value);
+            return;
+        }
 
-            StartupReadinessState.NotReady => new StartupRoutingResult(
-                StartupRoute.ProfilesHome,
-                readiness.Reason,
-                readiness.RecoveryHint,
-                IsBlocking: false),
+        await _preferencesService.RemoveAsync(ActiveProfilePreferenceKey);
+    }
 
-            StartupReadinessState.SetupRequired when readiness.Readiness is { HasSavedTfsConfig: false }
-                or { HasTestedConnectionSuccessfully: false }
-                or { HasVerifiedTfsApiSuccessfully: false } => new StartupRoutingResult(
-                    StartupRoute.Configuration,
-                    readiness.Reason,
-                    readiness.RecoveryHint,
-                    IsBlocking: false),
+    private static StartupStateResolution BuildTransportFailureResolution(
+        string? currentRelativeUri,
+        string reason,
+        string recoveryHint)
+    {
+        var targetUri = StartupNavigationTargetResolver.GetBlockingRoute();
+        return new StartupStateResolution(
+            Contract: null,
+            TargetUri: targetUri,
+            ShouldRenderCurrentRoute: StartupNavigationTargetResolver.IsCurrentTarget(currentRelativeUri, targetUri),
+            Reason: reason,
+            RecoveryHint: recoveryHint);
+    }
 
-            StartupReadinessState.SetupRequired => new StartupRoutingResult(
-                StartupRoute.CreateFirstProfile,
-                readiness.Reason,
-                readiness.RecoveryHint,
-                IsBlocking: false),
-
-            StartupReadinessState.SyncRequired => new StartupRoutingResult(
-                StartupRoute.SyncGate,
-                readiness.Reason,
-                readiness.RecoveryHint,
-                IsBlocking: false),
-
-            StartupReadinessState.Unavailable or StartupReadinessState.Error => new StartupRoutingResult(
-                StartupRoute.BlockingError,
-                readiness.Reason,
-                readiness.RecoveryHint,
-                IsBlocking: true),
-
-            _ => new StartupRoutingResult(
-                StartupRoute.BlockingError,
-                "Startup readiness is in an unknown state.",
-                "Retry startup after confirming the backend is available.",
-                IsBlocking: true)
+    private static string ResolveReason(StartupStateResponseDto contract)
+    {
+        return contract.StartupState switch
+        {
+            StartupStateDto.NoProfile => "No active profile is selected.",
+            StartupStateDto.ProfileInvalid => "The active profile selection is invalid and must be reselected.",
+            StartupStateDto.ProfileValid_NoSync => contract.SyncStatus switch
+            {
+                StartupSyncStatusDto.InProgress => "Sync is still in progress for the active profile.",
+                StartupSyncStatusDto.SuccessWithWarnings => "The latest sync completed with warnings and does not qualify as startup-ready.",
+                StartupSyncStatusDto.Failed => "The latest sync failed for the active profile.",
+                StartupSyncStatusDto.Invalidated => "A later sync attempt invalidated the last successful startup cache state.",
+                StartupSyncStatusDto.MissingData => "The latest successful sync is missing required startup cache data.",
+                _ => "The active profile has not completed a successful sync yet."
+            },
+            StartupStateDto.Blocked => contract.BlockedReason switch
+            {
+                StartupBlockedReasonDto.MissingConfiguration => "Startup configuration is incomplete.",
+                StartupBlockedReasonDto.InvalidActiveProfile => "Startup encountered an invalid persisted active profile.",
+                _ => "Startup could not continue safely."
+            },
+            _ => "Startup checks passed."
         };
     }
 
-    /// <inheritdoc />
-    public bool IsFeaturePageAccessible(StartupReadinessResult readiness)
+    private static string ResolveRecoveryHint(StartupStateResponseDto contract)
     {
-        return readiness.State == StartupReadinessState.Ready;
-    }
-
-    private async Task<StartupReadinessResult> ClassifyReadinessAsync(
-        StartupReadinessDto readiness,
-        CancellationToken cancellationToken)
-    {
-        if (RequiresSetup(readiness))
+        return contract.StartupState switch
         {
-            return new StartupReadinessResult(
-                StartupReadinessState.SetupRequired,
-                readiness,
-                readiness.MissingRequirementMessage ?? "Setup must be completed before continuing.",
-                BuildSetupRecoveryHint(readiness));
-        }
-
-        if (readiness.ActiveProfileId == null)
-        {
-            return new StartupReadinessResult(
-                StartupReadinessState.NotReady,
-                readiness,
-                readiness.MissingRequirementMessage ?? "An active profile must be selected before continuing.",
-                "Open Profiles and select the profile you want to use.");
-        }
-
-        var profileCacheState = await _cacheSyncService.GetCacheStatusAsync(readiness.ActiveProfileId.Value, cancellationToken);
-        if (profileCacheState == null)
-        {
-            return new StartupReadinessResult(
-                StartupReadinessState.Unavailable,
-                readiness,
-                "Cache readiness could not be determined for the active profile.",
-                "Open Sync Gate after confirming the backend is available, then retry.");
-        }
-
-        if (!profileCacheState.LastSuccessfulSync.HasValue)
-        {
-            return new StartupReadinessResult(
-                StartupReadinessState.SyncRequired,
-                readiness,
-                profileCacheState.LastErrorMessage ?? "The active profile must complete a cache sync before workspace pages can load.",
-                "Open Sync Gate to build or refresh the cache for the active profile.");
-        }
-
-        return new StartupReadinessResult(
-            StartupReadinessState.Ready,
-            readiness,
-            "Startup checks passed.",
-            "You can continue to the workspace.");
-    }
-
-    private static bool RequiresSetup(StartupReadinessDto readiness)
-    {
-        return !readiness.HasSavedTfsConfig
-               || !readiness.HasTestedConnectionSuccessfully
-               || !readiness.HasVerifiedTfsApiSuccessfully
-               || !readiness.HasAnyProfile;
-    }
-
-    private static string BuildSetupRecoveryHint(StartupReadinessDto readiness)
-    {
-        if (!readiness.HasSavedTfsConfig || !readiness.HasTestedConnectionSuccessfully || !readiness.HasVerifiedTfsApiSuccessfully)
-        {
-            return "Open TFS settings and complete the required connection and verification steps.";
-        }
-
-        return "Create your first profile to continue.";
-    }
-
-    private static StartupReadinessDto MapReadiness(SharedStartupReadinessDto readiness)
-    {
-        return new StartupReadinessDto(
-            readiness.IsMockDataEnabled,
-            readiness.HasSavedTfsConfig,
-            readiness.HasTestedConnectionSuccessfully,
-            readiness.HasVerifiedTfsApiSuccessfully,
-            readiness.HasAnyProfile,
-            readiness.ActiveProfileId,
-            readiness.MissingRequirementMessage);
+            StartupStateDto.NoProfile or StartupStateDto.ProfileInvalid => "Select a valid profile before continuing.",
+            StartupStateDto.ProfileValid_NoSync => "Complete a successful sync before entering workspace routes.",
+            StartupStateDto.Blocked when contract.BlockedReason == StartupBlockedReasonDto.MissingConfiguration
+                => "Open settings and complete the required startup configuration before continuing.",
+            StartupStateDto.Blocked => "Retry startup after confirming the backend and configuration are available.",
+            _ => "You can continue to the requested route."
+        };
     }
 }

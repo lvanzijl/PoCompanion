@@ -3,6 +3,7 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Settings
 @inject IProfileService ProfileService
+@inject StartupGateNotificationService StartupGateNotificationService
 @inject SettingsService SettingsService
 @inject ISnackbar Snackbar
 @inject NavigationManager NavigationManager
@@ -62,9 +63,6 @@
 </MudTooltip>
 
 @code {
-    [Parameter]
-    public EventCallback OnProfileChanged { get; set; }
-
     private IEnumerable<ProfileDto> _profiles = Enumerable.Empty<ProfileDto>();
     private int? _activeProfileId;
     private bool _isLoading = true;
@@ -101,9 +99,7 @@
             await ProfileService.SetActiveProfileAsync(profile.Id);
             _activeProfileId = profile.Id;
             Snackbar.Add($"Switched to profile: {profile.Name}", Severity.Success);
-            
-            // Notify parent component that profile changed
-            await OnProfileChanged.InvokeAsync();
+            StartupGateNotificationService.RequestReevaluation();
         }
         catch (Exception ex)
         {

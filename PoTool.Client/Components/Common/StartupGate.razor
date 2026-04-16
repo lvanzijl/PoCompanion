@@ -1,0 +1,86 @@
+@inject NavigationManager NavigationManager
+@inject StartupGateCoordinator StartupGateCoordinator
+@inject StartupGateNotificationService StartupGateNotificationService
+
+@if (StartupGateCoordinator.Snapshot.ShouldRenderRouter)
+{
+    <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="@typeof(Pages.NotFound)">
+        <Found Context="routeData">
+            <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+    </Router>
+}
+else
+{
+    <MudContainer Class="d-flex justify-center align-center" Style="height: 100vh;">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+    </MudContainer>
+}
+
+@implements IDisposable
+
+@code {
+    private CancellationTokenSource? _resolutionCts;
+    private bool _startupResolvedOnce;
+
+    protected override async Task OnInitializedAsync()
+    {
+        NavigationManager.LocationChanged += HandleLocationChanged;
+        StartupGateNotificationService.ReevaluationRequested += HandleReevaluationRequested;
+        await ResolveCurrentLocationAsync();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= HandleLocationChanged;
+        StartupGateNotificationService.ReevaluationRequested -= HandleReevaluationRequested;
+        _resolutionCts?.Cancel();
+        _resolutionCts?.Dispose();
+    }
+
+    private async void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (!ShouldResolveForLocation(e.Location))
+        {
+            return;
+        }
+
+        await ResolveCurrentLocationAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void HandleReevaluationRequested()
+    {
+        await ResolveCurrentLocationAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private bool ShouldResolveForLocation(string location)
+    {
+        if (!_startupResolvedOnce)
+        {
+            return true;
+        }
+
+        var currentPath = StartupGuardRouteMatcher.NormalizePath(NavigationManager.ToBaseRelativePath(location));
+        return StartupNavigationTargetResolver.IsStartupFlowPath(currentPath)
+               || StartupGateCoordinator.LastResolution?.Contract?.StartupState != PoTool.Shared.Settings.StartupStateDto.Ready;
+    }
+
+    private async Task ResolveCurrentLocationAsync()
+    {
+        _resolutionCts?.Cancel();
+        _resolutionCts?.Dispose();
+        _resolutionCts = new CancellationTokenSource();
+
+        var currentRelativeUri = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        await StartupGateCoordinator.ResolveAsync(currentRelativeUri, _resolutionCts.Token);
+        _startupResolvedOnce = true;
+
+        if (!string.IsNullOrWhiteSpace(StartupGateCoordinator.Snapshot.PendingNavigationUri))
+        {
+            NavigationManager.NavigateTo(StartupGateCoordinator.Snapshot.PendingNavigationUri, replace: true);
+        }
+    }
+}

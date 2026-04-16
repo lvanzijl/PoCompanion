@@ -8,12 +8,16 @@ namespace PoTool.Client.Services;
 /// </summary>
 public class ProfileService : IProfileService
 {
+    private const string ActiveProfilePreferenceKey = "ActiveProfileId";
+
     private readonly IProfilesClient _profilesClient;
+    private readonly IPreferencesService _preferencesService;
     private int? _cachedActiveProfileId;
 
-    public ProfileService(IProfilesClient profilesClient)
+    public ProfileService(IProfilesClient profilesClient, IPreferencesService preferencesService)
     {
         _profilesClient = profilesClient;
+        _preferencesService = preferencesService;
     }
 
     /// <summary>
@@ -134,6 +138,14 @@ public class ProfileService : IProfileService
         
         // Update cached value to maintain consistency
         _cachedActiveProfileId = profileId;
+        if (profileId.HasValue)
+        {
+            await _preferencesService.SetIntAsync(ActiveProfilePreferenceKey, profileId.Value);
+        }
+        else
+        {
+            await _preferencesService.RemoveAsync(ActiveProfilePreferenceKey);
+        }
         
         return result;
     }

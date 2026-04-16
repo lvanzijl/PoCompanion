@@ -5,11 +5,11 @@
 @using PoTool.Client.Services
 @using PoTool.Client.Models
 @inject IOnboardingService OnboardingService
-@inject IStartupOrchestratorService StartupOrchestrator
 @inject GlobalFilterStore GlobalFilterStore
 @inject IProfileService ProfileService
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
+@inject StartupGateNotificationService StartupGateNotificationService
 @inject GlobalFilterCorrectionService GlobalFilterCorrectionService
 @inject GlobalFilterDefaultsService GlobalFilterDefaultsService
 @inject GlobalFilterRouteService GlobalFilterRouteService
@@ -32,7 +32,7 @@
                                   Title="Home" 
                                   AriaLabel="Return to home page" />
                 </MudTooltip>
-                <ProfileSelector @ref="_profileSelector" OnProfileChanged="HandleProfileChanged" />
+                <ProfileSelector @ref="_profileSelector" />
             </div>
             <div class="top-row__workspace-nav">
                 <WorkspaceNavigationBar OnNavigate="NavigateToWorkspaceAsync" />
@@ -63,9 +63,7 @@
                 <FilterSummaryBar />
                 <GlobalFilterControls />
             </section>
-            <StartupGuard>
-                @Body
-            </StartupGuard>
+            @Body
         </article>
     </main>
 </div>
@@ -132,7 +130,7 @@
         var activeProfile = await ProfileService.GetActiveProfileAsync();
         if (activeProfile == null)
         {
-            NavigationManager.NavigateTo($"{WorkspaceRoutes.Home}?noProfile=true");
+            StartupGateNotificationService.RequestReevaluation();
             return;
         }
 
@@ -162,12 +160,6 @@
         };
         
         await DialogService.ShowAsync<KeyboardShortcutsDialog>("Keyboard Shortcuts", options);
-    }
-
-    private void HandleProfileChanged()
-    {
-        // Refresh the current page when profile changes by forcing navigation
-        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     }
 
     private void ObserveCurrentRoute(string? uri = null)

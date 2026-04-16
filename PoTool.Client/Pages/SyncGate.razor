@@ -2,12 +2,12 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @using PoTool.Client.Services
 @using PoTool.Shared.Settings
-@using System.Web
 @inject IProfileService ProfileService
 @inject CacheSyncService CacheSyncService
 @inject NavigationManager NavigationManager
 @inject HubConnection HubConnection
 @inject ISnackbar Snackbar
+@inject StartupGateNotificationService StartupGateNotificationService
 @implements IAsyncDisposable
 
 <PageTitle>Preparing Workspace - PO Companion</PageTitle>
@@ -67,11 +67,11 @@
                 </MudAlert>
 
                 <MudStack Row="true" Spacing="2">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NavigateToTarget">
-                        Continue
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="TriggerSyncAsync">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="TriggerSyncAsync">
                         Retry Sync
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="GoToProfiles">
+                        Back to Profiles
                     </MudButton>
                 </MudStack>
             }
@@ -123,19 +123,10 @@
     private int? _profileId;
     private string? _profileName;
     private CacheStateDto? _cacheState;
-    private string? _returnUrl;
 
     protected override async Task OnInitializedAsync()
     {
-        ParseQueryParameters();
         await InitializeAsync();
-    }
-    
-    private void ParseQueryParameters()
-    {
-        var uri = new Uri(NavigationManager.Uri);
-        var queryParams = HttpUtility.ParseQueryString(uri.Query);
-        _returnUrl = queryParams["returnUrl"];
     }
 
     private async Task InitializeAsync()
@@ -149,8 +140,8 @@
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
             {
-                // No profile selected, redirect to profiles page
-                NavigationManager.NavigateTo("/profiles", replace: true);
+                _errorMessage = "Startup prerequisites changed. Re-evaluating startup route...";
+                StartupGateNotificationService.RequestReevaluation();
                 return;
             }
             
@@ -238,10 +229,9 @@
             {
                 StateHasChanged();
 
-                // Navigate when complete
-                if (update.IsComplete && !update.HasFailed)
+                if (update.IsComplete && !update.HasFailed && !update.HasWarnings)
                 {
-                    NavigateToTarget();
+                    StartupGateNotificationService.RequestReevaluation();
                 }
             });
         }
@@ -284,10 +274,10 @@
                     _cacheState = newState;
                     await InvokeAsync(StateHasChanged);
                     
-                    // Navigate when complete
-                    if (_cacheState.LastSuccessfulSync.HasValue)
+                    if (_cacheState.LastSuccessfulSync.HasValue
+                        && _cacheState.SyncStatus == CacheSyncStatusDto.Success)
                     {
-                        NavigateToTarget();
+                        StartupGateNotificationService.RequestReevaluation();
                         return;
                     }
                 }
@@ -368,53 +358,12 @@
         NavigationManager.NavigateTo(destination, replace: true);
     }
 
-    private void NavigateToTarget()
-    {
-        // Navigate to return URL if valid, otherwise to home
-        var targetUrl = "/home";
-        if (!string.IsNullOrEmpty(_returnUrl) && IsValidReturnUrl(_returnUrl))
-        {
-            targetUrl = _returnUrl;
-        }
-        NavigationManager.NavigateTo(targetUrl, replace: true);
-    }
-    
-    /// <summary>
-    /// Validates return URL to prevent open redirect vulnerabilities.
-    /// Only allows relative paths starting with "/" that don't contain dangerous patterns.
-    /// </summary>
-    private static bool IsValidReturnUrl(string url)
-    {
-        // Must be a relative path starting with "/"
-        if (!url.StartsWith("/"))
-            return false;
-        
-        // Must not contain "//" after the first character (could be a protocol like "//evil.com")
-        // Using IndexOf to specifically check for "//" after position 0
-        if (url.IndexOf("//", 1, StringComparison.Ordinal) >= 0)
-            return false;
-        
-        // Must not contain backslash which could be interpreted as "/\evil.com"
-        if (url.Contains('\\'))
-            return false;
-        
-        // Must not contain a colon (could be a protocol like "/https://evil.com")
-        if (url.Contains(':'))
-            return false;
-        
-        // Use Uri.TryCreate as additional validation
-        if (!Uri.TryCreate(url, UriKind.Relative, out _))
-            return false;
-        
-        return true;
-    }
-
     private string GetStatusTitle()
     {
         return _cacheState?.SyncStatus switch
         {
             CacheSyncStatusDto.InProgress => "Preparing Your Workspace",
-            CacheSyncStatusDto.Success => "Workspace Ready",
+            CacheSyncStatusDto.Success => "Finalizing Startup",
             CacheSyncStatusDto.SuccessWithWarnings => "Workspace Ready with Warnings",
             CacheSyncStatusDto.Failed => "Sync Failed",
             _ => "Initializing Workspace"
@@ -428,8 +377,8 @@
         return _cacheState?.SyncStatus switch
         {
             CacheSyncStatusDto.InProgress => $"Loading work items and data{profileText}. This may take a moment...",
-            CacheSyncStatusDto.Success => "Your data is ready. Redirecting...",
-            CacheSyncStatusDto.SuccessWithWarnings => "Data loaded with warnings. You can continue while we retry later.",
+            CacheSyncStatusDto.Success => "Your data is ready. Completing startup routing...",
+            CacheSyncStatusDto.SuccessWithWarnings => "Data loaded with warnings. Retry sync before entering workspace routes.",
             CacheSyncStatusDto.Failed => "There was a problem loading your data. You can try again or select a different profile.",
             _ => $"Setting up your workspace{profileText}..."
         };
