@@ -43,7 +43,7 @@
                 <MudButton Variant="Variant.Outlined"
                            Color="Color.Primary"
                            StartIcon="@Icons.Material.Filled.Refresh"
-                           Disabled="@(!_selectedProductId.HasValue || _selectedProductRootIds.Length == 0 || _isBusy || _isLoadingBoard)"
+                           Disabled="@(!_selectedProductId.HasValue || _selectedProductRootIds.Length == 0 || _isBusy || _boardState.UiState == UiDataState.Loading)"
                            OnClick="RefreshBoardFromTfsAsync">
                     @(_isRefreshingFromTfs ? "Refreshing…" : "Refresh from TFS")
                 </MudButton>
@@ -66,24 +66,33 @@
         </MudStack>
     </MudPaper>
 
-    @if (_projectPlanningSummary is not null)
-    {
+    <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
+                            State="@ProjectPlanningSummaryState"
+                            ProductOwnerId="@_activeProfileId"
+                            Subject="Project planning summary"
+                            EmptyTitle="No project planning summary available"
+                            EmptyMessage="No project planning summary is available for the selected scope."
+                            FailedMessage="Project planning summary could not be loaded right now."
+                            OnRecovery="@LoadProjectPlanningSummaryAsync">
+        <NotRequestedContent>
+        </NotRequestedContent>
+        <ChildContent Context="projectPlanningSummary">
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="2">
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
                     <MudStack Spacing="0">
                         <MudText Typo="Typo.overline" Color="Color.Secondary">Project planning summary</MudText>
-                        <MudText Typo="Typo.h6">@_projectPlanningSummary.ProjectAlias</MudText>
+                        <MudText Typo="Typo.h6">@projectPlanningSummary.ProjectAlias</MudText>
                     </MudStack>
                     <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                         <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
-                            @_projectPlanningSummary.PlannedPBIs planned · @_projectPlanningSummary.UnplannedPBIs unplanned
+                            @projectPlanningSummary.PlannedPBIs planned · @projectPlanningSummary.UnplannedPBIs unplanned
                         </MudChip>
-                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(HasPlanningGap())">
-                            @GetPlanningGapLabel()
+                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(HasPlanningGap(projectPlanningSummary))">
+                            @GetPlanningGapLabel(projectPlanningSummary)
                         </MudChip>
-                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(_projectPlanningSummary.OvercommitIndicator)">
-                            @(_projectPlanningSummary.OvercommitIndicator ? "Overcommitted across products" : "Capacity window within range")
+                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(projectPlanningSummary.OvercommitIndicator)">
+                            @(projectPlanningSummary.OvercommitIndicator ? "Overcommitted across products" : "Capacity window within range")
                         </MudChip>
                     </MudStack>
                 </MudStack>
@@ -92,87 +101,58 @@
                     <MudItem xs="12" sm="6" md="4">
                         <MudPaper Outlined="true" Class="pa-3">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Planned effort</MudText>
-                            <MudText Typo="Typo.h6">@_projectPlanningSummary.PlannedEffort / @_projectPlanningSummary.TotalEffort</MudText>
+                            <MudText Typo="Typo.h6">@projectPlanningSummary.PlannedEffort / @projectPlanningSummary.TotalEffort</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudPaper Outlined="true" Class="pa-3">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Capacity / sprint</MudText>
-                            <MudText Typo="Typo.h6">@FormatCapacity(_projectPlanningSummary.CapacityPerSprint)</MudText>
+                            <MudText Typo="Typo.h6">@FormatCapacity(projectPlanningSummary.CapacityPerSprint)</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="12" sm="6" md="4">
                         <MudPaper Outlined="true" Class="pa-3">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Product imbalance</MudText>
-                            <MudText Typo="Typo.h6">@GetProductImbalanceLabel()</MudText>
+                            <MudText Typo="Typo.h6">@GetProductImbalanceLabel(projectPlanningSummary)</MudText>
                         </MudPaper>
                     </MudItem>
                 </MudGrid>
             </MudStack>
         </MudPaper>
-    }
-    else if (_projectPlanningSummaryState is not null
-        && _projectPlanningSummaryState.ToViewModel("Project planning summary could not be loaded right now.").UiState is UiDataState.Loading or UiDataState.Failed)
-    {
-        <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
-                                State="@_projectPlanningSummaryState.ToViewModel("Project planning summary could not be loaded right now.")"
-                                ProductOwnerId="@_activeProfileId"
-                                Subject="Project planning summary"
-                                FailedMessage="Project planning summary could not be loaded right now."
-                                OnRecovery="@LoadProjectPlanningSummaryAsync">
-            <ChildContent Context="_">
-            </ChildContent>
-        </CanonicalDataStateView>
-    }
+        </ChildContent>
+    </CanonicalDataStateView>
 
     @* Board Content *@
-    @if (!string.IsNullOrWhiteSpace(_contextError))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4">
-            @_contextError
-        </MudAlert>
-    }
-    else if (_selectedProductId == null)
-    {
-        <MudPaper Elevation="1" Class="pa-8">
-            <MudStack AlignItems="AlignItems.Center" Spacing="3">
-                <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Large" Color="Color.Secondary" />
-                <MudText Typo="Typo.h6" Color="Color.Secondary">Select a product to start planning</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                    Choose a product from the selector above to load its PBIs and bugs into the planning board.
-                </MudText>
-            </MudStack>
-        </MudPaper>
-    }
-    else if (_isLoadingBoard)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_boardState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.EmptyButValid or UiDataState.Invalid)
-    {
-        <CanonicalDataStateView TData="IReadOnlyList<WorkItemDto>"
-                                State="@_boardState"
-                                ProductOwnerId="@_activeProfileId"
-                                Subject="Plan Board"
-                                EmptyTitle="No plan board data available"
-                                EmptyMessage="No work items are available for the selected product."
-                                FailedMessage="Plan Board could not be loaded right now."
-                                OnRecovery="@RetryBoardLoadAsync">
-            <ChildContent Context="_">
-            </ChildContent>
-        </CanonicalDataStateView>
-    }
-    else
-    {
+    <CanonicalDataStateView TData="PlanBoardRenderModel"
+                            State="@BoardRenderState"
+                            ProductOwnerId="@_activeProfileId"
+                            Subject="Plan Board"
+                            EmptyTitle="No plan board data available"
+                            EmptyMessage="No work items are available for the selected product."
+                            InvalidMessage="Adjust the current product selection to load the plan board."
+                            FailedMessage="Plan Board could not be loaded right now."
+                            OnRecovery="@RetryBoardLoadAsync">
+        <NotRequestedContent>
+            <MudPaper Elevation="1" Class="pa-8">
+                <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                    <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Large" Color="Color.Secondary" />
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">Select a product to start planning</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Choose a product from the selector above to load its PBIs and bugs into the planning board.
+                    </MudText>
+                </MudStack>
+            </MudPaper>
+        </NotRequestedContent>
+        <ChildContent Context="board">
         @if (_isBusy)
         {
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
         }
 
-        @if (!string.IsNullOrWhiteSpace(_sprintResolutionMessage))
+        @if (!string.IsNullOrWhiteSpace(board.SprintResolutionMessage))
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-3">
-                @_sprintResolutionMessage
+                @board.SprintResolutionMessage
             </MudAlert>
         }
 
@@ -192,7 +172,7 @@
                         </MudStack>
                     </div>
                     <div class="plan-candidate-tree" style="overflow-y: auto; max-height: 70vh;">
-                        @if (_candidateTree.Count == 0)
+                        @if (board.CandidateTree.Count == 0)
                         {
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
                                 No unplanned PBIs or bugs
@@ -200,7 +180,7 @@
                         }
                         else
                         {
-                            @foreach (var node in _candidateTree)
+                            @foreach (var node in board.CandidateTree)
                             {
                                 @RenderCandidateNode(node, 0)
                             }
@@ -210,10 +190,10 @@
             </div>
 
             @* Sprint Columns *@
-            @foreach (var sprint in _sprintColumns)
+            @foreach (var sprint in board.SprintColumns)
             {
                 var cap = GetSprintCapacityState(sprint.ZoneId);
-                var sprintItems = _sprintItems.GetValueOrDefault(sprint.ZoneId) ?? [];
+                var sprintItems = board.SprintItems.GetValueOrDefault(sprint.ZoneId) ?? [];
                 var isDropTarget = _draggedNode != null;
 
                 <div class="plan-board-column">
@@ -340,7 +320,8 @@
                 </div>
             }
         </div>
-    }
+        </ChildContent>
+    </CanonicalDataStateView>
 </MudContainer>
 
 <style>
@@ -502,10 +483,8 @@
     private List<ProjectDto> _projects = new();
     private List<ProductDto> _allProducts = new();
     private List<ProductDto> _products = new();
-    private ProjectPlanningSummaryDto? _projectPlanningSummary;
     private CacheBackedClientResult<ProjectPlanningSummaryDto>? _projectPlanningSummaryState;
     private string? _selectedProjectRouteKey;
-    private bool _isLoadingBoard;
     private bool _isBusy;
 
     private List<SprintColumn> _sprintColumns = new();
@@ -535,6 +514,58 @@
     private string? _contextError;
     private IDisposable? _filterSubscription;
     private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
+
+    private DataStateViewModel<ProjectPlanningSummaryDto> ProjectPlanningSummaryState
+        => string.IsNullOrWhiteSpace(_selectedProjectRouteKey) || _projectPlanningSummaryState is null
+            ? DataStateViewModel<ProjectPlanningSummaryDto>.NotRequested()
+            : _projectPlanningSummaryState.ToViewModel("Project planning summary could not be loaded right now.");
+
+    private DataStateViewModel<PlanBoardRenderModel> BoardRenderState
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(_contextError))
+            {
+                return DataStateViewModel<PlanBoardRenderModel>.Invalid(_contextError);
+            }
+
+            if (!_selectedProductId.HasValue)
+            {
+                return DataStateViewModel<PlanBoardRenderModel>.NotRequested();
+            }
+
+            if (_boardState.Data is not null && _boardState.UiState == UiDataState.Ready)
+            {
+                return DataStateViewModel<PlanBoardRenderModel>.Ready(
+                    new PlanBoardRenderModel(_sprintColumns, _candidateTree, _sprintItems, _sprintResolutionMessage));
+            }
+
+            if (_boardState.Data is not null && _boardState.UiState == UiDataState.Invalid)
+            {
+                return DataStateViewModel<PlanBoardRenderModel>.Invalid(
+                    reason: _boardState.Reason ?? "Adjust the current product selection to load the plan board.",
+                    data: new PlanBoardRenderModel(_sprintColumns, _candidateTree, _sprintItems, _sprintResolutionMessage),
+                    invalidFields: _boardState.InvalidFields,
+                    validationMessages: _boardState.ValidationMessages,
+                    filterMetadata: _boardState.FilterMetadata);
+            }
+
+            return _boardState.UiState switch
+            {
+                UiDataState.Loading => DataStateViewModel<PlanBoardRenderModel>.Loading(
+                    _boardState.Reason,
+                    _boardState.RetryAfterSeconds,
+                    _boardState.ShowCacheStatus),
+                UiDataState.EmptyButValid => DataStateViewModel<PlanBoardRenderModel>.Empty(
+                    _boardState.Reason ?? "No work items are available for the selected product."),
+                UiDataState.Invalid => DataStateViewModel<PlanBoardRenderModel>.Invalid(
+                    _boardState.Reason ?? "Adjust the current product selection to load the plan board."),
+                UiDataState.Failed => DataStateViewModel<PlanBoardRenderModel>.Failed(
+                    _boardState.Reason ?? "Plan Board could not be loaded right now."),
+                _ => DataStateViewModel<PlanBoardRenderModel>.NotRequested()
+            };
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -619,7 +650,6 @@
 
     private async Task LoadBoardAsync(int productId)
     {
-        _isLoadingBoard = true;
         _boardState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.Loading();
         StateHasChanged();
 
@@ -741,14 +771,13 @@
         }
         finally
         {
-            _isLoadingBoard = false;
             StateHasChanged();
         }
     }
 
     private async Task RefreshBoardFromTfsAsync()
     {
-        if (!_selectedProductId.HasValue || _selectedProductRootIds.Length == 0 || _isBusy || _isLoadingBoard)
+        if (!_selectedProductId.HasValue || _selectedProductRootIds.Length == 0 || _isBusy || _boardState.UiState == UiDataState.Loading)
             return;
 
         _isBusy = true;
@@ -1179,14 +1208,10 @@
         if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
         {
             _projectPlanningSummaryState = CacheBackedClientResult<ProjectPlanningSummaryDto>.Empty();
-            _projectPlanningSummary = null;
             return;
         }
 
         _projectPlanningSummaryState = await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
-        _projectPlanningSummary = _projectPlanningSummaryState.State == CacheBackedClientState.Success
-            ? _projectPlanningSummaryState.Data
-            : null;
     }
 
     private async Task NavigateToCurrentScopeAsync(int? productId, bool loadBoard)
@@ -1294,40 +1319,40 @@
             ? project.Name
             : $"{project.Name} ({project.Alias})";
 
-    private bool HasPlanningGap()
-        => _projectPlanningSummary is { TotalPBIs: > 0 } &&
-           _projectPlanningSummary.UnplannedPBIs / (double)_projectPlanningSummary.TotalPBIs > 0.5d;
+    private static bool HasPlanningGap(ProjectPlanningSummaryDto projectPlanningSummary)
+        => projectPlanningSummary.TotalPBIs > 0 &&
+           projectPlanningSummary.UnplannedPBIs / (double)projectPlanningSummary.TotalPBIs > 0.5d;
 
     public void Dispose()
         => _filterSubscription?.Dispose();
 
-    private string GetPlanningGapLabel()
+    private static string GetPlanningGapLabel(ProjectPlanningSummaryDto projectPlanningSummary)
     {
-        if (_projectPlanningSummary is null || _projectPlanningSummary.TotalPBIs == 0)
+        if (projectPlanningSummary.TotalPBIs == 0)
         {
             return "Planning gap unavailable";
         }
 
-        var ratio = _projectPlanningSummary.UnplannedPBIs / (double)_projectPlanningSummary.TotalPBIs * 100d;
-        return HasPlanningGap()
+        var ratio = projectPlanningSummary.UnplannedPBIs / (double)projectPlanningSummary.TotalPBIs * 100d;
+        return HasPlanningGap(projectPlanningSummary)
             ? $"{ratio:F0}% of PBIs are unplanned"
             : $"{ratio:F0}% unplanned";
     }
 
-    private string GetProductImbalanceLabel()
+    private static string GetProductImbalanceLabel(ProjectPlanningSummaryDto projectPlanningSummary)
     {
-        if (_projectPlanningSummary is null || _projectPlanningSummary.TotalEffort <= 0 || _projectPlanningSummary.Products.Count == 0)
+        if (projectPlanningSummary.TotalEffort <= 0 || projectPlanningSummary.Products.Count == 0)
         {
             return "N/A";
         }
 
-        var leadingProduct = _projectPlanningSummary.Products.MaxBy(static product => product.TotalEffort);
+        var leadingProduct = projectPlanningSummary.Products.MaxBy(static product => product.TotalEffort);
         if (leadingProduct == null)
         {
             return "N/A";
         }
 
-        var share = leadingProduct.TotalEffort / (double)_projectPlanningSummary.TotalEffort * 100d;
+        var share = leadingProduct.TotalEffort / (double)projectPlanningSummary.TotalEffort * 100d;
         return share > 60d
             ? $"{leadingProduct.ProductName} {share:F0}%"
             : "Balanced";
@@ -1432,6 +1457,12 @@
         public int? Effort { get; init; }
         public string IterationPath { get; set; } = string.Empty;
     }
+
+    private sealed record PlanBoardRenderModel(
+        IReadOnlyList<SprintColumn> SprintColumns,
+        IReadOnlyList<PlanBoardCandidateNode> CandidateTree,
+        IReadOnlyDictionary<string, List<SprintDragItem>> SprintItems,
+        string? SprintResolutionMessage);
 
     private sealed record SprintCapacityState(
         int Capacity,

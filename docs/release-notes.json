@@ -2,6 +2,14 @@
   {
     "date": "2026-04-16",
     "type": "Changed",
+    "title": "More planning and health read surfaces now use one canonical data-state renderer",
+    "impact": "Backlog Health, Multi-Product Planning, Sprint Activity, Plan Board, the dependency panel, and the timeline panel now route loading, empty, invalid-filter, and failure handling through DataStateViewModel<T> plus CanonicalDataStateView instead of local null checks, manual loading flags, or ad-hoc error UI, and new governance audits block those legacy patterns from returning on the governed read surfaces.",
+    "area": "Planning / Health / Delivery / Work Items",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-16",
+    "type": "Changed",
     "title": "Canonical UI data-state normalization now removes page-level Not Ready handling",
     "impact": "Cache-backed pages and workspace tiles now normalize Not Ready responses into the governed loading state before UI rendering, plan-board and roadmap summaries reuse the same canonical fallback path as the rest of the app, and governance audits now block new page/component references to Not Ready state tokens or direct DataStatePanel usage.",
     "area": "Home / Planning / Delivery / Pull Requests / Pipelines / Validation",

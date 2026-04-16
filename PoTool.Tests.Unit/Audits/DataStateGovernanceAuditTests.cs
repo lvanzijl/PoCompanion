@@ -28,6 +28,7 @@ public sealed class DataStateGovernanceAuditTests
     [
         "PoTool.Client/Pages/Home/BacklogOverviewPage.razor",
         "PoTool.Client/Pages/Home/MultiProductPlanning.razor",
+        "PoTool.Client/Pages/Home/PlanBoard.razor",
         "PoTool.Client/Pages/Home/SprintTrendActivity.razor",
         "PoTool.Client/Components/Dependencies/DependenciesPanel.razor",
         "PoTool.Client/Components/Timeline/TimelinePanel.razor"
