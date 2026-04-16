@@ -85,20 +85,24 @@
         }
     </MudPaper>
 
-    <TrendDataStateView TData="PipelineQueryResponseDto<PipelineInsightsDto>"
-                        State="@_dataState"
-                        IsLoading="@_isLoading"
-                        FilterNotice="@_filterNotice"
-                        ProductOwnerId="@_activeProfileId"
-                        Subject="Pipeline insights"
-                        InvalidMessage="Adjust the selected team or sprint to load pipeline insights."
-                        FailedMessage="The pipeline insights request failed."
-                        NotReadyMessage="Pipeline insights will load once the cache is ready."
-                        OnRecovery="@LoadInsightsAsync">
+    <CanonicalDataStateView TData="PipelineInsightsDto"
+                            State="@_insightsState"
+                            ProductOwnerId="@_activeProfileId"
+                            Subject="Pipeline insights"
+                            EmptyMessage="No data for selected period."
+                            InvalidMessage="Adjust the selected team or sprint to load pipeline insights."
+                            FailedMessage="The pipeline insights request failed."
+                            OnRecovery="@LoadInsightsAsync">
         <NotRequestedContent>
-            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            @if (!_selectedTeamId.HasValue || !_selectedSprintId.HasValue)
             {
-                <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
+                <MudPaper Elevation="1" Class="pa-6 mb-4 d-flex flex-column align-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Large" Color="Color.Default" Class="mb-2" />
+                    <MudText Typo="Typo.h6">Select a team and sprint to view pipeline health</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Data is read from the local cache — no live TFS calls.
+                    </MudText>
+                </MudPaper>
             }
             else
             {
@@ -112,8 +116,7 @@
             }
         </NotRequestedContent>
         <ChildContent Context="_">
-        @if (_insightsData is not null)
-        {
+        @{ var insightsData = _insightsData!; }
         @if (!string.IsNullOrWhiteSpace(_pipelineQualityErrorMessage))
         {
             <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="mb-4">
@@ -131,27 +134,27 @@
             <MudGrid Spacing="2">
                 <MudItem xs="6" sm="3">
                     <MudPaper Elevation="0" Class="pa-3 mud-theme-default" Style="text-align:center;">
-                        <MudText Typo="Typo.h5">@_insightsData.TotalBuilds</MudText>
+                        <MudText Typo="Typo.h5">@insightsData.TotalBuilds</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Total builds</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="3">
                     <MudPaper Elevation="0" Class="pa-3 pipeline-stat-error" Style="text-align:center;">
-                        <MudText Typo="Typo.h5" Color="Color.Error">@_insightsData.FailureRate.ToString("F1")%</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Failure rate (@_insightsData.FailedBuilds failed)</MudText>
+                        <MudText Typo="Typo.h5" Color="Color.Error">@insightsData.FailureRate.ToString("F1")%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Failure rate (@insightsData.FailedBuilds failed)</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="3">
                     <MudPaper Elevation="0" Class="pa-3 pipeline-stat-warning" Style="text-align:center;">
-                        <MudText Typo="Typo.h5" Color="Color.Warning">@_insightsData.WarningRate.ToString("F1")%</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Warning rate (@_insightsData.WarningBuilds partial)</MudText>
+                        <MudText Typo="Typo.h5" Color="Color.Warning">@insightsData.WarningRate.ToString("F1")%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Warning rate (@insightsData.WarningBuilds partial)</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="3">
                     <MudPaper Elevation="0" Class="pa-3 mud-theme-default" Style="text-align:center;">
-                        @if (_insightsData.P90DurationMinutes.HasValue)
+                        @if (insightsData.P90DurationMinutes.HasValue)
                         {
-                            <MudText Typo="Typo.h5">@FormatMinutes(_insightsData.P90DurationMinutes.Value)</MudText>
+                            <MudText Typo="Typo.h5">@FormatMinutes(insightsData.P90DurationMinutes.Value)</MudText>
                         }
                         else
                         {
@@ -164,7 +167,7 @@
         </MudPaper>
 
         @* ── Global Top 3 In Trouble ─────────────────────────────────── *@
-        @if (_insightsData.GlobalTop3InTrouble.Any())
+        @if (insightsData.GlobalTop3InTrouble.Any())
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">
@@ -176,7 +179,7 @@
                 </MudText>
 
                 <MudGrid Spacing="2">
-                    @foreach (var entry in _insightsData.GlobalTop3InTrouble)
+                    @foreach (var entry in insightsData.GlobalTop3InTrouble)
                     {
                         var capturedEntry = entry;
                         <MudItem xs="12" md="4">
@@ -193,7 +196,7 @@
         }
 
         @* ── Per-product sections ────────────────────────────────────── *@
-        @foreach (var product in _insightsData.Products)
+        @foreach (var product in insightsData.Products)
         {
             var productPoints = _scatterPointsByProduct.TryGetValue(product.ProductId, out var pts) ? pts : Array.Empty<TimeScatterPoint>();
             var highlightSet  = _highlightByProduct.TryGetValue(product.ProductId, out var hs) ? hs : null;
@@ -254,11 +257,11 @@
                         Click a pipeline in trouble to highlight it.
                     </MudText>
                     <MudPaper Elevation="1" Class="pa-2 mb-4">
-                        @if (_insightsData.SprintStart.HasValue && _insightsData.SprintEnd.HasValue)
+                        @if (insightsData.SprintStart.HasValue && insightsData.SprintEnd.HasValue)
                         {
                             <TimeScatterSvg Points="@productPoints"
-                                            SprintStart="@_insightsData.SprintStart.Value"
-                                            SprintEnd="@_insightsData.SprintEnd.Value"
+                                            SprintStart="@insightsData.SprintStart.Value"
+                                            SprintEnd="@insightsData.SprintEnd.Value"
                                             MedianDurationMinutes="@product.MedianDurationMinutes"
                                             P90DurationMinutes="@product.P90DurationMinutes"
                                             SloDurationMinutes="@_sloDurationMinutes"
@@ -327,9 +330,8 @@
                 }
             </MudPaper>
         }
-        }
         </ChildContent>
-    </TrendDataStateView>
+    </CanonicalDataStateView>
 
 </MudContainer>
 
@@ -492,9 +494,6 @@
 @code {
     // ── State ────────────────────────────────────────────────────────────
 
-    private bool   _isLoading;
-    private string? _errorMessage;
-
     private int? _activeProfileId;
 
     private bool _includePartiallySucceeded = true;
@@ -512,8 +511,7 @@
     private List<SprintDto> _sprints = new();
 
     private PipelineInsightsDto? _insightsData;
-    private CanonicalFilterNoticeModel? _filterNotice;
-    private DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>> _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.NotRequested();
+    private DataStateViewModel<PipelineInsightsDto> _insightsState = DataStateViewModel<PipelineInsightsDto>.NotRequested();
     private string? _pipelineQualityErrorMessage;
     private bool _isDrawerBuildQualityLoading;
     private string? _drawerBuildQualityErrorMessage;
@@ -548,7 +546,6 @@
         _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         UpdateBreadcrumbs();
 
-        _isLoading = true;
         try
         {
             var profile = await ProfileService.GetActiveProfileAsync();
@@ -572,11 +569,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = $"Failed to initialize: {ex.Message}";
-        }
-        finally
-        {
-            _isLoading = false;
+            _insightsState = DataStateViewModel<PipelineInsightsDto>.Failed($"Failed to initialize: {ex.Message}");
         }
     }
 
@@ -588,21 +581,16 @@
         if (!evaluation.CanExecuteQueries)
         {
             _insightsData = null;
-            _filterNotice = null;
-            _dataState = TrendUiStateFactory.InvalidFilter<PipelineQueryResponseDto<PipelineInsightsDto>>(
-                evaluation,
-                "Select a valid team and sprint to load pipeline insights.");
+            _insightsState = DataStateViewModel<PipelineInsightsDto>.Invalid("Select a valid team and sprint to load pipeline insights.");
             return;
         }
 
         if (!_activeProfileId.HasValue || !_selectedTeamId.HasValue || !_selectedSprintId.HasValue)
         {
-            _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.NotRequested();
+            _insightsState = DataStateViewModel<PipelineInsightsDto>.NotRequested();
             return;
         }
 
-        _isLoading    = true;
-        _errorMessage = null;
         _scatterPointsByProduct.Clear();
         _highlightByProduct.Clear();
         _pipelineBuildQualityByDefinition.Clear();
@@ -616,7 +604,7 @@
 
         try
         {
-            _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.Loading();
+            _insightsState = DataStateViewModel<PipelineInsightsDto>.Loading();
             var response = await PipelineStateService.GetInsightsStateAsync(
                 _activeProfileId.Value,
                 _selectedSprintId.Value,
@@ -624,20 +612,23 @@
                 _includePartiallySucceeded,
                 _includeCanceled,
                 CancellationToken.None);
-            _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.FromResponse(response, "Pipeline insights could not be loaded right now.");
-            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
+            var envelopeState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.FromResponse(response, "Pipeline insights could not be loaded right now.");
+            _insightsState = CanonicalDataStateViewModelMapper.Unwrap(
+                envelopeState,
+                static envelope => envelope.Data,
+                "No data for selected period.",
+                "Adjust the selected team or sprint to load pipeline insights.");
+            if (_insightsState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 _insightsData = null;
                 return;
             }
 
-            var envelope = _dataState.Data;
-            _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
-            _insightsData = envelope?.Data;
+            _insightsData = _insightsState.Data;
             if (_insightsData is null || !HasRenderablePageData(_insightsData))
             {
                 _insightsData = null;
-                _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.Empty("No data for selected period.");
+                _insightsState = DataStateViewModel<PipelineInsightsDto>.Empty("No data for selected period.");
                 return;
             }
 
@@ -653,15 +644,11 @@
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.Failed("The pipeline insights request failed.");
+            _insightsState = DataStateViewModel<PipelineInsightsDto>.Failed("The pipeline insights request failed.");
             _insightsData = null;
-            _filterNotice = null;
         }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
+
+        StateHasChanged();
     }
 
     // ── Scatter map builder ──────────────────────────────────────────────

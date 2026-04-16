@@ -5,79 +5,66 @@
 @using PoTool.Shared.Metrics
 @inject MetricsStateService MetricsStateService
 
-@if (_isLoading)
-{
-    <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="my-2" />
-}
-else
-{
-    <DataStateView TData="DeliveryQueryResponseDto<CapacityCalibrationDto>"
-                   State="@_calibrationState"
-                   EmptyTitle="No calibration data available"
-                   EmptyMessage="No completed sprint history is available for calibration."
-                   NotReadyTitle="Calibration is syncing"
-                   NotReadyMessage="Calibration data will load once the cache is ready."
-                   FailedTitle="Calibration failed to load">
-        <ChildContent Context="envelope">
-            @if (envelope.Data is not null && envelope.Data.Sprints.Count > 0)
-            {
-                <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
+<CanonicalDataStateView TData="CapacityCalibrationDto"
+                        State="@_calibrationState"
+                        Subject="Capacity calibration"
+                        EmptyTitle="No calibration data available"
+                        EmptyMessage="No completed sprint history is available for calibration."
+                        FailedTitle="Calibration failed to load">
+    <ChildContent Context="calibration">
+        <MudPaper Elevation="1" Class="pa-3">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
+                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle2">Calibration (@calibration.Sprints.Count sprints)</MudText>
+                @if (calibration.OutlierSprintNames.Count > 0)
+                {
+                    <MudTooltip Text="@($"Outlier sprints (P10/P90): {string.Join(", ", calibration.OutlierSprintNames)}")">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                    </MudTooltip>
+                }
+            </MudStack>
 
-                <MudPaper Elevation="1" Class="pa-3">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
-                        <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Size="Size.Small" />
-                        <MudText Typo="Typo.subtitle2">Calibration (@envelope.Data.Sprints.Count sprints)</MudText>
-                        @if (envelope.Data.OutlierSprintNames.Count > 0)
-                        {
-                            <MudTooltip Text="@($"Outlier sprints (P10/P90): {string.Join(", ", envelope.Data.OutlierSprintNames)}")">
-                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                            </MudTooltip>
-                        }
-                    </MudStack>
-
-                    <MudGrid Spacing="1">
-                        <MudItem xs="6" sm="3">
-                            <MudTooltip Text="Median velocity (P50) — typical sprint output">
-                                <MudStack Spacing="0" AlignItems="AlignItems.Center">
-                                    <MudText Typo="Typo.h6" Color="Color.Primary">@envelope.Data.MedianVelocity.ToString("F0")</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Median pts</MudText>
-                                </MudStack>
-                            </MudTooltip>
-                        </MudItem>
-                        <MudItem xs="6" sm="3">
-                            <MudTooltip Text="Volatility band P25–P75 — plan at P25 for high confidence">
-                                <MudStack Spacing="0" AlignItems="AlignItems.Center">
-                                    <MudText Typo="Typo.h6" Color="Color.Secondary">
-                                        @envelope.Data.P25Velocity.ToString("F0")–@envelope.Data.P75Velocity.ToString("F0")
-                                    </MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">P25–P75 band</MudText>
-                                </MudStack>
-                            </MudTooltip>
-                        </MudItem>
-                        <MudItem xs="6" sm="3">
-                            <MudTooltip Text="Median predictability — ratio of done/committed (1.0 = full delivery)">
-                                <MudStack Spacing="0" AlignItems="AlignItems.Center">
-                                    <MudText Typo="Typo.h6" Color="@GetPredictabilityColor(envelope.Data)">
-                                        @(envelope.Data.MedianPredictability * 100).ToString("F0")%
-                                    </MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Predictability</MudText>
-                                </MudStack>
-                            </MudTooltip>
-                        </MudItem>
-                        <MudItem xs="6" sm="3">
-                            <MudTooltip Text="Plan at P25 velocity for high-confidence sprint commitment">
-                                <MudStack Spacing="0" AlignItems="AlignItems.Center">
-                                    <MudText Typo="Typo.h6" Color="Color.Success">@envelope.Data.P25Velocity.ToString("F0")</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Safe plan pts</MudText>
-                                </MudStack>
-                            </MudTooltip>
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
-            }
-        </ChildContent>
-    </DataStateView>
-}
+            <MudGrid Spacing="1">
+                <MudItem xs="6" sm="3">
+                    <MudTooltip Text="Median velocity (P50) — typical sprint output">
+                        <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6" Color="Color.Primary">@calibration.MedianVelocity.ToString("F0")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Median pts</MudText>
+                        </MudStack>
+                    </MudTooltip>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudTooltip Text="Volatility band P25–P75 — plan at P25 for high confidence">
+                        <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6" Color="Color.Secondary">
+                                @calibration.P25Velocity.ToString("F0")–@calibration.P75Velocity.ToString("F0")
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">P25–P75 band</MudText>
+                        </MudStack>
+                    </MudTooltip>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudTooltip Text="Median predictability — ratio of done/committed (1.0 = full delivery)">
+                        <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6" Color="@GetPredictabilityColor(calibration)">
+                                @(calibration.MedianPredictability * 100).ToString("F0")%
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Predictability</MudText>
+                        </MudStack>
+                    </MudTooltip>
+                </MudItem>
+                <MudItem xs="6" sm="3">
+                    <MudTooltip Text="Plan at P25 velocity for high-confidence sprint commitment">
+                        <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.h6" Color="Color.Success">@calibration.P25Velocity.ToString("F0")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Safe plan pts</MudText>
+                        </MudStack>
+                    </MudTooltip>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    </ChildContent>
+</CanonicalDataStateView>
 
 @code {
     [Parameter, EditorRequired]
@@ -89,9 +76,7 @@ else
     [Parameter]
     public IEnumerable<int>? ProductIds { get; set; }
 
-    private bool _isLoading;
-    private CanonicalFilterNoticeModel? _filterNotice;
-    private DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>> _calibrationState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.NotRequested();
+    private DataStateViewModel<CapacityCalibrationDto> _calibrationState = DataStateViewModel<CapacityCalibrationDto>.NotRequested();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -103,8 +88,7 @@ else
 
     private async Task LoadAsync()
     {
-        _isLoading = true;
-        _calibrationState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.Loading();
+        _calibrationState = DataStateViewModel<CapacityCalibrationDto>.Loading();
         StateHasChanged();
 
         var response = await MetricsStateService.GetCapacityCalibrationStateAsync(
@@ -112,13 +96,14 @@ else
             SprintIds,
             ProductIds,
             CancellationToken.None);
-        _calibrationState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.FromResponse(
+        var envelopeState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.FromResponse(
             response,
             "Calibration data could not be loaded right now.");
-        _filterNotice = _calibrationState.State == PoTool.Shared.DataState.DataStateDto.Available && _calibrationState.Data is not null
-            ? CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(_calibrationState.Data).FilterMetadata)
-            : null;
-        _isLoading = false;
+        _calibrationState = CanonicalDataStateViewModelMapper.Unwrap(
+            envelopeState,
+            static envelope => envelope.Data,
+            "No completed sprint history is available for calibration.");
+        StateHasChanged();
     }
 
     private static Color GetPredictabilityColor(CapacityCalibrationDto calibration)
