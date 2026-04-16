@@ -55,6 +55,5 @@
 
 ## Remaining risks or follow-up items
 
-- `StartupGuard.razor` still exists but is no longer the active routing gate; it can be removed in a later cleanup if the repository wants to eliminate unused code.
 - Full `PoTool.Tests.Unit` still has pre-existing unrelated failures in governance/documentation audits and cache-backed client migration checks.
 - Manual browser verification of the new central gate flow was not performed in this environment.

@@ -1,3 +1,4 @@
+using System.Net.Http;
 using PoTool.Client.ApiClient;
 using SharedStartupReadinessDto = PoTool.Shared.Settings.StartupReadinessDto;
 
@@ -239,7 +240,7 @@ public class StartupOrchestratorService : IStartupOrchestratorService
         {
             await _profileService.SetActiveProfileAsync(null, cancellationToken);
         }
-        catch
+        catch (Exception ex) when (ex is HttpRequestException or ApiException)
         {
             // Ignore cleanup failures; startup classification still treats the profile as unselected locally.
         }
