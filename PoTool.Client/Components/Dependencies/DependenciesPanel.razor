@@ -1,9 +1,9 @@
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Models
 @using PoTool.Client.Services
 @inject IWorkItemsClient WorkItemsClient
-@inject ErrorMessageService ErrorMessageService
 
 @* Dependencies Panel - Reusable component for embedding dependency graph into workspaces *@
 
@@ -29,44 +29,47 @@
             <MudTextField @bind-Value="_workItemTypesFilter" 
                          Label="Work Item Types (e.g., Epic,Feature)" 
                          Variant="Variant.Outlined" />
-            <MudButton Variant="Variant.Filled" 
-                      Color="Color.Primary" 
-                      OnClick="LoadDependencyGraph"
-                      Disabled="@_isLoading"
-                      StartIcon="@Icons.Material.Filled.Refresh">
-                Load Graph
-            </MudButton>
+             <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="LoadDependencyGraph"
+                       Disabled="@(_graphState.UiState == UiDataState.Loading)"
+                       StartIcon="@Icons.Material.Filled.Refresh">
+                 Load Graph
+             </MudButton>
         </MudStack>
     </MudStack>
 </MudPaper>
 
-<LoadingIndicator IsLoading="@_isLoading" />
-
-@if (!_isLoading && _graphData != null)
-{
-    <ErrorDisplay ErrorResponse="@_errorResponse" 
-                  Class="mb-4"
-                  OnDismiss="ClearError" />
-
+<CanonicalDataStateView TData="DependencyGraphDto"
+                        State="@_graphState"
+                        Subject="Dependency graph"
+                        EmptyTitle="No dependency data found"
+                        EmptyMessage="No dependency data found for the given filters."
+                        FailedMessage="Dependency graph could not be loaded right now."
+                        OnRecovery="@LoadDependencyGraph">
+    <NotRequestedContent>
+        <MudAlert Severity="Severity.Info">Enter filters and click Load Graph to analyze dependencies.</MudAlert>
+    </NotRequestedContent>
+    <ChildContent Context="graphData">
     @* Summary Cards *@
     <MudGrid Class="mb-4">
         <MetricSummaryCard Label="Total Nodes"
-                          Value="@_graphData.Nodes.Count.ToString()"
+                          Value="@graphData.Nodes.Count.ToString()"
                           Icon="@Icons.Material.Filled.Circle"
                           IconColor="Color.Primary" />
         
         <MetricSummaryCard Label="Total Links"
-                          Value="@_graphData.Links.Count.ToString()"
+                          Value="@graphData.Links.Count.ToString()"
                           Icon="@Icons.Material.Filled.Link"
                           IconColor="Color.Info" />
         
         <MetricSummaryCard Label="Blocking Items"
-                          Value="@_graphData.Nodes.Count(n => n.IsBlocking).ToString()"
+                          Value="@graphData.Nodes.Count(n => n.IsBlocking).ToString()"
                           Icon="@Icons.Material.Filled.Block"
                           IconColor="Color.Error" />
         
         <MetricSummaryCard Label="Critical Paths"
-                          Value="@_graphData.CriticalPaths.Count.ToString()"
+                          Value="@graphData.CriticalPaths.Count.ToString()"
                           Icon="@Icons.Material.Filled.Warning"
                           IconColor="Color.Warning" />
     </MudGrid>
@@ -74,7 +77,7 @@
     @* Dependency Table *@
     <MudPaper Elevation="1" Class="pa-4">
         <MudText Typo="Typo.h6" GutterBottom="true">Work Items with Dependencies</MudText>
-        <MudTable Items="@_graphData.Nodes.Where(n => n.DependencyCount > 0).Take(10)" Dense="true" Hover="true">
+        <MudTable Items="@graphData.Nodes.Where(n => n.DependencyCount > 0).Take(10)" Dense="true" Hover="true">
             <HeaderContent>
                 <MudTh>ID</MudTh>
                 <MudTh>Title</MudTh>
@@ -103,34 +106,25 @@
                 </MudTd>
             </RowTemplate>
         </MudTable>
-        @if (_graphData.Nodes.Count(n => n.DependencyCount > 0) > 10)
+        @if (graphData.Nodes.Count(n => n.DependencyCount > 0) > 10)
         {
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
-                Showing 10 of @_graphData.Nodes.Count(n => n.DependencyCount > 0) items with dependencies
+                Showing 10 of @graphData.Nodes.Count(n => n.DependencyCount > 0) items with dependencies
             </MudText>
         }
     </MudPaper>
-}
-else if (!_isLoading && _graphData == null && _hasAttemptedLoad)
-{
-    <MudAlert Severity="Severity.Info">No dependency data found for the given filters.</MudAlert>
-}
-else if (!_isLoading && !_hasAttemptedLoad)
-{
-    <MudAlert Severity="Severity.Info">Enter filters and click Load Graph to analyze dependencies.</MudAlert>
-}
+    </ChildContent>
+</CanonicalDataStateView>
 
 @code {
     [Parameter]
     public string? InitialAreaPath { get; set; }
 
-    private bool _isLoading = false;
     private bool _hasAttemptedLoad = false;
     private string? _areaPathFilter;
     private string? _workItemIdsFilter;
     private string? _workItemTypesFilter;
-    private DependencyGraphDto? _graphData;
-    private ErrorResponse? _errorResponse;
+    private DataStateViewModel<DependencyGraphDto> _graphState = DataStateViewModel<DependencyGraphDto>.NotRequested();
 
     protected override async Task OnInitializedAsync()
     {
@@ -143,38 +137,28 @@ else if (!_isLoading && !_hasAttemptedLoad)
 
     private async Task LoadDependencyGraph()
     {
-        _isLoading = true;
         _hasAttemptedLoad = true;
+        _graphState = DataStateViewModel<DependencyGraphDto>.Loading();
         StateHasChanged();
 
         try
         {
-            ClearError();
             var response = GeneratedCacheEnvelopeHelper.ToDataStateResult(
                 await WorkItemsClient.GetDependencyGraphAsync(
                 areaPathFilter: _areaPathFilter, 
                 workItemIds: _workItemIdsFilter,
                 workItemTypes: _workItemTypesFilter));
-            _graphData = response.CanUseData ? response.Data : null;
-            if (!response.CanUseData && !string.IsNullOrWhiteSpace(response.Reason))
-            {
-                _errorResponse = ErrorMessageService.GetErrorResponse(
-                    new InvalidOperationException(response.Reason),
-                    "Dependency graph unavailable");
-            }
+            _graphState = _hasAttemptedLoad
+                ? DataStateViewModel<DependencyGraphDto>.FromResult(response)
+                : DataStateViewModel<DependencyGraphDto>.NotRequested();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errorResponse = ErrorMessageService.GetErrorResponse(ex, "Error loading dependency graph");
+            _graphState = DataStateViewModel<DependencyGraphDto>.Failed("Dependency graph could not be loaded right now.");
         }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
-    }
 
-    private void ClearError() => _errorResponse = null;
+        StateHasChanged();
+    }
 
     private Color GetStateColor(string? state)
     {

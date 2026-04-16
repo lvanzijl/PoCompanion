@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace PoTool.Tests.Unit.Audits;
 
 [TestClass]
@@ -20,6 +22,15 @@ public sealed class DataStateGovernanceAuditTests
         "PoTool.Client/Pages/Home/SprintTrendActivity.razor",
         "PoTool.Client/Pages/Home/ValidationQueuePage.razor",
         "PoTool.Client/Pages/Home/ValidationTriagePage.razor"
+    ];
+
+    private static readonly string[] GovernedReadSurfaceFiles =
+    [
+        "PoTool.Client/Pages/Home/BacklogOverviewPage.razor",
+        "PoTool.Client/Pages/Home/MultiProductPlanning.razor",
+        "PoTool.Client/Pages/Home/SprintTrendActivity.razor",
+        "PoTool.Client/Components/Dependencies/DependenciesPanel.razor",
+        "PoTool.Client/Components/Timeline/TimelinePanel.razor"
     ];
 
     [TestMethod]
@@ -117,6 +128,63 @@ public sealed class DataStateGovernanceAuditTests
                 }
             }
         }
+
+        CollectionAssert.AreEqual(Array.Empty<string>(), violations);
+    }
+
+    [TestMethod]
+    public void GovernedReadSurfaces_DoNotUseManualLoadingFlagsOrLegacyErrorDisplays()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var forbiddenTokens = new[]
+        {
+            "<LoadingIndicator",
+            "<ErrorDisplay",
+            "private bool _isLoading",
+            "private string? _loadError",
+            "private string? _errorMessage",
+            "private ErrorResponse?",
+            "IsLoading=\"@_isLoading\"",
+            "Severity=\"Severity.Error\""
+        };
+
+        var violations = new List<string>();
+        foreach (var relativePath in GovernedReadSurfaceFiles)
+        {
+            var absolutePath = Path.Combine(repositoryRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+            var content = File.ReadAllText(absolutePath);
+
+            foreach (var token in forbiddenTokens)
+            {
+                if (content.Contains(token, StringComparison.Ordinal))
+                {
+                    violations.Add($"{relativePath} contains {token}");
+                }
+            }
+        }
+
+        CollectionAssert.AreEqual(Array.Empty<string>(), violations);
+    }
+
+    [TestMethod]
+    public void GovernedReadSurfaces_DoNotUseNullDrivenRenderingBranches()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var nullDrivenRenderPattern = new Regex(
+            @"@if\s*\([^)]*(==\s*null|!=\s*null|is\s+null|is\s+not\s+null)[^)]*\)",
+            RegexOptions.Compiled);
+
+        var violations = GovernedReadSurfaceFiles
+            .Select(relativePath =>
+            {
+                var absolutePath = Path.Combine(repositoryRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+                var content = File.ReadAllText(absolutePath);
+                return nullDrivenRenderPattern.IsMatch(content) ? relativePath : null;
+            })
+            .Where(static path => path is not null)
+            .Cast<string>()
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray();
 
         CollectionAssert.AreEqual(Array.Empty<string>(), violations);
     }

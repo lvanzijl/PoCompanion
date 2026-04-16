@@ -38,14 +38,12 @@
     </MudPaper>
 
     <CanonicalDataStateView TData="WorkItemActivityDetailsDto"
-                            State="@ActivityState"
-                            IsLoading="@_isLoading"
+                            State="@_activityState"
                             ProductOwnerId="@_profileId"
                             Subject="Sprint activity"
                             EmptyMessage="No activity details available for this work item."
                             InvalidMessage="Adjust the current filter selection to load sprint activity."
                             FailedMessage="Sprint activity could not be loaded right now."
-                            FilterNotice="@_filterNotice"
                             OnRecovery="@ReloadActivityAsync">
         <ChildContent Context="details">
         @* Work item metadata *@
@@ -203,47 +201,18 @@
     [Parameter]
     public int WorkItemId { get; set; }
 
-    private bool _isLoading = true;
-    private string? _errorMessage;
-    private WorkItemActivityDetailsDto? _details;
-    private CanonicalFilterNoticeModel? _filterNotice;
+    private DataStateViewModel<WorkItemActivityDetailsDto> _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.NotRequested();
     private List<BreadcrumbItem> _breadcrumbs = new();
     private int? _profileId;
     private string? _returnView;
     private List<SprintDto> _sprints = new();
     private List<WorkItemActivityGroup> _processedGroups = new();
     private ActivitySummary _summary = new();
-    private DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>> _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.NotRequested();
     private IDisposable? _filterSubscription;
     private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
     private int? _selectedSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Sprint
         ? GlobalFilterStore.GetState().Time.SprintId
         : null;
-    private DataStateViewModel<WorkItemActivityDetailsDto> ActivityState
-        => !string.IsNullOrWhiteSpace(_errorMessage)
-            ? DataStateViewModel<WorkItemActivityDetailsDto>.Failed(_errorMessage)
-            : _details is null
-                ? _dataState.UiState switch
-                {
-                    UiDataState.Loading => DataStateViewModel<WorkItemActivityDetailsDto>.Loading(_dataState.Reason, _dataState.RetryAfterSeconds, _dataState.ShowCacheStatus),
-                    UiDataState.Failed => DataStateViewModel<WorkItemActivityDetailsDto>.Failed(_dataState.Reason),
-                    UiDataState.Invalid => DataStateViewModel<WorkItemActivityDetailsDto>.Invalid(_dataState.Reason),
-                    _ => DataStateViewModel<WorkItemActivityDetailsDto>.Empty("No activity details available for this work item.")
-                }
-                : _dataState.UiState == UiDataState.Invalid
-                    ? DataStateViewModel<WorkItemActivityDetailsDto>.Invalid(
-                        reason: _dataState.Reason ?? "Adjust the current filter selection to load sprint activity.",
-                        data: _details,
-                        invalidFields: _dataState.InvalidFields,
-                        validationMessages: _dataState.ValidationMessages,
-                        filterMetadata: _dataState.FilterMetadata)
-                    : DataStateViewModel<WorkItemActivityDetailsDto>.Ready(_details) with
-                    {
-                        FilterMetadata = _dataState.FilterMetadata,
-                        InvalidFields = _dataState.InvalidFields,
-                        ValidationMessages = _dataState.ValidationMessages
-                    };
-
     // Fields that, when appearing together at the same timestamp, indicate a creation event.
     private static readonly HashSet<string> CreationIndicatorFields = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -277,7 +246,7 @@
         {
             if (WorkItemId <= 0)
             {
-                _errorMessage = "Select a valid work item to view sprint activity.";
+                _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Invalid("Select a valid work item to view sprint activity.");
                 return;
             }
 
@@ -287,7 +256,7 @@
             _profileId = activeProfile?.Id;
             if (!_profileId.HasValue)
             {
-                _errorMessage = "No active profile found.";
+                _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Failed("No active profile found.");
                 return;
             }
 
@@ -297,14 +266,9 @@
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Failed("Sprint activity could not be loaded right now.");
-            _errorMessage = null;
-            _filterNotice = null;
-            Snackbar.Add(_dataState.Reason!, Severity.Error);
-        }
-        finally
-        {
-            _isLoading = false;
+            ResetActivityPresentation();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Failed("Sprint activity could not be loaded right now.");
+            Snackbar.Add(_activityState.Reason!, Severity.Error);
         }
     }
 
@@ -312,14 +276,15 @@
     {
         if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
         {
-            _details = null;
-            _filterNotice = null;
+            ResetActivityPresentation();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Invalid("Adjust the current filter selection to load sprint activity.");
             return;
         }
 
         if (!_profileId.HasValue)
         {
-            _errorMessage = "No active profile found.";
+            ResetActivityPresentation();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Failed("No active profile found.");
             return;
         }
 
@@ -329,7 +294,7 @@
 
         try
         {
-            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Loading();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Loading();
             var response = await MetricsStateService.GetWorkItemActivityDetailsStateAsync(
                 WorkItemId,
                 _profileId.Value,
@@ -337,34 +302,26 @@
                 selectedSprint?.StartUtc,
                 selectedSprint?.EndUtc,
                 CancellationToken.None);
-            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.FromResponse(response, "Sprint activity could not be loaded right now.");
-            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
+            var envelopeState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.FromResponse(
+                response,
+                "Sprint activity could not be loaded right now.");
+            _activityState = MapActivityState(envelopeState);
+            if (_activityState.Data is not null)
             {
-                return;
-            }
-
-            var envelope = _dataState.Data;
-            if (envelope is null)
-            {
-                return;
-            }
-
-            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
-            _details = envelope.Data;
-
-            if (_details != null)
-            {
-                var processed = ProcessActivities(_details.Activities);
+                var processed = ProcessActivities(_activityState.Data.Activities);
                 _processedGroups = GroupByWorkItem(processed);
                 _summary = BuildSummary(processed);
+            }
+            else
+            {
+                ResetActivityPresentation();
             }
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Failed("Sprint activity could not be loaded right now.");
-            _errorMessage = null;
-            _filterNotice = null;
-            Snackbar.Add(_dataState.Reason!, Severity.Error);
+            ResetActivityPresentation();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Failed("Sprint activity could not be loaded right now.");
+            Snackbar.Add(_activityState.Reason!, Severity.Error);
         }
     }
 
@@ -595,6 +552,46 @@
 
     private void HandleGlobalFilterChanged()
         => _ = InvokeAsync(StateHasChanged);
+
+    private void ResetActivityPresentation()
+    {
+        _processedGroups = [];
+        _summary = new ActivitySummary();
+    }
+
+    private static DataStateViewModel<WorkItemActivityDetailsDto> MapActivityState(
+        DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>> envelopeState)
+    {
+        if (envelopeState.Data?.Data is { } details)
+        {
+            return envelopeState.UiState == UiDataState.Invalid
+                ? DataStateViewModel<WorkItemActivityDetailsDto>.Invalid(
+                    reason: envelopeState.Reason ?? "Adjust the current filter selection to load sprint activity.",
+                    data: details,
+                    invalidFields: envelopeState.InvalidFields,
+                    validationMessages: envelopeState.ValidationMessages,
+                    filterMetadata: envelopeState.FilterMetadata)
+                : DataStateViewModel<WorkItemActivityDetailsDto>.Ready(details) with
+                {
+                    FilterMetadata = envelopeState.FilterMetadata,
+                    InvalidFields = envelopeState.InvalidFields,
+                    ValidationMessages = envelopeState.ValidationMessages
+                };
+        }
+
+        return envelopeState.UiState switch
+        {
+            UiDataState.Loading => DataStateViewModel<WorkItemActivityDetailsDto>.Loading(
+                envelopeState.Reason,
+                envelopeState.RetryAfterSeconds,
+                envelopeState.ShowCacheStatus),
+            UiDataState.Invalid => DataStateViewModel<WorkItemActivityDetailsDto>.Invalid(envelopeState.Reason),
+            UiDataState.EmptyButValid => DataStateViewModel<WorkItemActivityDetailsDto>.Empty(
+                envelopeState.Reason ?? "No activity details available for this work item."),
+            UiDataState.Failed => DataStateViewModel<WorkItemActivityDetailsDto>.Failed(envelopeState.Reason),
+            _ => DataStateViewModel<WorkItemActivityDetailsDto>.NotRequested()
+        };
+    }
 
     public void Dispose()
     {

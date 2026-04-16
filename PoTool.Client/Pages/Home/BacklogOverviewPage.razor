@@ -2,6 +2,7 @@
 @using PoTool.Client.Components.Common
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
+@using PoTool.Client.Models
 @using PoTool.Shared.Health
 @using PoTool.Shared.WorkItems
 @inherits WorkspaceBase
@@ -66,24 +67,18 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (!string.IsNullOrWhiteSpace(_contextError))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4">@_contextError</MudAlert>
-    }
-    else if (_loadError != null)
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
-    }
-    else if (_selectedProductId == null)
-    {
-        <MudAlert Severity="Severity.Info">Select a product to view its backlog health.</MudAlert>
-    }
-    else if (_state != null)
-    {
+    <CanonicalDataStateView TData="ProductBacklogStateDto"
+                            State="@_backlogState"
+                            Subject="Backlog Health"
+                            EmptyTitle="No backlog health data available"
+                            EmptyMessage="No backlog health data is available for the selected product."
+                            InvalidMessage="Adjust the current product selection to load backlog health."
+                            FailedMessage="Backlog health could not be loaded right now."
+                            OnRecovery="@RetryLoadAsync">
+        <NotRequestedContent>
+            <MudAlert Severity="Severity.Info">Select a product to view its backlog health.</MudAlert>
+        </NotRequestedContent>
+        <ChildContent Context="_">
         @* ── SECTION 1: READY FOR IMPLEMENTATION ────────────────────────────── *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
@@ -322,13 +317,8 @@
                 </MudButton>
             </MudStack>
         </MudPaper>
-    }
-    else
-    {
-        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-            No backlog health data is available for the selected product yet.
-        </MudAlert>
-    }
+        </ChildContent>
+    </CanonicalDataStateView>
 </MudContainer>
 
 <style>
@@ -340,8 +330,6 @@
 </style>
 
 @code {
-    private bool _isLoading = true;
-    private string? _loadError;
     private List<BreadcrumbItem> _breadcrumbs = new();
 
     // Products
@@ -351,8 +339,7 @@
     private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
     private string? _contextError;
 
-    // Loaded backlog state
-    private ProductBacklogStateDto? _state;
+    private DataStateViewModel<ProductBacklogStateDto> _backlogState = DataStateViewModel<ProductBacklogStateDto>.NotRequested();
     private List<EpicRefinementDto> _readyEpics = new();
     private List<EpicRefinementDto> _refinementEpics = new();
 
@@ -387,12 +374,8 @@
         }
         catch (Exception ex)
         {
-            _loadError = $"Failed to load backlog health: {ex.Message}";
-            Console.WriteLine($"[BacklogOverview] {_loadError}");
-        }
-        finally
-        {
-            _isLoading = false;
+            _backlogState = DataStateViewModel<ProductBacklogStateDto>.Failed("Backlog health could not be loaded right now.");
+            Console.WriteLine($"[BacklogOverview] Failed to load backlog health: {ex.Message}");
         }
     }
 
@@ -416,27 +399,34 @@
 
     private async Task LoadDataAsync(int productId)
     {
+        DataStateResult<ProductBacklogStateDto> backlogResult;
         try
         {
-            var response = await WorkItemService.GetBacklogStateResultAsync(productId);
-            _state = response.CanUseData ? response.Data : null;
+            backlogResult = await WorkItemService.GetBacklogStateResultAsync(productId);
         }
         catch (ApiException ex) when (ex.StatusCode == 404)
         {
-            _state = null;
+            backlogResult = DataStateResult<ProductBacklogStateDto>.Empty("No backlog health data is available for the selected product.");
         }
-        if (_state != null)
+
+        _backlogState = DataStateViewModel<ProductBacklogStateDto>.FromResult(backlogResult);
+        if (_backlogState.Data is not null)
         {
-            _readyEpics = _state.Epics.Where(e => e.Score == 100).ToList();
-            _refinementEpics = _state.Epics
+            _readyEpics = _backlogState.Data.Epics.Where(e => e.Score == 100).ToList();
+            _refinementEpics = _backlogState.Data.Epics
                 .Where(e => e.Score < 100)
                 .OrderByDescending(e => e.Score)
                 .ToList();
         }
+        else
+        {
+            _readyEpics.Clear();
+            _refinementEpics.Clear();
+        }
 
         // Load SI count from validation triage (product-scoped)
-        var summaryResponse = await WorkItemService.GetValidationTriageSummaryStateAsync(new[] { productId });
-        _siIssueCount = summaryResponse?.Data?.StructuralIntegrity.TotalItemCount ?? 0;
+        var summaryResponse = await WorkItemService.GetValidationTriageSummaryAsync(new[] { productId });
+        _siIssueCount = summaryResponse.CanUseData ? summaryResponse.Data!.StructuralIntegrity.TotalItemCount : 0;
     }
 
     private void UpdateBreadcrumbs()
@@ -529,7 +519,7 @@
         if (!string.IsNullOrWhiteSpace(_contextError))
         {
             _loadedProductId = null;
-            _state = null;
+            _backlogState = DataStateViewModel<ProductBacklogStateDto>.Invalid(_contextError);
             _readyEpics.Clear();
             _refinementEpics.Clear();
             _siIssueCount = 0;
@@ -543,7 +533,7 @@
         }
 
         _loadedProductId = _selectedProductId;
-        _state = null;
+        _backlogState = DataStateViewModel<ProductBacklogStateDto>.NotRequested();
         _readyEpics.Clear();
         _refinementEpics.Clear();
         _siIssueCount = 0;
@@ -554,8 +544,7 @@
             return;
         }
 
-        _isLoading = true;
-        _loadError = null;
+        _backlogState = DataStateViewModel<ProductBacklogStateDto>.Loading();
         await InvokeAsync(StateHasChanged);
 
         try
@@ -564,14 +553,11 @@
         }
         catch (Exception ex)
         {
-            _loadError = $"Failed to load backlog health: {ex.Message}";
-            Console.WriteLine($"[BacklogOverview] {_loadError}");
+            _backlogState = DataStateViewModel<ProductBacklogStateDto>.Failed("Backlog health could not be loaded right now.");
+            Console.WriteLine($"[BacklogOverview] Failed to load backlog health: {ex.Message}");
         }
-        finally
-        {
-            _isLoading = false;
-            await InvokeAsync(StateHasChanged);
-        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private void HandleGlobalFilterChanged()
@@ -584,6 +570,9 @@
             ? $"Selected global product '{string.Join(", ", invalidProductIds)}' is not available in the current backlog health scope."
             : null;
     }
+
+    private Task RetryLoadAsync()
+        => LoadSelectedProductAsync();
 
     public void Dispose()
         => _filterSubscription?.Dispose();
