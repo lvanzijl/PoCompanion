@@ -10,15 +10,8 @@ namespace PoTool.Api.Services;
 /// </summary>
 public sealed class StartupStateResolutionService
 {
-    private static readonly HashSet<string> StartupFlowPaths = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "/",
-        "/profiles",
-        "/sync-gate",
-        "/startup-blocked"
-    };
-
-    private static readonly TimeSpan SyncAttemptTolerance = TimeSpan.FromSeconds(5);
+    private static readonly HashSet<string> StartupFlowPaths = new(StartupStateContract.StartupFlowPaths, StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan SyncAttemptTolerance = TimeSpan.FromSeconds(StartupStateContract.SyncAttemptToleranceSeconds);
 
     private readonly TfsConfigurationService _tfsConfigService;
     private readonly IProfileRepository _profileRepository;
@@ -347,7 +340,7 @@ public sealed class StartupStateResolutionService
         var candidate = returnUrl.Trim();
         if (!candidate.StartsWith("/", StringComparison.Ordinal)
             || candidate.StartsWith("//", StringComparison.Ordinal)
-            || candidate.IndexOf("//", 2, StringComparison.Ordinal) >= 0
+            || candidate.IndexOf("//", 1, StringComparison.Ordinal) >= 0
             || candidate.Contains('\\')
             || candidate.Contains(':')
             || !Uri.TryCreate(candidate, UriKind.Relative, out _))

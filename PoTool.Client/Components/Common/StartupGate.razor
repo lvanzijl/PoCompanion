@@ -64,7 +64,7 @@ else
         }
 
         var currentPath = StartupGuardRouteMatcher.NormalizePath(NavigationManager.ToBaseRelativePath(location));
-        return currentPath is "/" or "/profiles" or "/sync-gate" or "/startup-blocked"
+        return StartupNavigationTargetResolver.IsStartupFlowPath(currentPath)
                || StartupGateCoordinator.LastResolution?.Contract?.StartupState != PoTool.Shared.Settings.StartupStateDto.Ready;
     }
 

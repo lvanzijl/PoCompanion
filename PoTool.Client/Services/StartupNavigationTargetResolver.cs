@@ -1,3 +1,5 @@
+using PoTool.Shared.Settings;
+
 namespace PoTool.Client.Services;
 
 /// <summary>
@@ -15,6 +17,11 @@ public static class StartupNavigationTargetResolver
     public static string GetBlockingRoute()
     {
         return "/startup-blocked";
+    }
+
+    public static bool IsStartupFlowPath(string? currentPath)
+    {
+        return StartupStateContract.StartupFlowPaths.Contains(currentPath ?? string.Empty, StringComparer.OrdinalIgnoreCase);
     }
 
     private static string NormalizeUriForComparison(string? relativeUri)

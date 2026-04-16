@@ -351,6 +351,7 @@
         "SprintTrendData",
         "SprintTrendMetricsDto",
         "StartupBlockedReasonDto",
+        "StartupStateContract",
         "StartupDiagnosticFlagsDto",
         "StartupStateDto",
         "StartupStateResponseDto",
