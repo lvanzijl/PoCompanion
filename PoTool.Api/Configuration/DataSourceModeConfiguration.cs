@@ -72,6 +72,9 @@ public static class DataSourceModeConfiguration
     /// </summary>
     public static readonly HashSet<string> LiveModeAllowedExactRoutes = new(StringComparer.OrdinalIgnoreCase)
     {
+        // Startup authority
+        "/api/startup-state",
+
         // Pipeline configuration/discovery
         "/api/pipelines/definitions",
 

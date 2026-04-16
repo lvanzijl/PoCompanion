@@ -75,6 +75,18 @@ public class DataSourceModeMiddlewareTests
     }
 
     [TestMethod]
+    public async Task InvokeAsync_StartupStateRoute_SetsLiveMode()
+    {
+        var context = CreateHttpContext("/api/startup-state");
+        var middleware = CreateMiddleware();
+
+        await middleware.InvokeAsync(context, _mockModeProvider.Object);
+
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
     public async Task InvokeAsync_OnboardingRoute_SetsLiveMode()
     {
         var context = CreateHttpContext("/api/onboarding/status");
