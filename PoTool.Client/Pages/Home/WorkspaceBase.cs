@@ -23,6 +23,9 @@ public abstract class WorkspaceBase : ComponentBase
     protected ISnackbar Snackbar { get; set; } = default!;
 
     [Inject]
+    protected StartupGateNotificationService StartupGateNotificationService { get; set; } = default!;
+
+    [Inject]
     protected GlobalFilterStore GlobalFilterStore { get; set; } = default!;
 
     /// <summary>
@@ -107,7 +110,7 @@ public abstract class WorkspaceBase : ComponentBase
         var activeProfile = await ProfileService.GetActiveProfileAsync();
         if (activeProfile == null)
         {
-            NavigationManager.NavigateTo($"{WorkspaceRoutes.Home}?noProfile=true");
+            StartupGateNotificationService.RequestReevaluation();
             return false;
         }
         

@@ -3,11 +3,7 @@
 <CascadingValue Value="@_errorBoundary">
     <ErrorBoundary @ref="_errorBoundary">
         <ChildContent>
-            <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="@typeof(Pages.NotFound)">
-                <Found Context="routeData">
-                    <StartupRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-                </Found>
-            </Router>
+            <StartupGate />
         </ChildContent>
         <ErrorContent Context="exception">
             <div class="error-boundary-container">

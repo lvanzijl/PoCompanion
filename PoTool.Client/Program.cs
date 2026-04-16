@@ -256,6 +256,8 @@ builder.Services.AddScoped<IOnboardingBindingReplacementLookupService, Onboardin
 builder.Services.AddScoped<OnboardingExecutionService>();
 builder.Services.AddScoped<OnboardingWorkspaceViewModelFactory>();
 builder.Services.AddScoped<IStartupOrchestratorService, StartupOrchestratorService>();
+builder.Services.AddScoped<StartupGateCoordinator>();
+builder.Services.AddScoped<StartupGateNotificationService>();
 builder.Services.AddScoped<CacheSyncService>();
 builder.Services.AddScoped<ICacheSyncService>(sp => sp.GetRequiredService<CacheSyncService>());
 builder.Services.AddScoped<HomeProductBarMetricsService>();

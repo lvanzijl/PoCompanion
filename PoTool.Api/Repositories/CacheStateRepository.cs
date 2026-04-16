@@ -364,6 +364,9 @@ public class CacheStateRepository : ICacheStateRepository
             PullRequestCount = entity.PullRequestCount,
             PipelineCount = entity.PipelineCount,
             LastErrorMessage = entity.LastErrorMessage,
+            WorkItemWatermark = entity.WorkItemWatermark,
+            PullRequestWatermark = entity.PullRequestWatermark,
+            PipelineFinishWatermark = entity.PipelineFinishWatermark ?? entity.PipelineWatermark,
             CurrentSyncStage = entity.CurrentSyncStage,
             StageProgressPercent = entity.StageProgressPercent
         };

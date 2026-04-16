@@ -17,72 +17,42 @@ public sealed record StartupReadinessDto(
 );
 
 /// <summary>
-/// Explicit readiness states for startup gating and root routing.
+/// Deterministic startup resolution states emitted by the central startup state machine.
 /// </summary>
-public enum StartupReadinessState
+public enum StartupResolutionState
 {
+    NoProfile,
+    ProfileInvalid,
+    ProfileValid_NoSync,
     Ready,
-    NotReady,
-    SetupRequired,
-    SyncRequired,
-    Unavailable,
-    Error
+    Blocked
 }
 
 /// <summary>
-/// Structured startup readiness result that never relies on null.
+/// Additional categorization for blocked startup states.
 /// </summary>
-public sealed record StartupReadinessResult(
-    StartupReadinessState State,
-    StartupReadinessDto? Readiness,
-    string Reason,
-    string RecoveryHint
-);
-
-/// <summary>
-/// Represents the startup routing destination.
-/// </summary>
-public enum StartupRoute
+public enum StartupBlockedReason
 {
-    /// <summary>
-    /// Route to the home dashboard.
-    /// </summary>
-    Home,
-
-    /// <summary>
-     /// Route to Profiles Home (user is ready to use the app).
-     /// </summary>
-    ProfilesHome,
-
-    /// <summary>
-    /// Route to TFS Configuration page.
-    /// </summary>
-    Configuration,
-
-    /// <summary>
-     /// Route to Create First Profile page.
-     /// </summary>
-    CreateFirstProfile,
-
-    /// <summary>
-    /// Route to Sync Gate page.
-    /// </summary>
-    SyncGate,
-
-    /// <summary>
-    /// Route to the blocking startup error page.
-    /// </summary>
-    BlockingError
+    MissingConfiguration,
+    BackendUnavailable,
+    InvalidResponse,
+    UnexpectedFailure,
+    CacheUnavailable
 }
 
 /// <summary>
-/// Result of startup routing decision.
+/// Structured startup resolution result used by the root startup gate.
 /// </summary>
-public sealed record StartupRoutingResult(
-    StartupRoute Route,
-    string Message,
+public sealed record StartupStateResolution(
+    StartupResolutionState State,
+    StartupReadinessDto? Readiness,
+    string RequestedReadyUri,
+    string TargetUri,
+    bool ShouldRenderCurrentRoute,
+    int? ActiveProfileId,
+    string Reason,
     string RecoveryHint,
-    bool IsBlocking
+    StartupBlockedReason? BlockedReason = null
 );
 
 /// <summary>
@@ -91,18 +61,7 @@ public sealed record StartupRoutingResult(
 public interface IStartupOrchestratorService
 {
     /// <summary>
-    /// Gets the startup readiness state from the backend.
+    /// Resolves startup state atomically for the current route before any page renders.
     /// </summary>
-    Task<StartupReadinessResult> GetStartupReadinessAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Determines where to route the user based on startup readiness state.
-    /// </summary>
-    StartupRoutingResult DetermineRoute(StartupReadinessResult readiness);
-
-    /// <summary>
-    /// Checks if a given feature page should be accessible based on the current readiness state.
-    /// Returns true if accessible, false if should be blocked.
-    /// </summary>
-    bool IsFeaturePageAccessible(StartupReadinessResult readiness);
+    Task<StartupStateResolution> ResolveStartupStateAsync(string? currentRelativeUri, CancellationToken cancellationToken = default);
 }

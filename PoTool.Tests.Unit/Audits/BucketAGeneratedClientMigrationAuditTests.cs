@@ -27,7 +27,7 @@ public sealed class BucketAGeneratedClientMigrationAuditTests
         AssertMethodDoesNotContainForbiddenPatterns(projectServiceSource, "GetProjectAsync");
         AssertMethodDoesNotContainForbiddenPatterns(projectServiceSource, "GetProjectProductsAsync");
         AssertMethodDoesNotContainForbiddenPatterns(teamServiceSource, "CreateTeamAsync");
-        AssertMethodDoesNotContainForbiddenPatterns(startupServiceSource, "GetStartupReadinessAsync");
+        AssertMethodDoesNotContainForbiddenPatterns(startupServiceSource, "ResolveStartupStateAsync");
         AssertMethodDoesNotContainForbiddenPatterns(cacheSyncServiceSource, "GetCacheStatusAsync");
         AssertMethodDoesNotContainForbiddenPatterns(cacheSyncServiceSource, "IsSyncRunningAsync");
         AssertMethodDoesNotContainForbiddenPatterns(cacheSyncServiceSource, "GetCacheInsightsAsync");

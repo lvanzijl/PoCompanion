@@ -14,7 +14,6 @@
 @using Microsoft.Extensions.Logging
 @using static PoTool.Client.Components.Common.PageHelp
 @inject TfsConfigService TfsConfigService
-@inject IStartupOrchestratorService StartupOrchestrator
 @inject ErrorMessageService ErrorMessageService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -24,15 +23,6 @@
 <PageTitle>TFS Configuration</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
-    
-    @* Startup Readiness Banner *@
-    @if (_startupReadiness != null && _startupReadiness.State != StartupReadinessState.Ready && !string.IsNullOrEmpty(_startupReadiness.Reason))
-    {
-        <MudAlert Severity="Severity.Warning" Class="mb-4" Dense="true" Icon="@Icons.Material.Filled.Info">
-            <MudText Typo="Typo.subtitle2">@_startupReadiness.Reason</MudText>
-        </MudAlert>
-    }
-    
     <!-- Context-Aware Help -->
     <PageHelp Title="Azure DevOps / TFS Configuration"
               Description="Configure your connection to Azure DevOps or on-premises TFS. This page allows you to set up authentication, test the connection, and ensure PO Companion can access your work item data."
@@ -249,18 +239,9 @@
     // Error display
     private ErrorResponse? _errorResponse;
     
-    // Startup readiness state
-    private StartupReadinessResult? _startupReadiness;
-
     protected override async Task OnInitializedAsync()
     {
         await LoadCurrentConfig();
-        await LoadStartupReadiness();
-    }
-    
-    private async Task LoadStartupReadiness()
-    {
-        _startupReadiness = await StartupOrchestrator.GetStartupReadinessAsync();
     }
 
     private async Task OnUrlChanged(string value)

@@ -1,46 +1,95 @@
+using System.Web;
+
 namespace PoTool.Client.Services;
 
 /// <summary>
-/// Resolves root-startup routing decisions into concrete client URIs.
+/// Resolves authoritative startup state into concrete client URIs and ready-route intent.
 /// </summary>
 public static class StartupNavigationTargetResolver
 {
-    /// <summary>
-    /// Maps a startup routing decision to the concrete client URI that should be opened.
-    /// </summary>
-    public static string GetTargetUri(StartupRoutingResult routingResult, string? returnUrl = null)
+    private static readonly HashSet<string> StartupFlowPaths = new(StringComparer.OrdinalIgnoreCase)
     {
-        return routingResult.Route switch
+        "/",
+        "/profiles",
+        "/sync-gate",
+        "/startup-blocked"
+    };
+
+    public static string ResolveRequestedReadyUri(string? currentRelativeUri)
+    {
+        var relativeUri = string.IsNullOrWhiteSpace(currentRelativeUri)
+            ? "/"
+            : currentRelativeUri;
+        var absoluteUri = new Uri($"https://startup.local/{relativeUri.TrimStart('/')}");
+        var currentPath = StartupGuardRouteMatcher.NormalizePath(absoluteUri.PathAndQuery);
+
+        if (StartupFlowPaths.Contains(currentPath))
         {
-            StartupRoute.Home => "/home",
-            StartupRoute.Configuration => "/settings/tfs",
-            StartupRoute.CreateFirstProfile or StartupRoute.ProfilesHome => BuildProfilesUri(returnUrl),
-            StartupRoute.SyncGate => BuildSyncGateUri(returnUrl),
-            StartupRoute.BlockingError => BuildBlockingUri(routingResult),
-            _ => BuildBlockingUri(new StartupRoutingResult(
-                StartupRoute.BlockingError,
+            var query = HttpUtility.ParseQueryString(absoluteUri.Query);
+            if (StartupReturnUrlHelper.TryNormalize(query["returnUrl"], out var returnUrl))
+            {
+                return returnUrl;
+            }
+
+            return currentPath.Equals("/profiles", StringComparison.OrdinalIgnoreCase)
+                ? "/profiles"
+                : "/home";
+        }
+
+        if (currentPath == "/")
+        {
+            return "/home";
+        }
+
+        return StartupReturnUrlHelper.NormalizeOrDefault(absoluteUri.PathAndQuery);
+    }
+
+    public static string GetTargetUri(
+        StartupResolutionState state,
+        string requestedReadyUri,
+        string message,
+        string recoveryHint)
+    {
+        var normalizedReadyUri = StartupReturnUrlHelper.NormalizeOrDefault(requestedReadyUri);
+        return state switch
+        {
+            StartupResolutionState.NoProfile or StartupResolutionState.ProfileInvalid
+                => $"/profiles?returnUrl={Uri.EscapeDataString(normalizedReadyUri)}",
+            StartupResolutionState.ProfileValid_NoSync
+                => $"/sync-gate?returnUrl={Uri.EscapeDataString(normalizedReadyUri)}",
+            StartupResolutionState.Ready => normalizedReadyUri,
+            StartupResolutionState.Blocked => BuildBlockingUri(message, recoveryHint),
+            _ => BuildBlockingUri(
                 "Startup routing reached an unknown destination.",
-                "Retry startup after confirming the backend is available.",
-                IsBlocking: true))
+                "Retry startup after confirming the backend is available.")
         };
     }
 
-    private static string BuildProfilesUri(string? returnUrl)
+    public static bool IsCurrentTarget(string? currentRelativeUri, string targetUri)
     {
-        var normalizedReturnUrl = StartupReturnUrlHelper.NormalizeOrDefault(returnUrl);
-        return $"/profiles?returnUrl={Uri.EscapeDataString(normalizedReturnUrl)}";
+        var current = NormalizeUriForComparison(currentRelativeUri);
+        var target = NormalizeUriForComparison(targetUri);
+        return string.Equals(current, target, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string BuildSyncGateUri(string? returnUrl)
+    private static string NormalizeUriForComparison(string? relativeUri)
     {
-        var normalizedReturnUrl = StartupReturnUrlHelper.NormalizeOrDefault(returnUrl);
-        return $"/sync-gate?returnUrl={Uri.EscapeDataString(normalizedReturnUrl)}";
+        if (string.IsNullOrWhiteSpace(relativeUri))
+        {
+            return "/";
+        }
+
+        var absoluteUri = new Uri($"https://startup.local/{relativeUri.TrimStart('/')}");
+        var path = StartupGuardRouteMatcher.NormalizePath(absoluteUri.AbsolutePath);
+        return string.IsNullOrEmpty(absoluteUri.Query)
+            ? path
+            : $"{path}{absoluteUri.Query}";
     }
 
-    private static string BuildBlockingUri(StartupRoutingResult routingResult)
+    private static string BuildBlockingUri(string message, string recoveryHint)
     {
-        var message = Uri.EscapeDataString(routingResult.Message);
-        var hint = Uri.EscapeDataString(routingResult.RecoveryHint);
+        message = Uri.EscapeDataString(message);
+        var hint = Uri.EscapeDataString(recoveryHint);
         return $"/startup-blocked?message={message}&hint={hint}";
     }
 }

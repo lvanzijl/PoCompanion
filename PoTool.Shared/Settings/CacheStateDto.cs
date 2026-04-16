@@ -83,6 +83,21 @@ public class CacheStateDto
     public string? LastErrorMessage { get; set; }
 
     /// <summary>
+    /// Work item watermark captured by the latest successful sync.
+    /// </summary>
+    public DateTimeOffset? WorkItemWatermark { get; set; }
+
+    /// <summary>
+    /// Pull request watermark captured by the latest successful sync.
+    /// </summary>
+    public DateTimeOffset? PullRequestWatermark { get; set; }
+
+    /// <summary>
+    /// Canonical pipeline finish watermark captured by the latest successful sync.
+    /// </summary>
+    public DateTimeOffset? PipelineFinishWatermark { get; set; }
+
+    /// <summary>
     /// Current sync stage when SyncStatus is InProgress.
     /// </summary>
     public string? CurrentSyncStage { get; set; }
