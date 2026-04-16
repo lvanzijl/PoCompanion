@@ -11,13 +11,14 @@ public static class DataSourceModeEndpointMetadataResolver
         ArgumentNullException.ThrowIfNull(context);
 
         var path = context.Request.Path.Value;
-        return TryGetRouteIntent(context.GetEndpoint()?.Metadata, out var routeIntent)
+        var routeIntent = ResolveMetadataRouteIntent(context.GetEndpoint()?.Metadata, path);
+        return routeIntent != RouteIntent.Unknown
             ? routeIntent
             : DataSourceModeConfiguration.ResolveRouteIntentOrThrow(path);
     }
 
     public static bool RequiresCache(Endpoint? endpoint, string? path = null)
-        => ResolveRouteIntent(endpoint?.Metadata, path) == RouteIntent.CacheOnlyAnalyticalRead;
+        => ResolveRouteIntent(endpoint?.Metadata?.OfType<object>().ToArray(), path) == RouteIntent.CacheOnlyAnalyticalRead;
 
     public static bool RequiresCache(ActionDescriptor actionDescriptor, string? path = null)
     {
@@ -30,8 +31,13 @@ public static class DataSourceModeEndpointMetadataResolver
     {
         ArgumentNullException.ThrowIfNull(methodInfo);
 
-        return ResolveDeclaredRouteIntent(methodInfo) == RouteIntent.CacheOnlyAnalyticalRead
-            || ResolveRouteIntent(path) == RouteIntent.CacheOnlyAnalyticalRead;
+        var declaredRouteIntent = ResolveDeclaredRouteIntent(methodInfo);
+        if (declaredRouteIntent != RouteIntent.Unknown)
+        {
+            return declaredRouteIntent == RouteIntent.CacheOnlyAnalyticalRead;
+        }
+
+        return ResolveRouteIntent(path) == RouteIntent.CacheOnlyAnalyticalRead;
     }
 
     public static RouteIntent ResolveDeclaredRouteIntent(MethodInfo methodInfo)
@@ -45,29 +51,15 @@ public static class DataSourceModeEndpointMetadataResolver
 
     public static bool TryGetRouteIntent(EndpointMetadataCollection? metadata, out RouteIntent routeIntent)
     {
-        if (metadata is not null)
-        {
-            var classification = metadata.GetMetadata<IDataSourceModeMetadata>();
-            if (classification is not null)
-            {
-                routeIntent = classification.RouteIntent;
-                return true;
-            }
-        }
-
-        routeIntent = RouteIntent.Unknown;
-        return false;
+        routeIntent = ResolveMetadataRouteIntent(metadata, path: null);
+        return routeIntent != RouteIntent.Unknown;
     }
 
     private static RouteIntent ResolveRouteIntent(IList<object>? metadata, string? path)
     {
         if (metadata is not null)
         {
-            var classification = metadata.OfType<IDataSourceModeMetadata>().LastOrDefault();
-            if (classification is not null)
-            {
-                return classification.RouteIntent;
-            }
+            return ResolveMetadataRouteIntent(metadata, path);
         }
 
         return ResolveRouteIntent(path);
@@ -77,4 +69,15 @@ public static class DataSourceModeEndpointMetadataResolver
         => path is null
             ? RouteIntent.Unknown
             : DataSourceModeConfiguration.GetRouteIntent(path);
+
+    private static RouteIntent ResolveMetadataRouteIntent(IEnumerable<object>? metadata, string? path)
+    {
+        var classifications = metadata?.OfType<IDataSourceModeMetadata>().ToArray() ?? [];
+        return classifications.Length switch
+        {
+            0 => RouteIntent.Unknown,
+            1 => classifications[0].RouteIntent,
+            _ => throw new InvalidOperationException($"Endpoint '{path ?? "<unknown>"}' has multiple DataSourceMode metadata entries.")
+        };
+    }
 }

@@ -21,7 +21,10 @@ public sealed class DataSourceModeEndpointMetadataConvention : IApplicationModel
                     continue;
                 }
 
-                action.EndpointMetadata.Add(new DataSourceModeMetadata(resolvedRouteIntent.Value));
+                foreach (var selector in action.Selectors)
+                {
+                    selector.EndpointMetadata.Add(new DataSourceModeMetadata(resolvedRouteIntent.Value));
+                }
             }
         }
     }

@@ -1,15 +1,16 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using System.Text.RegularExpressions;
 
 namespace PoTool.Api.Configuration;
 
 public static class DataSourceModeEndpointValidation
 {
-    public static void ValidateManagedEndpoints(IServiceProvider services)
+    public static void ValidateManagedEndpoints(IEndpointRouteBuilder endpointRouteBuilder)
     {
-        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(endpointRouteBuilder);
 
-        var endpoints = services
-            .GetServices<EndpointDataSource>()
+        var endpoints = endpointRouteBuilder.DataSources
             .SelectMany(dataSource => dataSource.Endpoints);
 
         ValidateManagedEndpoints(endpoints);
@@ -78,8 +79,15 @@ public static class DataSourceModeEndpointValidation
             normalized = "/" + normalized;
         }
 
-        return normalized.Length > 1
+        normalized = normalized.Length > 1
             ? normalized.TrimEnd('/')
             : normalized;
+
+        return Regex.Replace(
+            normalized,
+            @"\{([^}:]+)(?::([^}]+))?\}",
+            match => string.Equals(match.Groups[2].Value, "int", StringComparison.OrdinalIgnoreCase) ? "123" : "sample",
+            RegexOptions.None,
+            TimeSpan.FromSeconds(1));
     }
 }

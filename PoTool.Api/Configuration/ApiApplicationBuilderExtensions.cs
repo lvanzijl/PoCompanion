@@ -198,12 +198,21 @@ public static class ApiApplicationBuilderExtensions
         // Add a defensive guard to ensure cache-only analytical routes never execute in Live mode.
         app.UseMiddleware<PoTool.Api.Middleware.WorkspaceGuardMiddleware>();
 
+        app.MapPoToolEndpoints();
+
+        return app;
+    }
+
+    public static WebApplication MapPoToolEndpoints(this WebApplication app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
         app.MapControllers();
 
         // Map SignalR hub for cache sync progress updates
         app.MapHub<CacheSyncHub>("/hubs/cachesync")
             .WithDataSourceMode(RouteIntent.LiveAllowed);
-        
+
         // Map SignalR hub for TFS config progress updates
         app.MapHub<TfsConfigHub>("/hubs/tfsconfig")
             .WithDataSourceMode(RouteIntent.LiveAllowed);
@@ -326,7 +335,7 @@ public static class ApiApplicationBuilderExtensions
             response.Headers.Append("X-Accel-Buffering", "no"); // Disable nginx buffering
 
             var writer = new StreamWriter(response.Body);
-            
+
             // Helper to broadcast via SignalR AND write to HTTP stream for compatibility
             async Task BroadcastAndWriteAsync(string phase, ProgressState state, string message, int? percentComplete, string? details)
             {
@@ -374,7 +383,7 @@ public static class ApiApplicationBuilderExtensions
                 // Phase 3: Verify TFS API capabilities
                 await BroadcastAndWriteAsync("Verifying API", ProgressState.Running, "Running TFS API capability checks...", 50, null);
                 var report = await client.VerifyCapabilitiesAsync(false, null, ct);
-                
+
                 // Report individual check results as sub-progress
                 int checkIndex = 0;
                 int totalChecks = report.Checks.Count;
@@ -433,8 +442,7 @@ public static class ApiApplicationBuilderExtensions
         // Fallback to index.html for client-side routing
         app.MapFallbackToFile("index.html");
 
-        DataSourceModeEndpointValidation.ValidateManagedEndpoints(app.Services);
-
+        DataSourceModeEndpointValidation.ValidateManagedEndpoints(app);
         return app;
     }
 

@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-16",
+    "type": "Changed",
+    "title": "API startup now fails fast if any managed endpoint skips data-source classification",
+    "impact": "Managed API, health, and SignalR endpoints now declare their data-source mode classification directly in endpoint metadata, the middleware reads that metadata instead of relying primarily on string route matching, and startup validation now blocks the app immediately if a managed endpoint is missing or duplicates classification metadata, preventing new unclassified routes from reaching runtime.",
+    "area": "API / Startup / Data Source Mode",
+    "link": "/"
+  },
+  {
+    "date": "2026-04-16",
     "type": "Fixed",
     "title": "Startup-state route now loads through the governed API data-source classifier",
     "impact": "The authoritative `/api/startup-state` startup gate is now explicitly classified as a live-allowed startup/configuration read, so first-load navigation no longer fails inside the data-source mode middleware before the startup-state contract can resolve Profiles, Sync Gate, blocked startup, or the requested route.",
