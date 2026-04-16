@@ -61,70 +61,15 @@
     </MudPaper>
 
     <MudPaper Elevation="1" Class="pa-4 mb-4">
-        @if (!string.IsNullOrWhiteSpace(_loadError))
-        {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
-                    <MudText Typo="Typo.body2">@_loadError</MudText>
-                    <CompactButton ButtonRole="ButtonRole.Utility"
-                                   Icon="@Icons.Material.Filled.Refresh"
-                                   OnClick="RetryLoadAsync">
-                        Retry
-                    </CompactButton>
-                </MudStack>
-            </MudAlert>
-        }
-        else if (_isLoading)
-        {
-            <MudGrid Spacing="2">
-                @for (var index = 0; index < 3; index++)
-                {
-                    <MudItem xs="12" md="6" lg="4" @key="@($"build-quality-placeholder-{index}")">
-                        <MudCard Elevation="2">
-                            <MudCardContent>
-                                <MudSkeleton SkeletonType="SkeletonType.Text" Height="28px" Width="160px" Class="mb-3" />
-                                <MudGrid Spacing="2">
-                                    <MudItem xs="12" md="4">
-                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
-                                    </MudItem>
-                                    <MudItem xs="12" md="4">
-                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
-                                    </MudItem>
-                                    <MudItem xs="12" md="4">
-                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
-                                    </MudItem>
-                                </MudGrid>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                }
-            </MudGrid>
-        }
-        else if (_buildQualityResponse?.State == CacheBackedClientState.NotReady)
-        {
-            <DataStatePanel State="DataStateDto.NotReady"
-                            Subject="Build Quality overview"
-                            Reason="@_buildQualityResponse.Reason"
-                            ProductOwnerId="@_activeProfileId"
-                            OnRecovery="@RetryLoadAsync" />
-        }
-        else if (_buildQualityResponse?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
-        {
-            <DataStatePanel State="DataStateDto.Failed"
-                            Subject="Build Quality overview"
-                            Reason="@(_buildQualityResponse?.Reason)"
-                            OnRecovery="@RetryLoadAsync" />
-        }
-        else if (_buildQualityResponse?.State == CacheBackedClientState.Empty || _buildQualityPage is null || !_buildQualityPage.Products.Any())
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                @(_buildQualityResponse?.Reason ?? "No Build Quality data is available for the active Product Owner yet.")
-            </MudAlert>
-        }
-        else
-        {
-            <CanonicalFilterMetadataNotice Metadata="_buildQualityFilterNotice" />
-
+        <CanonicalDataStateView TData="SharedBuildQualityPageDto"
+                                State="@_buildQualityViewState"
+                                ProductOwnerId="@_activeProfileId"
+                                Subject="Build Quality overview"
+                                EmptyMessage="No Build Quality data is available for the active Product Owner yet."
+                                FailedMessage="Build Quality overview unavailable right now."
+                                FilterNotice="@_buildQualityFilterNotice"
+                                OnRecovery="@RetryLoadAsync">
+            <ChildContent Context="buildQualityPage">
             <MudStack Spacing="2" Class="mb-4">
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     Showing default-branch Build Quality for @GetWindowLabel().
@@ -132,12 +77,12 @@
 
                 <BuildQualitySummaryComponent Title="Overall Build Quality"
                                               Subtitle="@GetOverallSummarySubtitle()"
-                                              Result="@_buildQualityPage.Summary" />
+                                              Result="@buildQualityPage.Summary" />
 
                 <MudText Typo="Typo.subtitle2">Products</MudText>
 
                 <MudGrid Spacing="2">
-                    @foreach (var product in GetProductsInDisplayOrder())
+                    @foreach (var product in GetProductsInDisplayOrder(buildQualityPage))
                     {
                         <MudItem xs="12" md="6" lg="4" @key="product.ProductId">
                             <BuildQualitySummaryComponent Title="@product.ProductName"
@@ -147,7 +92,8 @@
                     }
                 </MudGrid>
             </MudStack>
-        }
+            </ChildContent>
+        </CanonicalDataStateView>
     </MudPaper>
 </MudContainer>
 
@@ -161,10 +107,9 @@
     private CacheBackedClientResult<CanonicalClientResponse<SharedBuildQualityPageDto>>? _buildQualityResponse;
     private CanonicalFilterMetadata? _buildQualityFilterMetadata;
     private CanonicalFilterNoticeModel? _buildQualityFilterNotice;
-    private string? _loadError;
+    private DataStateViewModel<SharedBuildQualityPageDto> _buildQualityViewState = DataStateViewModel<SharedBuildQualityPageDto>.NotRequested();
     private string? _selectedProductName;
     private int? _activeProfileId;
-    private bool _isLoading = true;
     private DateTimeOffset _windowStartUtc;
     private DateTimeOffset _windowEndUtc;
 
@@ -191,10 +136,9 @@
 
     private async Task LoadOverviewAsync()
     {
-        _isLoading = true;
-        _loadError = null;
         _buildQualityPage = null;
         _buildQualityFilterNotice = null;
+        _buildQualityViewState = DataStateViewModel<SharedBuildQualityPageDto>.Loading();
         _selectedProductName = null;
         await InvokeAsync(StateHasChanged);
 
@@ -208,7 +152,7 @@
             var activeProfile = await ProfileService.GetActiveProfileAsync(_lifetimeCts.Token);
             if (activeProfile is null)
             {
-                _loadError = "No active profile selected.";
+                _buildQualityViewState = DataStateViewModel<SharedBuildQualityPageDto>.Failed("No active profile selected.");
                 return;
             }
 
@@ -224,12 +168,14 @@
                 _buildQualityFilterMetadata = null;
                 _buildQualityFilterNotice = null;
                 _buildQualityPage = null;
+                _buildQualityViewState = _buildQualityResponse.ToViewModel("Build Quality overview unavailable right now.");
                 return;
             }
 
             _buildQualityFilterMetadata = _buildQualityResponse.Data.FilterMetadata;
             _buildQualityFilterNotice = CanonicalClientResponseFactory.CreateNotice(_buildQualityFilterMetadata);
             _buildQualityPage = _buildQualityResponse.Data.Data;
+            _buildQualityViewState = _buildQualityResponse.ToViewModel("Build Quality overview unavailable right now.");
 
             if (ProductId.HasValue)
             {
@@ -247,10 +193,10 @@
             _buildQualityFilterNotice = null;
             _buildQualityResponse = CacheBackedClientResult<CanonicalClientResponse<SharedBuildQualityPageDto>>.Failed($"Build Quality overview unavailable right now: {ex.Message}");
             _buildQualityPage = null;
+            _buildQualityViewState = _buildQualityResponse.ToViewModel("Build Quality overview unavailable right now.");
         }
         finally
         {
-            _isLoading = false;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -265,14 +211,15 @@
         return LoadOverviewAsync();
     }
 
-    private IEnumerable<SharedBuildQualityProductDto> GetProductsInDisplayOrder()
+    private IEnumerable<SharedBuildQualityProductDto> GetProductsInDisplayOrder(SharedBuildQualityPageDto? buildQualityPage = null)
     {
-        if (_buildQualityPage is null)
+        buildQualityPage ??= _buildQualityPage;
+        if (buildQualityPage is null)
         {
             return Array.Empty<SharedBuildQualityProductDto>();
         }
 
-        return _buildQualityPage.Products
+        return buildQualityPage.Products
             .OrderByDescending(product => ProductId.HasValue && product.ProductId == ProductId.Value)
             .ThenBy(product => product.ProductName, StringComparer.OrdinalIgnoreCase);
     }

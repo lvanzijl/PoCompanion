@@ -37,49 +37,27 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Sprint activity"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId"
-                        OnRecovery="@ReloadActivityAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Sprint activity"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@ReloadActivityAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
-    }
-    else if (_details == null)
-    {
-        <MudAlert Severity="Severity.Warning">No activity details available for this work item.</MudAlert>
-    }
-    else
-    {
-        <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
-
+    <CanonicalDataStateView TData="WorkItemActivityDetailsDto"
+                            State="@_activityState"
+                            ProductOwnerId="@_profileId"
+                            Subject="Sprint activity"
+                            EmptyMessage="No activity details available for this work item."
+                            InvalidMessage="Adjust the current filter selection to load sprint activity."
+                            FailedMessage="Sprint activity could not be loaded right now."
+                            OnRecovery="@ReloadActivityAsync">
+        <ChildContent Context="details">
         @* Work item metadata *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudStack Spacing="1">
-                <MudText Typo="Typo.h6">@_details.WorkItemType #@_details.WorkItemId</MudText>
-                <MudText Typo="Typo.body1">@_details.WorkItemTitle</MudText>
-                @if (_details.PeriodStartUtc.HasValue || _details.PeriodEndUtc.HasValue)
+                <MudText Typo="Typo.h6">@details.WorkItemType #@details.WorkItemId</MudText>
+                <MudText Typo="Typo.body1">@details.WorkItemTitle</MudText>
+                @if (details.PeriodStartUtc.HasValue || details.PeriodEndUtc.HasValue)
                 {
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
                         Period:
-                        @(_details.PeriodStartUtc?.ToString("u") ?? "Start unbounded")
+                        @(details.PeriodStartUtc?.ToString("u") ?? "Start unbounded")
                         –
-                        @(_details.PeriodEndUtc?.ToString("u") ?? "End unbounded")
+                        @(details.PeriodEndUtc?.ToString("u") ?? "End unbounded")
                     </MudText>
                 }
             </MudStack>
@@ -215,30 +193,26 @@
                 </MudExpansionPanels>
             }
         </MudPaper>
-    }
+        </ChildContent>
+    </CanonicalDataStateView>
 </MudContainer>
 
 @code {
     [Parameter]
     public int WorkItemId { get; set; }
 
-    private bool _isLoading = true;
-    private string? _errorMessage;
-    private WorkItemActivityDetailsDto? _details;
-    private CanonicalFilterNoticeModel? _filterNotice;
+    private DataStateViewModel<WorkItemActivityDetailsDto> _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.NotRequested();
     private List<BreadcrumbItem> _breadcrumbs = new();
     private int? _profileId;
     private string? _returnView;
     private List<SprintDto> _sprints = new();
     private List<WorkItemActivityGroup> _processedGroups = new();
     private ActivitySummary _summary = new();
-    private DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>> _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.NotRequested();
     private IDisposable? _filterSubscription;
     private int? _selectedTeamId => GlobalFilterStore.GetState().TeamId;
     private int? _selectedSprintId => GlobalFilterStore.GetState().Time.Mode == FilterTimeMode.Sprint
         ? GlobalFilterStore.GetState().Time.SprintId
         : null;
-
     // Fields that, when appearing together at the same timestamp, indicate a creation event.
     private static readonly HashSet<string> CreationIndicatorFields = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -272,7 +246,7 @@
         {
             if (WorkItemId <= 0)
             {
-                _errorMessage = "Select a valid work item to view sprint activity.";
+                _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Invalid("Select a valid work item to view sprint activity.");
                 return;
             }
 
@@ -282,7 +256,7 @@
             _profileId = activeProfile?.Id;
             if (!_profileId.HasValue)
             {
-                _errorMessage = "No active profile found.";
+                _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Failed("No active profile found.");
                 return;
             }
 
@@ -292,14 +266,9 @@
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Failed("Sprint activity could not be loaded right now.");
-            _errorMessage = null;
-            _filterNotice = null;
-            Snackbar.Add(_dataState.Reason!, Severity.Error);
-        }
-        finally
-        {
-            _isLoading = false;
+            ResetActivityPresentation();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Failed("Sprint activity could not be loaded right now.");
+            Snackbar.Add(_activityState.Reason!, Severity.Error);
         }
     }
 
@@ -307,14 +276,15 @@
     {
         if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
         {
-            _details = null;
-            _filterNotice = null;
+            ResetActivityPresentation();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Invalid("Adjust the current filter selection to load sprint activity.");
             return;
         }
 
         if (!_profileId.HasValue)
         {
-            _errorMessage = "No active profile found.";
+            ResetActivityPresentation();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Failed("No active profile found.");
             return;
         }
 
@@ -324,7 +294,7 @@
 
         try
         {
-            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Loading();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Loading();
             var response = await MetricsStateService.GetWorkItemActivityDetailsStateAsync(
                 WorkItemId,
                 _profileId.Value,
@@ -332,34 +302,26 @@
                 selectedSprint?.StartUtc,
                 selectedSprint?.EndUtc,
                 CancellationToken.None);
-            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.FromResponse(response, "Sprint activity could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            var envelopeState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.FromResponse(
+                response,
+                "Sprint activity could not be loaded right now.");
+            _activityState = MapActivityState(envelopeState);
+            if (_activityState.Data is not null)
             {
-                return;
-            }
-
-            var envelope = _dataState.Data;
-            if (envelope is null)
-            {
-                return;
-            }
-
-            _filterNotice = CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
-            _details = envelope.Data;
-
-            if (_details != null)
-            {
-                var processed = ProcessActivities(_details.Activities);
+                var processed = ProcessActivities(_activityState.Data.Activities);
                 _processedGroups = GroupByWorkItem(processed);
                 _summary = BuildSummary(processed);
+            }
+            else
+            {
+                ResetActivityPresentation();
             }
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.Failed("Sprint activity could not be loaded right now.");
-            _errorMessage = null;
-            _filterNotice = null;
-            Snackbar.Add(_dataState.Reason!, Severity.Error);
+            ResetActivityPresentation();
+            _activityState = DataStateViewModel<WorkItemActivityDetailsDto>.Failed("Sprint activity could not be loaded right now.");
+            Snackbar.Add(_activityState.Reason!, Severity.Error);
         }
     }
 
@@ -590,6 +552,46 @@
 
     private void HandleGlobalFilterChanged()
         => _ = InvokeAsync(StateHasChanged);
+
+    private void ResetActivityPresentation()
+    {
+        _processedGroups = [];
+        _summary = new ActivitySummary();
+    }
+
+    private static DataStateViewModel<WorkItemActivityDetailsDto> MapActivityState(
+        DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>> envelopeState)
+    {
+        if (envelopeState.Data?.Data is { } details)
+        {
+            return envelopeState.UiState == UiDataState.Invalid
+                ? DataStateViewModel<WorkItemActivityDetailsDto>.Invalid(
+                    reason: envelopeState.Reason ?? "Adjust the current filter selection to load sprint activity.",
+                    data: details,
+                    invalidFields: envelopeState.InvalidFields,
+                    validationMessages: envelopeState.ValidationMessages,
+                    filterMetadata: envelopeState.FilterMetadata)
+                : DataStateViewModel<WorkItemActivityDetailsDto>.Ready(details) with
+                {
+                    FilterMetadata = envelopeState.FilterMetadata,
+                    InvalidFields = envelopeState.InvalidFields,
+                    ValidationMessages = envelopeState.ValidationMessages
+                };
+        }
+
+        return envelopeState.UiState switch
+        {
+            UiDataState.Loading => DataStateViewModel<WorkItemActivityDetailsDto>.Loading(
+                envelopeState.Reason,
+                envelopeState.RetryAfterSeconds,
+                envelopeState.ShowCacheStatus),
+            UiDataState.Invalid => DataStateViewModel<WorkItemActivityDetailsDto>.Invalid(envelopeState.Reason),
+            UiDataState.EmptyButValid => DataStateViewModel<WorkItemActivityDetailsDto>.Empty(
+                envelopeState.Reason ?? "No activity details available for this work item."),
+            UiDataState.Failed => DataStateViewModel<WorkItemActivityDetailsDto>.Failed(envelopeState.Reason),
+            _ => DataStateViewModel<WorkItemActivityDetailsDto>.NotRequested()
+        };
+    }
 
     public void Dispose()
     {

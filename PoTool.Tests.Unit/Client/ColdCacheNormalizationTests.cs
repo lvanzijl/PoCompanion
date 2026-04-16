@@ -9,14 +9,14 @@ namespace PoTool.Tests.Unit.Client;
 public class ColdCacheNormalizationTests
 {
     [TestMethod]
-    public void DataStateViewModel_NotReady_MapsToCanonicalNotReadyState()
+    public void DataStateViewModel_NotReady_MapsToCanonicalLoadingState()
     {
         var model = new DataStateViewModel<string>(DataStateDto.NotReady, Reason: "Sync pending");
 
-        Assert.AreEqual(UiDataState.NotReady, model.UiState);
+        Assert.AreEqual(UiDataState.Loading, model.UiState);
         var display = CacheStatePresentation.Create("Delivery trends", model.State, model.Reason);
-        Assert.AreEqual("Data not ready", display.Title);
-        StringAssert.Contains(display.Message, "Cache not built");
+        Assert.AreEqual("Loading", display.Title);
+        Assert.AreEqual("Sync pending", display.Message);
     }
 
     [TestMethod]
@@ -51,12 +51,12 @@ public class ColdCacheNormalizationTests
     }
 
     [TestMethod]
-    public void StatusTileSignal_NotReady_UsesCanonicalLabel()
+    public void StatusTileSignal_Loading_UsesCanonicalLabel()
     {
-        var signal = StatusTileSignal.NotReady("Cache not built yet for the pipeline tile.");
+        var signal = StatusTileSignal.Loading("Pipeline signal data is still loading from the cache.");
 
-        Assert.AreEqual(TileSignalKind.NotReady, signal.Kind);
-        Assert.AreEqual("Data not ready", signal.Label);
-        StringAssert.Contains(signal.Tooltip, "Cache not built");
+        Assert.AreEqual(TileSignalKind.Loading, signal.Kind);
+        Assert.AreEqual("Loading", signal.Label);
+        StringAssert.Contains(signal.Tooltip, "loading");
     }
 }

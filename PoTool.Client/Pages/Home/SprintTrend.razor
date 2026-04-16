@@ -159,20 +159,17 @@
                     </MudStack>
                 </MudAlert>
             }
-            else if (_buildQualityResponse?.State == CacheBackedClientState.NotReady)
+            else if (_buildQualityResponse is not null && _buildQualityResponse.ToViewModel("Build Quality could not be loaded right now.").UiState is UiDataState.Loading or UiDataState.Failed)
             {
-                <DataStatePanel State="DataStateDto.NotReady"
-                                Subject="Build Quality"
-                                Reason="@(_buildQualityResponse?.Reason)"
-                                ProductOwnerId="@_profileId"
-                                OnRecovery="@RetryBuildQualityLoadAsync" />
-            }
-            else if (_buildQualityResponse?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
-            {
-                <DataStatePanel State="DataStateDto.Failed"
-                                Subject="Build Quality"
-                                Reason="@(_buildQualityResponse?.Reason)"
-                                OnRecovery="@RetryBuildQualityLoadAsync" />
+                <CanonicalDataStateView TData="SharedDeliveryBuildQualityDto"
+                                        State="@_buildQualityResponse.ToViewModel("Build Quality could not be loaded right now.")"
+                                        ProductOwnerId="@_profileId"
+                                        Subject="Build Quality"
+                                        FailedMessage="Build Quality could not be loaded right now."
+                                        OnRecovery="@RetryBuildQualityLoadAsync">
+                    <ChildContent Context="_">
+                    </ChildContent>
+                </CanonicalDataStateView>
             }
             else if (_sprintBuildQuality is null)
             {

@@ -29,18 +29,24 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (_dataState.State == DataStateDto.NotReady)
+    else if (_dataState.UiState == UiDataState.Loading)
     {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Portfolio history"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId" />
+        <CanonicalDataStateView TData="PortfolioProgressDto"
+                                State="@_dataState"
+                                ProductOwnerId="@_profileId"
+                                Subject="Portfolio history">
+            <ChildContent Context="state">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
-    else if (_dataState.State == DataStateDto.Failed)
+    else if (_dataState.UiState == UiDataState.Failed)
     {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Portfolio history"
-                        Reason="@_dataState.Reason" />
+        <CanonicalDataStateView TData="PortfolioProgressDto"
+                                State="@_dataState"
+                                Subject="Portfolio history">
+            <ChildContent Context="state">
+            </ChildContent>
+        </CanonicalDataStateView>
     }
     else if (!string.IsNullOrWhiteSpace(_errorMessage))
     {
@@ -492,7 +498,7 @@
     private IReadOnlyList<PortfolioComparisonItemDto> _changedWorkPackageItems = Array.Empty<PortfolioComparisonItemDto>();
     private IReadOnlyList<PortfolioSnapshotItemDto> _stableWorkPackageItems = Array.Empty<PortfolioSnapshotItemDto>();
     private IReadOnlyList<PortfolioComparisonItemDto> _changedComparisonItems = Array.Empty<PortfolioComparisonItemDto>();
-    private DataStateViewModel<object> _dataState = DataStateViewModel<object>.NotRequested();
+    private DataStateViewModel<PortfolioProgressDto> _dataState = DataStateViewModel<PortfolioProgressDto>.NotRequested();
 
     private sealed record PrimarySignalDisplay(
         string Title,
@@ -528,7 +534,7 @@
 
             _profileId = activeProfile.Id;
             _products = (await ProductService.GetProductsByOwnerAsync(activeProfile.Id)).ToList();
-            _dataState = DataStateViewModel<object>.Loading();
+            _dataState = DataStateViewModel<PortfolioProgressDto>.Loading();
             var progressResponse = await MetricsStateService.GetPortfolioProgressStateAsync(
                 activeProfile.Id,
                 _productId,
@@ -539,9 +545,9 @@
                 _sortDirection,
                 _groupBy);
             _dataState = progressResponse is null
-                ? new DataStateViewModel<object>(DataStateDto.Failed, Reason: "Portfolio history could not be loaded right now.")
-                : new DataStateViewModel<object>(progressResponse.State, progressResponse.Data, progressResponse.Reason, progressResponse.RetryAfterSeconds);
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+                ? DataStateViewModel<PortfolioProgressDto>.Failed("Portfolio history could not be loaded right now.")
+                : DataStateViewModel<PortfolioProgressDto>.FromResponse(progressResponse, "Portfolio history could not be loaded right now.");
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 return;
             }

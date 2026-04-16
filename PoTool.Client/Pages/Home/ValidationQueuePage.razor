@@ -50,11 +50,7 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_recoveryMessage != null)
+    @if (_recoveryMessage != null)
     {
         <GuidedRecoveryPanel Title="@_recoveryTitle"
                              Message="@_recoveryMessage"
@@ -63,47 +59,39 @@
                              SecondaryActionLabel="Home"
                              SecondaryAction="NavigateToHome" />
     }
-    else if (_dataState.State == DataStateDto.NotReady)
+    else
     {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Validation queue"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Validation queue"
-                        Reason="@_dataState.Reason" />
-    }
-    else if (_loadError != null)
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4">@_loadError</MudAlert>
-    }
-    else if (_queue != null)
-    {
+        <CanonicalDataStateView TData="ValidationQueueDto"
+                                State="@ValidationQueueState"
+                                IsLoading="@_isLoading"
+                                ProductOwnerId="@_profileId"
+                                Subject="Validation queue"
+                                EmptyMessage="Validation queue is unavailable for the current selection."
+                                FailedMessage="Validation queue data could not be loaded right now."
+                                OnRecovery="@LoadQueueAsync">
+            <ChildContent Context="queue">
         @* Category summary header *@
         <MudPaper Elevation="1" Class="pa-4 mb-4">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
-                <MudIcon Icon="@ValidationCategoryMeta.GetIcon(_queue.CategoryKey)" Color="@ValidationCategoryMeta.GetColor(_queue.CategoryKey)" Size="Size.Large" />
+                <MudIcon Icon="@ValidationCategoryMeta.GetIcon(queue.CategoryKey)" Color="@ValidationCategoryMeta.GetColor(queue.CategoryKey)" Size="Size.Large" />
                 <MudStack Spacing="0">
-                    <MudText Typo="Typo.h5">@_queue.CategoryLabel</MudText>
+                    <MudText Typo="Typo.h5">@queue.CategoryLabel</MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        @_queue.TotalItemCount work item@(_queue.TotalItemCount == 1 ? "" : "s") affected across @_queue.RuleGroups.Count rule@(_queue.RuleGroups.Count == 1 ? "" : "s")
+                        @queue.TotalItemCount work item@(queue.TotalItemCount == 1 ? "" : "s") affected across @queue.RuleGroups.Count rule@(queue.RuleGroups.Count == 1 ? "" : "s")
                     </MudText>
                 </MudStack>
-                @if (_queue.TotalItemCount > 0)
+                @if (queue.TotalItemCount > 0)
                 {
                     <MudChip T="string"
-                             Color="@ValidationCategoryMeta.GetColor(_queue.CategoryKey)"
+                             Color="@ValidationCategoryMeta.GetColor(queue.CategoryKey)"
                              Size="Size.Medium">
-                        @_queue.TotalItemCount items
+                        @queue.TotalItemCount items
                     </MudChip>
                 }
             </MudStack>
         </MudPaper>
 
-        @if (_queue.RuleGroups.Count == 0)
+        @if (queue.RuleGroups.Count == 0)
         {
             <MudAlert Severity="Severity.Success">
                 No validation issues found for this category. 
@@ -117,7 +105,7 @@
             </MudText>
 
             <MudGrid>
-                @foreach (var group in _queue.RuleGroups)
+                @foreach (var group in queue.RuleGroups)
                 {
                     <MudItem xs="12" sm="6" md="4">
                         <MudCard Elevation="2" Style="height: 100%;" Class="validation-queue-card">
@@ -128,7 +116,7 @@
                                             <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@group.ShortTitle</MudText>
                                         </MudStack>
                                         <MudChip T="string"
-                                                 Color="@ValidationCategoryMeta.GetColor(_queue.CategoryKey)"
+                                                 Color="@ValidationCategoryMeta.GetColor(queue.CategoryKey)"
                                                  Size="Size.Medium">
                                             @group.ItemCount
                                         </MudChip>
@@ -156,6 +144,8 @@
                 }
             </MudGrid>
         }
+            </ChildContent>
+        </CanonicalDataStateView>
     }
 </MudContainer>
 
@@ -184,6 +174,10 @@
     private string? _recoveryPrimaryActionLabel;
     private EventCallback _recoveryPrimaryAction;
     private DataStateViewModel<ValidationQueueDto> _dataState = DataStateViewModel<ValidationQueueDto>.NotRequested();
+    private DataStateViewModel<ValidationQueueDto> ValidationQueueState
+        => !string.IsNullOrWhiteSpace(_loadError)
+            ? DataStateViewModel<ValidationQueueDto>.Failed(_loadError)
+            : _dataState;
 
     protected override async Task OnInitializedAsync()
     {
@@ -258,6 +252,9 @@
             new($"{categoryLabel} Queue", null, disabled: true, icon: Icons.Material.Filled.Queue)
         };
     }
+
+    private Task LoadQueueAsync()
+        => OnInitializedAsync();
 
     private void StartFixSession(string ruleId)
     {

@@ -1,91 +1,84 @@
 @using PoTool.Client.Services
 @using PoTool.Client.ApiClient
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
 @using PoTool.Client.Pages.PullRequests.SubComponents
 @using PoTool.Client.Pages.Pipelines.SubComponents
 @using SharedPullRequestMetricsDto = PoTool.Shared.PullRequests.PullRequestMetricsDto
 @inject PullRequestService PullRequestService
 @inject PipelineService PipelineService
-@inject ErrorMessageService ErrorMessageService
-@inject ISnackbar Snackbar
 
 @* Flow Panel - Combined PR and Pipeline metrics for embedding into workspaces *@
 
-<LoadingIndicator IsLoading="@_isLoading" />
+<CanonicalDataStateView TData="FlowPanelData"
+                        State="@_flowState"
+                        Subject="Flow"
+                        EmptyTitle="No flow data available"
+                        EmptyMessage="No PR or pipeline data is available for the current selection."
+                        FailedMessage="Flow data could not be loaded right now."
+                        OnRecovery="@LoadDataAsync">
+    <ChildContent Context="flowData">
+        @if (flowData.PrMetrics.Any())
+        {
+            <MudPaper Elevation="1" Class="pa-4 mb-4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.MergeType" Class="mr-2" />
+                        Pull Request Metrics
+                    </MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                   Color="Color.Primary"
+                                   OnClick="LoadDataAsync"
+                                   Disabled="@(_flowState.UiState == UiDataState.Loading)" />
+                </MudStack>
 
-@if (!_isLoading)
-{
-    <ErrorDisplay ErrorResponse="@_errorResponse" 
-                  Class="mb-4"
-                  OnDismiss="ClearError" />
-
-    @* PR Metrics Section *@
-    @if (_prMetrics.Any())
-    {
-        <MudPaper Elevation="1" Class="pa-4 mb-4">
-            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h6">
+                <PRMetricsSummaryPanel TotalPRs="@GetTotalPRs(flowData.PrMetrics)"
+                                       AvgTimeOpen="@GetAvgTimeOpen(flowData.PrMetrics)"
+                                       AvgIterations="@GetAvgIterations(flowData.PrMetrics)"
+                                       AvgFiles="@GetAvgFiles(flowData.PrMetrics)" />
+            </MudPaper>
+        }
+        else
+        {
+            <MudPaper Elevation="1" Class="pa-4 mb-4">
+                <MudText Typo="Typo.h6" Class="mb-2">
                     <MudIcon Icon="@Icons.Material.Filled.MergeType" Class="mr-2" />
                     Pull Request Metrics
                 </MudText>
-                <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
-                              Color="Color.Primary" 
-                              OnClick="LoadDataAsync"
-                              Disabled="@_isLoading" />
-            </MudStack>
-            
-            <PRMetricsSummaryPanel TotalPRs="@GetTotalPRs()"
-                                   AvgTimeOpen="@GetAvgTimeOpen()"
-                                   AvgIterations="@GetAvgIterations()"
-                                   AvgFiles="@GetAvgFiles()" />
-        </MudPaper>
-    }
-    else
-    {
-        <MudPaper Elevation="1" Class="pa-4 mb-4">
-            <MudText Typo="Typo.h6" Class="mb-2">
-                <MudIcon Icon="@Icons.Material.Filled.MergeType" Class="mr-2" />
-                Pull Request Metrics
-            </MudText>
-            <MudAlert Severity="Severity.Info">No PR data available. Configure repositories in product settings.</MudAlert>
-        </MudPaper>
-    }
+                <MudAlert Severity="Severity.Info">No PR data available. Configure repositories in product settings.</MudAlert>
+            </MudPaper>
+        }
 
-    @* Pipeline Metrics Section *@
-    @if (_pipelineMetrics.Any())
-    {
-        <MudPaper Elevation="1" Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-3">
-                <MudIcon Icon="@Icons.Material.Filled.Engineering" Class="mr-2" />
-                Pipeline Metrics
-            </MudText>
-            
-            <PipelineMetricsSummaryPanel Metrics="@_pipelineMetrics" />
-        </MudPaper>
-    }
-    else
-    {
-        <MudPaper Elevation="1" Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-2">
-                <MudIcon Icon="@Icons.Material.Filled.Engineering" Class="mr-2" />
-                Pipeline Metrics
-            </MudText>
-            <MudAlert Severity="Severity.Info">No pipeline data available. Check that pipelines exist in your Azure DevOps project.</MudAlert>
-        </MudPaper>
-    }
-}
+        @if (flowData.PipelineMetrics.Any())
+        {
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Engineering" Class="mr-2" />
+                    Pipeline Metrics
+                </MudText>
+
+                <PipelineMetricsSummaryPanel Metrics="@flowData.PipelineMetrics" />
+            </MudPaper>
+        }
+        else
+        {
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudText Typo="Typo.h6" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Engineering" Class="mr-2" />
+                    Pipeline Metrics
+                </MudText>
+                <MudAlert Severity="Severity.Info">No pipeline data available. Check that pipelines exist in your Azure DevOps project.</MudAlert>
+            </MudPaper>
+        }
+    </ChildContent>
+</CanonicalDataStateView>
 
 @code {
-    /// <summary>
-    /// Optional product IDs to filter flow data.
-    /// </summary>
     [Parameter]
     public IEnumerable<int>? ProductIds { get; set; }
 
-    private bool _isLoading = true;
-    private List<SharedPullRequestMetricsDto> _prMetrics = new();
-    private List<PipelineMetricsDto> _pipelineMetrics = new();
-    private ErrorResponse? _errorResponse;
+    private DataStateViewModel<FlowPanelData> _flowState = DataStateViewModel<FlowPanelData>.NotRequested();
 
     protected override async Task OnInitializedAsync()
     {
@@ -99,31 +92,27 @@
 
     private async Task LoadDataAsync()
     {
-        _isLoading = true;
+        _flowState = DataStateViewModel<FlowPanelData>.Loading();
         StateHasChanged();
 
         try
         {
-            ClearError();
-            
-            // Load PR and Pipeline metrics in parallel
-            // Convert product IDs to comma-separated string for API
-            string? productIdsParam = ProductIds != null && ProductIds.Any() 
-                ? string.Join(",", ProductIds) 
+            string? productIdsParam = ProductIds != null && ProductIds.Any()
+                ? string.Join(",", ProductIds)
                 : null;
-            
+
             var prTask = PullRequestService.GetMetricsAsync(productIdsParam);
             var pipelineTask = PipelineService.GetMetricsAsync(productIdsParam);
-            
+
             await Task.WhenAll(prTask, pipelineTask);
 
             var prResponse = await prTask;
             var pipelineResponse = await pipelineTask;
 
-            _prMetrics = prResponse.CanUseData
+            var prMetrics = prResponse.CanUseData
                 ? prResponse.Data!.ToList()
                 : new List<PullRequestMetricsDto>();
-            _pipelineMetrics = pipelineResponse.CanUseData
+            var pipelineMetrics = pipelineResponse.CanUseData
                 ? pipelineResponse.Data!.ToList()
                 : new List<PipelineMetricsDto>();
 
@@ -134,60 +123,59 @@
                     : null;
             if (!string.IsNullOrWhiteSpace(failedResponse))
             {
-                throw new InvalidOperationException(failedResponse);
+                _flowState = DataStateViewModel<FlowPanelData>.Failed(failedResponse);
+                return;
             }
-        }
-        catch (Exception ex)
-        {
-            ShowError(ex, "Error loading flow data");
-        }
-        finally
-        {
-            _isLoading = false;
-            StateHasChanged();
-        }
-    }
 
-    private void ShowError(Exception ex, string context)
-    {
-        _errorResponse = ErrorMessageService.GetErrorResponse(ex, context);
+            _flowState = !prMetrics.Any() && !pipelineMetrics.Any()
+                ? DataStateViewModel<FlowPanelData>.Empty("No PR or pipeline data is available for the current selection.")
+                : DataStateViewModel<FlowPanelData>.Ready(new FlowPanelData(prMetrics, pipelineMetrics));
+        }
+        catch (Exception)
+        {
+            _flowState = DataStateViewModel<FlowPanelData>.Failed("Flow data could not be loaded right now.");
+        }
+
         StateHasChanged();
     }
 
-    private void ClearError()
-    {
-        _errorResponse = null;
-    }
+    private static string GetTotalPRs(IReadOnlyList<SharedPullRequestMetricsDto> prMetrics)
+        => prMetrics.Count.ToString();
 
-    private string GetTotalPRs()
+    private static string GetAvgTimeOpen(IReadOnlyList<SharedPullRequestMetricsDto> prMetrics)
     {
-        return _prMetrics.Count.ToString();
-    }
-
-    private string GetAvgTimeOpen()
-    {
-        if (_prMetrics.Count == 0)
+        if (prMetrics.Count == 0)
+        {
             return "0.0d";
-        
-        var avgDays = _prMetrics.Average(m => m.TotalTimeOpen.TotalDays);
+        }
+
+        var avgDays = prMetrics.Average(metric => metric.TotalTimeOpen.TotalDays);
         return $"{avgDays:F1}d";
     }
 
-    private string GetAvgIterations()
+    private static string GetAvgIterations(IReadOnlyList<SharedPullRequestMetricsDto> prMetrics)
     {
-        if (_prMetrics.Count == 0)
+        if (prMetrics.Count == 0)
+        {
             return "0.0";
-        
-        var avgIterations = _prMetrics.Average(m => m.IterationCount);
+        }
+
+        var avgIterations = prMetrics.Average(metric => metric.IterationCount);
         return avgIterations.ToString("F1");
     }
 
-    private string GetAvgFiles()
+    private static string GetAvgFiles(IReadOnlyList<SharedPullRequestMetricsDto> prMetrics)
     {
-        if (_prMetrics.Count == 0)
+        if (prMetrics.Count == 0)
+        {
             return "0.0";
-        
-        var avgFiles = _prMetrics.Average(m => m.TotalFileCount);
+        }
+
+        var avgFiles = prMetrics.Average(metric => metric.TotalFileCount);
         return avgFiles.ToString("F1");
     }
+
+    private sealed record FlowPanelData(
+        IReadOnlyList<SharedPullRequestMetricsDto> PrMetrics,
+        IReadOnlyList<PipelineMetricsDto> PipelineMetrics);
 }

@@ -22,10 +22,6 @@
             </MudStack>
         }
 
-        @if (State == DataStateDto.NotReady && ProductOwnerId.HasValue)
-        {
-            <CacheStatusSection ProductOwnerId="@ProductOwnerId.Value" />
-        }
     </MudStack>
 </MudPaper>
 
@@ -80,7 +76,7 @@
 
     private Severity GetSeverity() => (UiState ?? CacheStatePresentation.ToUiDataState(State)) switch
     {
-        UiDataState.NotReady => Severity.Info,
+        UiDataState.Loading => Severity.Info,
         UiDataState.EmptyButValid => Severity.Info,
         UiDataState.Invalid => Severity.Warning,
         UiDataState.Failed => Severity.Error,

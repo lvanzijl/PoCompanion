@@ -241,6 +241,7 @@ builder.Services.AddScoped<GlobalFilterLabelService>();
 builder.Services.AddScoped<GlobalFilterStore>();
 builder.Services.AddScoped<GlobalFilterUiState>();
 builder.Services.AddScoped<PageFilterExecutionGate>();
+builder.Services.AddScoped<TrendFilterDiagnosticsService>();
 builder.Services.AddScoped<GlobalFilterRouteService>();
 builder.Services.AddScoped<GlobalFilterCorrectionService>();
 builder.Services.AddScoped<GlobalFilterDefaultsService>();

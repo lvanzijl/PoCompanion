@@ -11,19 +11,15 @@
 
 <PageTitle>Multi-Product Planning - PO Companion</PageTitle>
 
-@if (_isLoading)
-{
-    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
-        <MudStack Spacing="2">
-            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="48px" />
-            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
-            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="180px" />
-        </MudStack>
-    </MudContainer>
-}
-else
-{
-    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4 mb-4">
+    <CanonicalDataStateView TData="IReadOnlyList<LoadedProductPlanning>"
+                            State="@_planningState"
+                            Subject="Multi-product planning"
+                            EmptyTitle="No planning projections available"
+                            EmptyMessage="No products with planning projections found. Ensure roadmap epics have forecast data."
+                            FailedMessage="Multi-product planning could not be loaded right now."
+                            OnRecovery="@LoadAsync">
+        <ChildContent Context="_">
         <MudStack Spacing="3">
             @* Header *@
             <MudPaper Elevation="1" Class="pa-3">
@@ -83,21 +79,6 @@ else
                 </MudPaper>
             }
 
-            @if (_loadError != null)
-            {
-                <MudAlert Severity="Severity.Warning">@_loadError</MudAlert>
-            }
-
-            @if (_productLanes.Count == 0 && !_isLoading)
-            {
-                <MudPaper Elevation="1" Class="pa-4">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        No products with planning projections found. Ensure roadmap epics have forecast data.
-                    </MudText>
-                </MudPaper>
-            }
-            else
-            {
                 @* Global axis header *@
                 @if (_globalAxisStart.HasValue && _globalAxisEnd.HasValue)
                 {
@@ -289,10 +270,10 @@ else
                         </MudStack>
                     </MudPaper>
                 }
-            }
         </MudStack>
-    </MudContainer>
-}
+        </ChildContent>
+    </CanonicalDataStateView>
+</MudContainer>
 
 <style>
     .projection-timeline-track {
@@ -392,10 +373,9 @@ else
 </style>
 
 @code {
-    private bool _isLoading = true;
-    private string? _loadError;
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<LoadedProductPlanning> _availableProducts = new();
+    private DataStateViewModel<IReadOnlyList<LoadedProductPlanning>> _planningState = DataStateViewModel<IReadOnlyList<LoadedProductPlanning>>.NotRequested();
     private List<ProductTimelineLane> _productLanes = new();
     private DateTimeOffset? _globalAxisStart;
     private DateTimeOffset? _globalAxisEnd;
@@ -421,8 +401,7 @@ else
 
     private async Task LoadAsync()
     {
-        _isLoading = true;
-        _loadError = null;
+        _planningState = DataStateViewModel<IReadOnlyList<LoadedProductPlanning>>.Loading();
         StateHasChanged();
 
         try
@@ -430,7 +409,9 @@ else
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
             {
-                _loadError = "No active profile found. Select a profile to continue.";
+                _availableProducts = [];
+                RebuildVisibleLanes();
+                _planningState = DataStateViewModel<IReadOnlyList<LoadedProductPlanning>>.Failed("No active profile found. Select a profile to continue.");
                 return;
             }
 
@@ -438,6 +419,8 @@ else
             if (products.Count == 0)
             {
                 _availableProducts = [];
+                RebuildVisibleLanes();
+                RefreshPlanningState();
                 return;
             }
 
@@ -477,14 +460,12 @@ else
                 .ToHashSet();
 
             RebuildVisibleLanes();
+            RefreshPlanningState();
         }
         catch (Exception ex)
         {
-            _loadError = $"Failed to load planning data: {ex.Message}";
-        }
-        finally
-        {
-            _isLoading = false;
+            _planningState = DataStateViewModel<IReadOnlyList<LoadedProductPlanning>>.Failed(
+                $"Failed to load planning data: {ex.Message}");
         }
     }
 
@@ -676,6 +657,7 @@ else
 
         _selectedProductIds = selectedIds;
         RebuildVisibleLanes();
+        RefreshPlanningState();
         return InvokeAsync(StateHasChanged);
     }
 
@@ -751,6 +733,21 @@ else
                         .Distinct()
                         .OrderBy(teamId => teamId)
                         .ToList()));
+    }
+
+    private void RefreshPlanningState()
+    {
+        if (_availableProducts.Count == 0)
+        {
+            _planningState = DataStateViewModel<IReadOnlyList<LoadedProductPlanning>>.Empty(
+                "No products with planning projections found. Ensure roadmap epics have forecast data.");
+            return;
+        }
+
+        _planningState = _productLanes.Count == 0
+            ? DataStateViewModel<IReadOnlyList<LoadedProductPlanning>>.Empty(
+                "No products with planning projections found. Ensure roadmap epics have forecast data.")
+            : DataStateViewModel<IReadOnlyList<LoadedProductPlanning>>.Ready(_availableProducts);
     }
 
     private sealed record ProductTimelineLane(int ProductId, string ProductName, IReadOnlyList<int> TeamIds, SprintCadenceInfo SprintCadence, RoadmapTimelineModel Timeline)

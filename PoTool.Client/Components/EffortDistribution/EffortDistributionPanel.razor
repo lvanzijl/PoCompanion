@@ -1,18 +1,17 @@
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @inject MetricsStateService MetricsStateService
 
 @* Effort Distribution Panel - Reusable component for embedding effort distribution data into workspaces *@
 
-<DataStateView TData="EffortDistributionDto"
-               State="@_distributionState"
-               IsLoading="@_isLoading"
-               EmptyTitle="No Effort Distribution Data Available"
-               EmptyMessage="No work items found to analyze. Please sync work items first."
-               NotReadyTitle="Effort distribution is syncing"
-               NotReadyMessage="Effort distribution data will load once the cache is ready."
-               FailedTitle="Effort distribution failed to load">
+<CanonicalDataStateView TData="EffortDistributionDto"
+                        State="@_distributionState"
+                        Subject="Effort distribution"
+                        EmptyTitle="No Effort Distribution Data Available"
+                        EmptyMessage="No work items found to analyze. Please sync work items first."
+                        FailedTitle="Effort distribution failed to load">
     <ChildContent Context="distributionData">
         <MudGrid Class="mb-4">
             <MetricSummaryCard Label="Total Effort"
@@ -82,7 +81,7 @@
                 <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                                Color="Color.Primary"
                                OnClick="LoadDataAsync"
-                               Disabled="@_isLoading" />
+                               Disabled="@(_distributionState.UiState == UiDataState.Loading)" />
             </MudStack>
             <MudChart ChartType="ChartType.Bar"
                       Width="100%"
@@ -128,7 +127,7 @@
             </MudTable>
         </MudPaper>
     </ChildContent>
-</DataStateView>
+</CanonicalDataStateView>
 
 @code {
     [Parameter]
@@ -140,7 +139,6 @@
     [Parameter]
     public int? DefaultCapacity { get; set; } = 40;
 
-    private bool _isLoading = true;
     private DataStateViewModel<EffortDistributionDto> _distributionState = DataStateViewModel<EffortDistributionDto>.NotRequested();
 
     private ChartOptions _chartOptions = new()
@@ -162,7 +160,6 @@
 
     private async Task LoadDataAsync()
     {
-        _isLoading = true;
         _distributionState = DataStateViewModel<EffortDistributionDto>.Loading();
         StateHasChanged();
 
@@ -174,7 +171,6 @@
         _distributionState = DataStateViewModel<EffortDistributionDto>.FromResponse(
             response,
             "Effort distribution data could not be loaded right now.");
-        _isLoading = false;
         StateHasChanged();
     }
 

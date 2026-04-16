@@ -53,7 +53,7 @@
                          Color="Color.Primary"
                          AnchorOrigin="Origin.BottomLeft"
                          Dense="true"
-                         Disabled="@(_isLoading || _productLanes.Count == 0)">
+                         Disabled="@(_roadmapState.UiState == UiDataState.Loading || _productLanes.Count == 0)">
                     <MudMenuItem OnClick="GenerateVisualRoadmap">
                         <div class="d-flex align-center gap-2">
                             <MudIcon Icon="@Icons.Material.Filled.Slideshow" Size="Size.Small" />
@@ -90,7 +90,7 @@
                          Color="Color.Secondary"
                          AnchorOrigin="Origin.BottomLeft"
                          Dense="true"
-                         Disabled="@(_isLoading)">
+                         Disabled="@(_roadmapState.UiState == UiDataState.Loading)">
                     <MudMenuItem OnClick="OpenCreateSnapshotDialog"
                                  Disabled="@(_productLanes.Count == 0)">
                         <div class="d-flex align-center gap-2">
@@ -124,43 +124,40 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (!string.IsNullOrWhiteSpace(_contextError))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4">
-            @_contextError
-        </MudAlert>
-    }
-    else
-    {
-        @if (_projectPlanningSummary is not null)
-        {
+    <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
+                            State="@ProjectPlanningSummaryState"
+                            ProductOwnerId="@_profileId"
+                            Subject="Project roadmap summary"
+                            EmptyTitle="No project roadmap summary available"
+                            EmptyMessage="No project roadmap summary is available for the selected scope."
+                            FailedMessage="Project roadmap summary could not be loaded right now."
+                            OnRecovery="@LoadProjectPlanningSummaryAsync">
+        <NotRequestedContent>
+        </NotRequestedContent>
+        <ChildContent Context="projectPlanningSummary">
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudStack Spacing="2">
                     <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
                         <MudStack Spacing="0">
                             <MudText Typo="Typo.overline" Color="Color.Secondary">Project roadmap summary</MudText>
-                            <MudText Typo="Typo.h6">@_projectPlanningSummary.ProjectAlias</MudText>
+                            <MudText Typo="Typo.h6">@projectPlanningSummary.ProjectAlias</MudText>
                         </MudStack>
                         <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                             <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
-                                @_projectPlanningSummary.TotalEpics roadmap epics
+                                @projectPlanningSummary.TotalEpics roadmap epics
                             </MudChip>
-                            <MudChip T="string" Variant="Variant.Outlined" Color="@GetRoadmapRiskColor(HasRoadmapDominance())">
-                                @GetRoadmapDominanceLabel()
+                            <MudChip T="string" Variant="Variant.Outlined" Color="@GetRoadmapRiskColor(HasRoadmapDominance(projectPlanningSummary))">
+                                @GetRoadmapDominanceLabel(projectPlanningSummary)
                             </MudChip>
                         </MudStack>
                     </MudStack>
 
                     <MudGrid Spacing="2">
-                        @foreach (var productSummary in _projectPlanningSummary.Products.OrderByDescending(product => product.EpicCount).ThenBy(product => product.ProductName))
+                        @foreach (var productSummary in projectPlanningSummary.Products.OrderByDescending(product => product.EpicCount).ThenBy(product => product.ProductName))
                         {
-                            var epicShare = _projectPlanningSummary.TotalEpics == 0
+                            var epicShare = projectPlanningSummary.TotalEpics == 0
                                 ? 0
-                                : productSummary.EpicCount / (double)_projectPlanningSummary.TotalEpics * 100d;
+                                : productSummary.EpicCount / (double)projectPlanningSummary.TotalEpics * 100d;
 
                             <MudItem xs="12" sm="6" md="4">
                                 <MudPaper Outlined="true" Class="pa-3">
@@ -174,23 +171,20 @@
                     </MudGrid>
                 </MudStack>
             </MudPaper>
-        }
-        else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
-        {
-            <DataStatePanel State="DataStateDto.NotReady"
-                            Subject="Project roadmap summary"
-                            Reason="@_projectPlanningSummaryState.Reason"
-                            ProductOwnerId="@_profileId"
-                            OnRecovery="@LoadProjectPlanningSummaryAsync" />
-        }
-        else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
-        {
-            <DataStatePanel State="DataStateDto.Failed"
-                            Subject="Project roadmap summary"
-                            Reason="@(_projectPlanningSummaryState?.Reason)"
-                            OnRecovery="@LoadProjectPlanningSummaryAsync" />
-        }
+        </ChildContent>
+    </CanonicalDataStateView>
 
+    <CanonicalDataStateView TData="IReadOnlyList<ProductLane>"
+                            State="@_roadmapState"
+                            Subject="Product roadmaps"
+                            EmptyTitle="No roadmap data available"
+                            EmptyMessage="No roadmap epics are available for the selected scope."
+                            InvalidMessage="Adjust the current project or product scope to load product roadmaps."
+                            FailedMessage="Product roadmaps could not be loaded right now."
+                            OnRecovery="@ReloadRoadmapAsync">
+        <NotRequestedContent>
+        </NotRequestedContent>
+        <ChildContent Context="_">
         @* Horizontal Scrollable Product Lanes *@
         <div style="overflow-x: auto; padding-bottom: 16px;">
             <div style="display: flex; gap: 16px; min-width: max-content;">
@@ -512,7 +506,8 @@
                 </MudButton>
             </MudStack>
         </MudPaper>
-    }
+        </ChildContent>
+    </CanonicalDataStateView>
 </MudContainer>
 
 @* --- Create Snapshot Dialog --- *@
@@ -770,16 +765,15 @@
     [Parameter]
     public string? RouteProjectAlias { get; set; }
 
-    private bool _isLoading = true;
     private bool _isReordering = false;
     private int? _profileId;
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<ProductLane> _productLanes = new();
+    private DataStateViewModel<IReadOnlyList<ProductLane>> _roadmapState = DataStateViewModel<IReadOnlyList<ProductLane>>.NotRequested();
     private List<ProductDto> _allProducts = new();
     private List<ProductDto> _products = new();
     private List<ProjectDto> _projects = new();
     private string? _selectedProjectRouteKey;
-    private ProjectPlanningSummaryDto? _projectPlanningSummary;
     private CacheBackedClientResult<ProjectPlanningSummaryDto>? _projectPlanningSummaryState;
     private TfsConfigDto? _tfsConfig;
     private readonly IReadOnlyList<PromptTemplateOption> _promptTemplates = RoadmapReportingService.GetAvailableTemplates();
@@ -794,11 +788,17 @@
     private IDisposable? _filterSubscription;
     private string? _contextError;
 
+    private DataStateViewModel<ProjectPlanningSummaryDto> ProjectPlanningSummaryState
+        => string.IsNullOrWhiteSpace(_selectedProjectRouteKey) || _projectPlanningSummaryState is null
+            ? DataStateViewModel<ProjectPlanningSummaryDto>.NotRequested()
+            : _projectPlanningSummaryState.ToViewModel("Project roadmap summary could not be loaded right now.");
+
     protected override async Task OnInitializedAsync()
     {
         _filterSubscription = GlobalFilterStore.Subscribe(HandleGlobalFilterChanged);
         try
         {
+            _roadmapState = DataStateViewModel<IReadOnlyList<ProductLane>>.Loading();
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
             {
@@ -826,11 +826,8 @@
         }
         catch (Exception ex)
         {
+            _roadmapState = DataStateViewModel<IReadOnlyList<ProductLane>>.Failed("Product roadmaps could not be loaded right now.");
             Snackbar.Add($"Error loading roadmap data: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isLoading = false;
         }
     }
 
@@ -840,6 +837,7 @@
 
         if (!string.IsNullOrWhiteSpace(_contextError))
         {
+            _roadmapState = DataStateViewModel<IReadOnlyList<ProductLane>>.Invalid(_contextError);
             return;
         }
 
@@ -965,6 +963,7 @@
             .OrderBy(l => l.ObjectiveBacklogPriority ?? double.MaxValue)
             .ThenBy(l => l.ObjectiveTfsId)
             .ToList();
+        RefreshRoadmapState();
     }
 
     private string? BuildTfsUrl(int workItemId)
@@ -1198,14 +1197,10 @@
         if (string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
         {
             _projectPlanningSummaryState = CacheBackedClientResult<ProjectPlanningSummaryDto>.Empty();
-            _projectPlanningSummary = null;
             return;
         }
 
         _projectPlanningSummaryState = await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
-        _projectPlanningSummary = _projectPlanningSummaryState.State == CacheBackedClientState.Success
-            ? _projectPlanningSummaryState.Data
-            : null;
     }
 
     private async Task OnProjectChanged(string? projectRouteKey)
@@ -1258,6 +1253,9 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private Task ReloadRoadmapAsync()
+        => BuildProductLanesAsync();
+
     private void RefreshContextError()
     {
         var usage = GlobalFilterStore.CurrentUsage;
@@ -1273,35 +1271,48 @@
             : null;
     }
 
+    private void RefreshRoadmapState()
+    {
+        if (!string.IsNullOrWhiteSpace(_contextError))
+        {
+            _roadmapState = DataStateViewModel<IReadOnlyList<ProductLane>>.Invalid(_contextError);
+            return;
+        }
+
+        _roadmapState = _productLanes.Count == 0
+            ? DataStateViewModel<IReadOnlyList<ProductLane>>.Empty("No roadmap epics are available for the selected scope.")
+            : DataStateViewModel<IReadOnlyList<ProductLane>>.Ready(_productLanes);
+    }
+
     public void Dispose()
         => _filterSubscription?.Dispose();
 
-    private bool HasRoadmapDominance()
+    private static bool HasRoadmapDominance(ProjectPlanningSummaryDto projectPlanningSummary)
     {
-        if (_projectPlanningSummary is null || _projectPlanningSummary.TotalEpics <= 0 || _projectPlanningSummary.Products.Count == 0)
+        if (projectPlanningSummary.TotalEpics <= 0 || projectPlanningSummary.Products.Count == 0)
         {
             return false;
         }
 
-        var leadingEpicCount = _projectPlanningSummary.Products.Max(static product => product.EpicCount);
-        return leadingEpicCount / (double)_projectPlanningSummary.TotalEpics > 0.6d;
+        var leadingEpicCount = projectPlanningSummary.Products.Max(static product => product.EpicCount);
+        return leadingEpicCount / (double)projectPlanningSummary.TotalEpics > 0.6d;
     }
 
-    private string GetRoadmapDominanceLabel()
+    private static string GetRoadmapDominanceLabel(ProjectPlanningSummaryDto projectPlanningSummary)
     {
-        if (_projectPlanningSummary is null || _projectPlanningSummary.Products.Count == 0 || _projectPlanningSummary.TotalEpics <= 0)
+        if (projectPlanningSummary.Products.Count == 0 || projectPlanningSummary.TotalEpics <= 0)
         {
             return "Roadmap balance unavailable";
         }
 
-        var leadingProduct = _projectPlanningSummary.Products.MaxBy(static product => product.EpicCount);
+        var leadingProduct = projectPlanningSummary.Products.MaxBy(static product => product.EpicCount);
         if (leadingProduct == null)
         {
             return "Roadmap balance unavailable";
         }
 
-        var share = leadingProduct.EpicCount / (double)_projectPlanningSummary.TotalEpics * 100d;
-        return HasRoadmapDominance()
+        var share = leadingProduct.EpicCount / (double)projectPlanningSummary.TotalEpics * 100d;
+        return HasRoadmapDominance(projectPlanningSummary)
             ? $"{leadingProduct.ProductName} dominates with {share:F0}% of roadmap epics"
             : "Roadmap epics are distributed across products";
     }

@@ -38,66 +38,56 @@
         </MudStack>
     </MudPaper>
 
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Portfolio delivery"
-                        Reason="@_dataState.Reason"
+    <TrendDataStateView TData="DeliveryQueryResponseDto<PortfolioDeliveryDto>"
+                        State="@_dataState"
+                        IsLoading="@_isLoading"
+                        FilterNotice="@_filterNotice"
                         ProductOwnerId="@_profileId"
-                        OnRecovery="@LoadInitialDataAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
                         Subject="Portfolio delivery"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@LoadInitialDataAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _errorMessage = null)">
-            @_errorMessage
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadInitialDataAsync" Class="ml-2">
-                Retry
-            </MudButton>
-        </MudAlert>
-    }
-    else
-    {
-        <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
-
-
+                        InvalidMessage="Adjust the selected team or sprint range to load portfolio delivery."
+                        FailedMessage="The portfolio delivery request failed."
+                        NotReadyMessage="Portfolio delivery will load once the cache is ready."
+                        OnRecovery="@LoadInitialDataAsync">
+        <NotRequestedContent>
+            @if (_selectedSprintIds.Count == 0 && _sprints.Any())
+            {
+                <MudPaper Elevation="1" Class="pa-6 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="Color.Secondary" Style="font-size: 2.5rem;" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+                        Select a sprint range above to view the portfolio delivery snapshot.
+                    </MudText>
+                </MudPaper>
+            }
+            else if (!_sprints.Any() && !_isLoading)
+            {
+                <MudPaper Elevation="1" Class="pa-6 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Secondary" Style="font-size: 2.5rem;" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+                        Select a team to load sprints.
+                    </MudText>
+                </MudPaper>
+            }
+        </NotRequestedContent>
+        <ChildContent Context="_">
+        @{ var data = _data!; }
         @if (_deliveryLoading)
         {
             <MudProgressLinear Indeterminate="true" Color="Color.Warning" Class="mb-4" />
         }
 
-        @if (_data == null && !_deliveryLoading && _selectedSprintIds.Count > 0)
-        {
-            <MudAlert Severity="Severity.Info" Class="mb-4">
-                No delivery data found for the selected sprint range.
-            </MudAlert>
-        }
-
-        @if (_data != null)
-        {
             @* ── Section header *@
             <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-1" Spacing="1">
                 <MudText Typo="Typo.overline" Color="Color.Secondary">
-                    @if (_data.SprintCount == 1)
+                    @if (data.SprintCount == 1)
                     {
                         <text>Single sprint snapshot</text>
                     }
                     else
                     {
-                        <text>Aggregated snapshot — @_data.SprintCount sprints</text>
+                        <text>Aggregated snapshot — @data.SprintCount sprints</text>
                     }
                 </MudText>
-                @if (_data.SprintCount > 1)
+                @if (data.SprintCount > 1)
                 {
                     <MudTooltip Text="Multiple sprints selected. All metrics are aggregated (summed) across the sprint range. This is a composition view — no time trends are shown.">
                         <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
@@ -115,37 +105,37 @@
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Success">@_data.Summary.TotalCompletedPbis</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Success">@data.Summary.TotalCompletedPbis</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Delivered Effort (hours)</MudText>
-                            <MudText Typo="Typo.h5">@_data.Summary.TotalCompletedEffort</MudText>
+                            <MudText Typo="Typo.h5">@data.Summary.TotalCompletedEffort</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Avg. Progress</MudText>
-                            <MudText Typo="Typo.h5">@_data.Summary.AverageProgressPercent.ToString("F0")<MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true">%</MudText></MudText>
+                            <MudText Typo="Typo.h5">@data.Summary.AverageProgressPercent.ToString("F0")<MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true">%</MudText></MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Created</MudText>
-                            <MudText Typo="Typo.h5" Color="@(_data.Summary.TotalBugsCreated > 0 ? Color.Warning : Color.Default)">@_data.Summary.TotalBugsCreated</MudText>
+                            <MudText Typo="Typo.h5" Color="@(data.Summary.TotalBugsCreated > 0 ? Color.Warning : Color.Default)">@data.Summary.TotalBugsCreated</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Worked</MudText>
-                            <MudText Typo="Typo.h5">@_data.Summary.TotalBugsWorked</MudText>
+                            <MudText Typo="Typo.h5">@data.Summary.TotalBugsWorked</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Closed</MudText>
-                            <MudText Typo="Typo.h5" Color="@(_data.Summary.TotalBugsClosed > 0 ? Color.Success : Color.Default)">@_data.Summary.TotalBugsClosed</MudText>
+                            <MudText Typo="Typo.h5" Color="@(data.Summary.TotalBugsClosed > 0 ? Color.Success : Color.Default)">@data.Summary.TotalBugsClosed</MudText>
                         </MudPaper>
                     </MudItem>
                 </MudGrid>
@@ -163,13 +153,13 @@
                                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
                             </MudTooltip>
                         </MudText>
-                        @if (_data.Products.Count == 0)
+                        @if (data.Products.Count == 0)
                         {
                             <MudText Typo="Typo.body2" Color="Color.Secondary">No delivery data available.</MudText>
                         }
                         else
                         {
-                            @foreach (var product in _data.Products)
+                            @foreach (var product in data.Products)
                             {
                                 <MudStack Class="mb-2" Spacing="0">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -199,13 +189,13 @@
                                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
                             </MudTooltip>
                         </MudText>
-                        @if (_data.TopFeatures.Count == 0)
+                        @if (data.TopFeatures.Count == 0)
                         {
                             <MudText Typo="Typo.body2" Color="Color.Secondary">No feature delivery data available for the selected sprint range.</MudText>
                         }
                         else
                         {
-                            @foreach (var feature in _data.TopFeatures)
+                            @foreach (var feature in data.TopFeatures)
                             {
                                 <MudStack Class="mb-2" Spacing="0">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -238,7 +228,7 @@
             </MudGrid>
 
             @* ── Bug distribution summary ── *@
-            @if (_data.Products.Any(p => p.BugsCreated > 0 || p.BugsWorked > 0 || p.BugsClosed > 0))
+            @if (data.Products.Any(p => p.BugsCreated > 0 || p.BugsWorked > 0 || p.BugsClosed > 0))
             {
                 <MudPaper Elevation="2" Class="pa-3 mb-3">
                     <MudText Typo="Typo.subtitle1" Class="mb-2">
@@ -259,7 +249,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var product in _data.Products.OrderByDescending(p => p.BugsCreated))
+                            @foreach (var product in data.Products.OrderByDescending(p => p.BugsCreated))
                             {
                                 var net = product.BugsCreated - product.BugsClosed;
                                 <tr>
@@ -298,7 +288,7 @@
                     </MudSimpleTable>
                 </MudPaper>
             }
-            else if (_data.HasData)
+            else if (data.HasData)
             {
                 <MudPaper Elevation="2" Class="pa-3 mb-3">
                     <MudText Typo="Typo.subtitle1" Class="mb-2">
@@ -308,29 +298,9 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">No bug activity recorded for the selected sprint range.</MudText>
                 </MudPaper>
             }
-        }
 
-        @* Initial state — no sprint range selected *@
-        @if (_data == null && !_deliveryLoading && _selectedSprintIds.Count == 0 && _sprints.Any())
-        {
-            <MudPaper Elevation="1" Class="pa-6 text-center">
-                <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="Color.Secondary" Style="font-size: 2.5rem;" />
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
-                    Select a sprint range above to view the portfolio delivery snapshot.
-                </MudText>
-            </MudPaper>
-        }
-
-        @if (!_sprints.Any() && !_isLoading)
-        {
-            <MudPaper Elevation="1" Class="pa-6 text-center">
-                <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Secondary" Style="font-size: 2.5rem;" />
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
-                    Select a team to load sprints.
-                </MudText>
-            </MudPaper>
-        }
-    }
+        </ChildContent>
+    </TrendDataStateView>
 </MudContainer>
 
 <style>
@@ -391,6 +361,8 @@
             _isLoading = true;
             _errorMessage = null;
             _data = null;
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.NotRequested();
+            _filterNotice = null;
 
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
@@ -446,11 +418,15 @@
 
     private async Task LoadDeliveryDataAsync()
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        var evaluation = PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+        if (!evaluation.CanExecuteQueries)
         {
             _selectedSprintIds = new List<int>();
             _data = null;
             _filterNotice = null;
+            _dataState = TrendUiStateFactory.InvalidFilter<DeliveryQueryResponseDto<PortfolioDeliveryDto>>(
+                evaluation,
+                "Select a valid team and sprint range to load portfolio delivery.");
             return;
         }
 
@@ -459,15 +435,20 @@
             _selectedSprintIds = new List<int>();
             _data = null;
             _filterNotice = null;
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.NotRequested();
             return;
         }
 
         // Build sprint ID list from the from/to range
-        _selectedSprintIds = BuildSprintRange(_fromSprintId, _toSprintId);
-        if (_selectedSprintIds.Count == 0)
+        var timeRange = GlobalFilterTrendRequestMapper.ResolveRange(GlobalFilterStore.GetState(), _sprints);
+        _selectedSprintIds = timeRange.SprintIds.ToList();
+        if (!timeRange.IsResolved || _selectedSprintIds.Count == 0)
         {
             _data = null;
             _filterNotice = null;
+            _dataState = TrendUiStateFactory.InvalidFilter<DeliveryQueryResponseDto<PortfolioDeliveryDto>>(
+                timeRange.FailureReason ?? "The selected sprint range could not be resolved.",
+                [GlobalFilterValidationMapper.Time]);
             return;
         }
 
@@ -480,24 +461,27 @@
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.Loading();
             var response = await MetricsStateService.GetPortfolioDeliveryStateAsync(
                 _profileId.Value,
-                _selectedSprintIds,
+                timeRange,
                 GlobalFilterStore.GetState().ProductIds.Count > 0 ? GlobalFilterStore.GetState().ProductIds : null,
                 CancellationToken.None);
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.FromResponse(response, "Portfolio delivery data could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 _data = null;
-                _filterNotice = null;
                 return;
             }
 
             var envelope = _dataState.Data;
             _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
             _data = envelope?.Data.HasData == true ? envelope.Data : null;
+            if (_data is null)
+            {
+                _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.Empty("No data for selected period.");
+            }
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.Failed("Portfolio delivery could not be loaded right now.");
+            _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.Failed("The portfolio delivery request failed.");
             Snackbar.Add(_dataState.Reason!, Severity.Error);
             _data = null;
             _filterNotice = null;

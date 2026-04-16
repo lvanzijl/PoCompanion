@@ -1,0 +1,62 @@
+@typeparam TData
+@using PoTool.Client.Models
+
+<CanonicalDataStateView TData="TData"
+                        State="@State"
+                        IsLoading="@IsLoading"
+                        ProductOwnerId="@ProductOwnerId"
+                        Subject="@Subject"
+                        EmptyTitle="No data for selected period"
+                        EmptyMessage="@EmptyMessage"
+                        InvalidTitle="Invalid filter selection"
+                        InvalidMessage="@InvalidMessage"
+                        FailedTitle="Failed to load data"
+                        FailedMessage="@FailedMessage"
+                        RecoveryActionText="@RecoveryActionText"
+                        FilterNotice="@FilterNotice"
+                        OnRecovery="@OnRecovery">
+    <ChildContent Context="data">
+        @ChildContent(data)
+    </ChildContent>
+    <NotRequestedContent>
+        @NotRequestedContent
+    </NotRequestedContent>
+</CanonicalDataStateView>
+
+@code {
+    [Parameter, EditorRequired]
+    public DataStateViewModel<TData> State { get; set; } = DataStateViewModel<TData>.NotRequested();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TData> ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? NotRequestedContent { get; set; }
+
+    [Parameter]
+    public CanonicalFilterNoticeModel? FilterNotice { get; set; }
+
+    [Parameter]
+    public int? ProductOwnerId { get; set; }
+
+    [Parameter]
+    public string Subject { get; set; } = "Trend data";
+
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No data for selected period.";
+
+    [Parameter]
+    public string InvalidMessage { get; set; } = "The current filter selection cannot be resolved for this view.";
+
+    [Parameter]
+    public string FailedMessage { get; set; } = "The trend data request failed.";
+
+    [Parameter]
+    public string RecoveryActionText { get; set; } = "Retry";
+
+    [Parameter]
+    public EventCallback OnRecovery { get; set; }
+}

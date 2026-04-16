@@ -49,6 +49,7 @@ public sealed class PullRequestFilterResolutionService
     {
         var requestedFilter = MapRequestedFilter(request);
         var issues = new List<FilterValidationIssue>();
+        ValidateBoundaryRequest(request, issues);
         ValidateRequestedFilter(requestedFilter, issues);
 
         var effectiveProductIds = ResolveProductIds(requestedFilter.ProductIds);
@@ -102,15 +103,7 @@ public sealed class PullRequestFilterResolutionService
             CollectSprintIds(requestedFilter.Time, effectiveFilter.Context.Time, effectiveFilter),
             cancellationToken);
 
-        _logger.LogInformation(
-            "Resolved PR filter for {Boundary}. RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}; RepositoryScopeCount: {RepositoryScopeCount}; RangeStartUtc: {RangeStartUtc}; RangeEndUtc: {RangeEndUtc}",
-            boundaryName,
-            requestedFilter,
-            effectiveFilter,
-            validation.InvalidFields,
-            effectiveFilter.RepositoryScope.Count,
-            effectiveFilter.RangeStartUtc,
-            effectiveFilter.RangeEndUtc);
+        LogResolution(boundaryName, request, requestedFilter, effectiveFilter, validation);
 
         return new PullRequestFilterResolution(requestedFilter, effectiveFilter, validation, teamLabels, sprintLabels);
     }
@@ -227,6 +220,57 @@ public sealed class PullRequestFilterResolutionService
                 issues.Add(new FilterValidationIssue(nameof(PullRequestFilterContext.Time), "Unsupported time selection mode."));
                 break;
         }
+    }
+
+    private static void ValidateBoundaryRequest(
+        PullRequestFilterBoundaryRequest request,
+        ICollection<FilterValidationIssue> issues)
+    {
+        if (request.SprintIds is { Count: 0 }
+            && !request.SprintId.HasValue
+            && !request.RangeStartUtc.HasValue
+            && !request.RangeEndUtc.HasValue)
+        {
+            issues.Add(new FilterValidationIssue(nameof(PullRequestFilterContext.Time), "Multi-sprint pull-request requests must include sprint identifiers or explicit range boundaries."));
+        }
+    }
+
+    private void LogResolution(
+        string boundaryName,
+        PullRequestFilterBoundaryRequest request,
+        PullRequestFilterContext requestedFilter,
+        PullRequestEffectiveFilter effectiveFilter,
+        FilterValidationResult validation)
+    {
+        var hasTimeMismatch = requestedFilter.Time.Mode != effectiveFilter.Context.Time.Mode
+            || (requestedFilter.Time.Mode == FilterTimeSelectionMode.MultiSprint && effectiveFilter.SprintIds.Count == 0);
+        if (!validation.IsValid || hasTimeMismatch)
+        {
+            _logger.LogWarning(
+                "PR filter mismatch for {Boundary}. RequestedTimeInput: SprintId={RequestedSprintId}, SprintIds={@RequestedSprintIds}, Range={RequestedRangeStartUtc}-{RequestedRangeEndUtc}; RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}",
+                boundaryName,
+                request.SprintId,
+                request.SprintIds,
+                request.RangeStartUtc,
+                request.RangeEndUtc,
+                requestedFilter,
+                effectiveFilter,
+                validation.InvalidFields);
+        }
+
+        _logger.LogInformation(
+            "Resolved PR filter for {Boundary}. RequestedTimeInput: SprintId={RequestedSprintId}, SprintIds={@RequestedSprintIds}, Range={RequestedRangeStartUtc}-{RequestedRangeEndUtc}; RequestedFilter: {@RequestedFilter}; EffectiveFilter: {@EffectiveFilter}; InvalidFields: {@InvalidFields}; RepositoryScopeCount: {RepositoryScopeCount}; RangeStartUtc: {RangeStartUtc}; RangeEndUtc: {RangeEndUtc}",
+            boundaryName,
+            request.SprintId,
+            request.SprintIds,
+            request.RangeStartUtc,
+            request.RangeEndUtc,
+            requestedFilter,
+            effectiveFilter,
+            validation.InvalidFields,
+            effectiveFilter.RepositoryScope.Count,
+            effectiveFilter.RangeStartUtc,
+            effectiveFilter.RangeEndUtc);
     }
 
     private static FilterSelection<int> ResolveProductIds(FilterSelection<int> requested)

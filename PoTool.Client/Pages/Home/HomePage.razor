@@ -776,7 +776,7 @@
         => result.Status switch
         {
             DataStateResultStatus.Invalid => (result.Reason, Color.Warning),
-            DataStateResultStatus.NotReady => (result.Reason, Color.Info),
+            DataStateResultStatus.Loading => (result.Reason, Color.Info),
             DataStateResultStatus.Failed => (result.Reason, Color.Error),
             _ => (null, Color.Default)
         };
@@ -909,7 +909,7 @@
             DetailColor = status switch
             {
                 DataStateResultStatus.Invalid => Color.Warning,
-                DataStateResultStatus.NotReady => Color.Info,
+                DataStateResultStatus.Loading => Color.Info,
                 DataStateResultStatus.Failed => Color.Error,
                 _ => Color.Default
             };

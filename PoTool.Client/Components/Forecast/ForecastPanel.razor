@@ -1,4 +1,5 @@
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Client.Services
 @inject MetricsStateService MetricsStateService
@@ -25,30 +26,23 @@
         <MudButton Variant="Variant.Filled" 
                    Color="Color.Primary" 
                    OnClick="LoadForecast"
-                   Disabled="@(!_selectedEpicId.HasValue || _selectedEpicId.Value <= 0 || _isLoading)"
+                   Disabled="@(!_selectedEpicId.HasValue || _selectedEpicId.Value <= 0 || _forecastState.UiState == UiDataState.Loading)"
                    StartIcon="@Icons.Material.Filled.Calculate">
             Calculate
         </MudButton>
     </MudStack>
 </MudPaper>
 
-<LoadingIndicator IsLoading="@_isLoading" />
-
-@if (!_hasAttemptedLoad)
-{
-    <MudAlert Severity="Severity.Info">Enter an Epic or Feature ID and click Calculate to see forecast.</MudAlert>
-}
-else
-{
-    <DataStateView TData="EpicCompletionForecastDto"
-                   State="@_forecastState"
-                   IsLoading="@_isLoading"
-                   EmptyTitle="No forecast data available"
-                   EmptyMessage="No forecast data is available for this epic or feature."
-                   NotReadyTitle="Forecast is syncing"
-                   NotReadyMessage="Forecast data will load once the cache is ready."
-                   FailedTitle="Forecast failed to load">
-        <ChildContent Context="forecast">
+<CanonicalDataStateView TData="EpicCompletionForecastDto"
+                        State="@_forecastState"
+                        Subject="Forecast"
+                        EmptyTitle="No forecast data available"
+                        EmptyMessage="No forecast data is available for this epic or feature."
+                        FailedTitle="Forecast failed to load">
+    <NotRequestedContent>
+        <MudAlert Severity="Severity.Info">Enter an Epic or Feature ID and click Calculate to see forecast.</MudAlert>
+    </NotRequestedContent>
+    <ChildContent Context="forecast">
             @* Epic Summary Card *@
             <MudCard Elevation="2" Class="mb-4">
                 <MudCardContent>
@@ -123,16 +117,13 @@ else
                     </tbody>
                 </MudSimpleTable>
             </MudPaper>
-        </ChildContent>
-    </DataStateView>
-}
+    </ChildContent>
+</CanonicalDataStateView>
 
 @code {
     [Parameter]
     public int? InitialEpicId { get; set; }
 
-    private bool _isLoading = false;
-    private bool _hasAttemptedLoad = false;
     private int? _selectedEpicId;
     private int _maxSprintsForVelocity = 6;
     private DataStateViewModel<EpicCompletionForecastDto> _forecastState = DataStateViewModel<EpicCompletionForecastDto>.NotRequested();
@@ -151,8 +142,6 @@ else
         if (!_selectedEpicId.HasValue || _selectedEpicId.Value <= 0)
             return;
 
-        _isLoading = true;
-        _hasAttemptedLoad = true;
         _forecastState = DataStateViewModel<EpicCompletionForecastDto>.Loading();
         StateHasChanged();
 
@@ -163,7 +152,6 @@ else
         _forecastState = DataStateViewModel<EpicCompletionForecastDto>.FromResponse(
             response,
             "Forecast data could not be loaded right now.");
-        _isLoading = false;
         StateHasChanged();
     }
 

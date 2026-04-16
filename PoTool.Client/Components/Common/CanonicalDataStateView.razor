@@ -1,0 +1,117 @@
+@typeparam TData
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
+@using PoTool.Client.Services
+@inject GlobalFilterUiState GlobalFilterUiState
+@inject TrendFilterDiagnosticsService TrendFilterDiagnosticsService
+@implements IDisposable
+
+<CanonicalFilterMetadataNotice Metadata="@ResolvedFilterNotice" />
+
+<DataStateView TData="TData"
+               State="@State"
+               IsLoading="@IsLoading"
+               ProductOwnerId="@ProductOwnerId"
+               Subject="@Subject"
+               EmptyTitle="@EmptyTitle"
+               EmptyMessage="@EmptyMessage"
+               InvalidTitle="@InvalidTitle"
+               InvalidMessage="@InvalidMessage"
+               FailedTitle="@FailedTitle"
+               FailedMessage="@FailedMessage"
+               RecoveryActionText="@RecoveryActionText"
+               OnRecovery="@OnRecovery">
+    <ChildContent Context="data">
+        @ChildContent(data)
+    </ChildContent>
+    <NotRequestedContent>
+        @NotRequestedContent
+    </NotRequestedContent>
+</DataStateView>
+
+@code {
+    private string? _lastDiagnosticsSignature;
+
+    [Parameter, EditorRequired]
+    public DataStateViewModel<TData> State { get; set; } = DataStateViewModel<TData>.NotRequested();
+
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TData> ChildContent { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? NotRequestedContent { get; set; }
+
+    [Parameter]
+    public CanonicalFilterNoticeModel? FilterNotice { get; set; }
+
+    [Parameter]
+    public int? ProductOwnerId { get; set; }
+
+    [Parameter]
+    public string Subject { get; set; } = "Data";
+
+    [Parameter]
+    public string EmptyTitle { get; set; } = "No data available";
+
+    [Parameter]
+    public string EmptyMessage { get; set; } = "No data is available for the current selection.";
+
+    [Parameter]
+    public string InvalidTitle { get; set; } = "Invalid filter selection";
+
+    [Parameter]
+    public string InvalidMessage { get; set; } = "The current filter selection cannot be resolved for this view.";
+
+    [Parameter]
+    public string FailedTitle { get; set; } = "Failed to load data";
+
+    [Parameter]
+    public string FailedMessage { get; set; } = "The request failed.";
+
+    [Parameter]
+    public string RecoveryActionText { get; set; } = "Retry";
+
+    [Parameter]
+    public EventCallback OnRecovery { get; set; }
+
+    private CanonicalFilterNoticeModel? ResolvedFilterNotice
+        => FilterNotice ?? CanonicalClientResponseFactory.CreateNotice(State.FilterMetadata);
+
+    protected override void OnParametersSet()
+    {
+        var validationFeedback = TrendUiStateFactory.CreateValidationFeedback(State);
+        if (validationFeedback is not null)
+        {
+            GlobalFilterUiState.SetValidationFeedback(validationFeedback);
+        }
+        else
+        {
+            GlobalFilterUiState.ClearValidationFeedback();
+        }
+
+        var signature = TrendFilterDiagnosticsService.BuildSignature(
+            Subject,
+            State.FilterMetadata,
+            State.InvalidFields,
+            State.ValidationMessages,
+            State.Reason);
+        if (!string.IsNullOrWhiteSpace(signature) && !string.Equals(_lastDiagnosticsSignature, signature, StringComparison.Ordinal))
+        {
+            TrendFilterDiagnosticsService.LogIfNeeded(
+                Subject,
+                State.FilterMetadata,
+                State.InvalidFields,
+                State.ValidationMessages,
+                State.Reason);
+            _lastDiagnosticsSignature = signature;
+        }
+    }
+
+    public void Dispose()
+    {
+        GlobalFilterUiState.ClearValidationFeedback();
+    }
+}

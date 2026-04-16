@@ -43,70 +43,36 @@
 
     </MudPaper>
 
-    @* Loading / Error States *@
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true">
-            @_errorMessage
-            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="@LoadInitialDataAsync">
-                Retry
-            </MudButton>
-        </MudAlert>
-    }
-    else if (!_selectedTeamId.HasValue)
-    {
-        <MudAlert Severity="Severity.Info" Class="mb-4">
-            Select a team to load sprint execution.
-        </MudAlert>
-    }
-    else if (!_selectedSprintId.HasValue)
-    {
-        <MudAlert Severity="Severity.Info" Class="mb-4">
-            Select a sprint to load sprint execution.
-        </MudAlert>
-    }
-
-    <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
-
-    @if (_executionLoading)
-    {
-        <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="mb-2" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Sprint execution"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId"
-                        OnRecovery="@LoadInitialDataAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Sprint execution"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@LoadInitialDataAsync" />
-    }
-
-    @if (_sprints.Count == 0 && !_isLoading)
-    {
-        <MudAlert Severity="Severity.Info" Class="mb-4">
-            No sprints found. Select a team to view sprint execution data.
-        </MudAlert>
-    }
-    else if (_data == null && !_executionLoading && _selectedSprintId.HasValue)
-    {
-        <MudAlert Severity="Severity.Info" Class="mb-4">
-            No execution data found for the selected sprint.
-        </MudAlert>
-    }
-
-    @if (_data != null && _data.HasData)
-    {
+    <CanonicalDataStateView TData="SprintExecutionDto"
+                            State="@_executionState"
+                            ProductOwnerId="@_profileId"
+                            Subject="Sprint execution"
+                            EmptyMessage="No execution data found for the selected sprint."
+                            InvalidMessage="Adjust the selected team or sprint to load sprint execution."
+                            FailedMessage="Sprint execution could not be loaded right now."
+                            OnRecovery="@LoadInitialDataAsync">
+        <NotRequestedContent>
+            @if (!_selectedTeamId.HasValue)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    Select a team to load sprint execution.
+                </MudAlert>
+            }
+            else if (_sprints.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    No sprints found. Select a team to view sprint execution data.
+                </MudAlert>
+            }
+            else if (!_selectedSprintId.HasValue)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    Select a sprint to load sprint execution.
+                </MudAlert>
+            }
+        </NotRequestedContent>
+        <ChildContent Context="_">
+        @{ var data = _data!; }
         @* Sprint Execution Summary *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.h6" Class="mb-3">
@@ -117,37 +83,37 @@
             <MudGrid Spacing="2">
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-primary);">@FormatStoryPoints(_data.Summary.CommittedSP)</MudText>
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-primary);">@FormatStoryPoints(data.Summary.CommittedSP)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Committed Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning);">@FormatStoryPoints(_data.Summary.AddedSP)</MudText>
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning);">@FormatStoryPoints(data.Summary.AddedSP)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Added Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-error);">@FormatStoryPoints(_data.Summary.RemovedSP)</MudText>
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-error);">@FormatStoryPoints(data.Summary.RemovedSP)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Removed Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-success);">@FormatStoryPoints(_data.Summary.DeliveredSP)</MudText>
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-success);">@FormatStoryPoints(data.Summary.DeliveredSP)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Delivered Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-text-secondary);">@FormatStoryPoints(_data.Summary.SpilloverSP)</MudText>
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-text-secondary);">@FormatStoryPoints(data.Summary.SpilloverSP)</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Spillover Story Points</MudText>
                     </MudPaper>
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning-darken);">@_data.Summary.StarvedCount</MudText>
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning-darken);">@data.Summary.StarvedCount</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Starved</MudText>
                     </MudPaper>
                 </MudItem>
@@ -155,12 +121,12 @@
         </MudPaper>
 
         @* Completion Order *@
-        @if (_data.CompletedPbis.Count > 0)
+        @if (data.CompletedPbis.Count > 0)
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">
                     <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-1" />
-                    Completion Order (@_data.CompletedPbis.Count)
+                    Completion Order (@data.CompletedPbis.Count)
                 </MudText>
                 <MudSimpleTable Dense="true" Striped="true" Hover="true">
                     <thead>
@@ -174,7 +140,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var pbi in _data.CompletedPbis)
+                        @foreach (var pbi in data.CompletedPbis)
                         {
                             <tr>
                                 <td>@pbi.CompletionOrder</td>
@@ -208,12 +174,12 @@
         }
 
         @* Starved Work *@
-        @if (_data.StarvedPbis.Count > 0)
+        @if (data.StarvedPbis.Count > 0)
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">
                     <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-1" />
-                    Potential Starvation Signals (@_data.StarvedPbis.Count)
+                    Potential Starvation Signals (@data.StarvedPbis.Count)
                 </MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
                     These PBIs were part of the initial sprint scope but remained unfinished,
@@ -229,7 +195,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var pbi in _data.StarvedPbis)
+                        @foreach (var pbi in data.StarvedPbis)
                         {
                             <tr>
                                 <td>
@@ -252,12 +218,12 @@
         }
 
         @* Unfinished PBIs *@
-        @if (_data.UnfinishedPbis.Count > 0)
+        @if (data.UnfinishedPbis.Count > 0)
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">
                     <MudIcon Icon="@Icons.Material.Filled.PendingActions" Color="Color.Default" Class="mr-1" />
-                    Unfinished PBIs (@_data.UnfinishedPbis.Count)
+                    Unfinished PBIs (@data.UnfinishedPbis.Count)
                 </MudText>
                 <MudSimpleTable Dense="true" Striped="true" Hover="true">
                     <thead>
@@ -270,7 +236,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var pbi in _data.UnfinishedPbis)
+                        @foreach (var pbi in data.UnfinishedPbis)
                         {
                             <tr>
                                 <td>
@@ -303,12 +269,12 @@
         }
 
         @* Added During Sprint *@
-        @if (_data.AddedDuringSprint.Count > 0)
+        @if (data.AddedDuringSprint.Count > 0)
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">
                     <MudIcon Icon="@Icons.Material.Filled.AddCircle" Color="Color.Warning" Class="mr-1" />
-                    Added During Sprint (@_data.AddedDuringSprint.Count)
+                    Added During Sprint (@data.AddedDuringSprint.Count)
                 </MudText>
                 <MudSimpleTable Dense="true" Striped="true" Hover="true">
                     <thead>
@@ -321,7 +287,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var pbi in _data.AddedDuringSprint)
+                        @foreach (var pbi in data.AddedDuringSprint)
                         {
                             <tr>
                                 <td>
@@ -345,12 +311,12 @@
         }
 
         @* Removed During Sprint *@
-        @if (_data.RemovedDuringSprint.Count > 0)
+        @if (data.RemovedDuringSprint.Count > 0)
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">
                     <MudIcon Icon="@Icons.Material.Filled.RemoveCircle" Color="Color.Error" Class="mr-1" />
-                    Removed During Sprint (@_data.RemovedDuringSprint.Count)
+                    Removed During Sprint (@data.RemovedDuringSprint.Count)
                 </MudText>
                 <MudSimpleTable Dense="true" Striped="true" Hover="true">
                     <thead>
@@ -363,7 +329,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var pbi in _data.RemovedDuringSprint)
+                        @foreach (var pbi in data.RemovedDuringSprint)
                         {
                             <tr>
                                 <td>
@@ -385,7 +351,8 @@
                 </MudSimpleTable>
             </MudPaper>
         }
-    }
+        </ChildContent>
+    </CanonicalDataStateView>
 </MudContainer>
 
 @code {
@@ -395,11 +362,7 @@
     private List<SprintDto> _sprints = new();
     private List<ProductDto> _products = new();
     private SprintExecutionDto? _data;
-    private DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>> _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.NotRequested();
-    private CanonicalFilterNoticeModel? _filterNotice;
-    private bool _isLoading;
-    private bool _executionLoading;
-    private string? _errorMessage;
+    private DataStateViewModel<SprintExecutionDto> _executionState = DataStateViewModel<SprintExecutionDto>.NotRequested();
     private List<BreadcrumbItem> _breadcrumbs = new();
 
     // Popovers
@@ -439,10 +402,8 @@
     {
         try
         {
-            _isLoading = true;
-            _errorMessage = null;
             _data = null;
-            _filterNotice = null;
+            _executionState = DataStateViewModel<SprintExecutionDto>.Loading();
 
             var activeProfile = await ProfileService.GetActiveProfileAsync();
             if (activeProfile == null)
@@ -472,12 +433,8 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            _executionState = DataStateViewModel<SprintExecutionDto>.Failed(ex.Message);
             Snackbar.Add($"Error loading Sprint Execution: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            _isLoading = false;
         }
     }
 
@@ -501,51 +458,47 @@
         if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
         {
             _data = null;
-            _filterNotice = null;
+            _executionState = DataStateViewModel<SprintExecutionDto>.Invalid("Adjust the current filter selection to load sprint execution.");
             return;
         }
 
         if (!_profileId.HasValue || !_selectedTeamId.HasValue || !_selectedSprintId.HasValue)
         {
             _data = null;
-            _filterNotice = null;
+            _executionState = DataStateViewModel<SprintExecutionDto>.NotRequested();
             return;
         }
 
         try
         {
-            _executionLoading = true;
             _data = null;
             StateHasChanged();
 
-            _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.Loading();
+            _executionState = DataStateViewModel<SprintExecutionDto>.Loading();
             var result = await MetricsStateService.GetSprintExecutionStateAsync(
                 _profileId.Value,
                 _selectedSprintId.Value,
                 _selectedProductId,
                 CancellationToken.None);
-            _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.FromResponse(result, "Sprint execution data could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            var envelopeState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.FromResponse(result, "Sprint execution data could not be loaded right now.");
+            _executionState = CanonicalDataStateViewModelMapper.Unwrap(
+                envelopeState,
+                static envelope => envelope.Data.HasData ? envelope.Data : null,
+                "No execution data found for the selected sprint.",
+                "Adjust the selected team or sprint to load sprint execution.");
+            if (_executionState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.EmptyButValid or UiDataState.Invalid)
             {
                 _data = null;
-                _filterNotice = null;
                 return;
             }
 
-            var envelope = _dataState.Data;
-            _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
-            _data = envelope?.Data.HasData == true ? envelope.Data : null;
+            _data = _executionState.Data;
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.Failed("Sprint execution could not be loaded right now.");
-            Snackbar.Add(_dataState.Reason!, Severity.Error);
+            _executionState = DataStateViewModel<SprintExecutionDto>.Failed("Sprint execution could not be loaded right now.");
+            Snackbar.Add(_executionState.Reason!, Severity.Error);
             _data = null;
-            _filterNotice = null;
-        }
-        finally
-        {
-            _executionLoading = false;
         }
     }
 
@@ -585,7 +538,7 @@
     {
         _sprints = new List<SprintDto>();
         _data = null;
-        _filterNotice = null;
+        _executionState = DataStateViewModel<SprintExecutionDto>.NotRequested();
         await UpdateFilterStateAsync(BuildCurrentLocalBridgeState() with { TeamId = teamId, SprintId = null });
         UpdateContextUrl();
 

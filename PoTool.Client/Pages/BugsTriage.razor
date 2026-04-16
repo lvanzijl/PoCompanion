@@ -51,48 +51,17 @@
         </MudButton>
     </div>
 
-    @if (_isLoading)
-    {
-        <div class="loading-state pa-4">
-            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-            <MudText Typo="Typo.body2" Class="mt-2">Loading bugs...</MudText>
-        </div>
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Bug triage"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="Bug triage"
-                        Reason="@_dataState.Reason" />
-    }
-    else if (_errorMessage != null)
-    {
-        <MudAlert Severity="Severity.Error" Class="ma-4" CloseIcon="true" CloseIconClicked="ClearError">
-            @_errorMessage
-        </MudAlert>
-    }
-    else if (!string.IsNullOrWhiteSpace(_contextError))
-    {
-        <MudAlert Severity="Severity.Error" Class="ma-4">
-            @_contextError
-        </MudAlert>
-    }
-    else if (!_bugs.Any())
-    {
-        <div class="empty-state pa-4">
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
-            <MudText Typo="Typo.h6" Class="mb-2">No bugs found</MudText>
-            <MudText Typo="Typo.body2">There are no bug work items in your backlog, or they have all been resolved.</MudText>
-        </div>
-    }
-    else
-    {
+    <CanonicalDataStateView TData="IReadOnlyList<WorkItemWithValidationDto>"
+                            State="@BugTriageState"
+                            IsLoading="@_isLoading"
+                            ProductOwnerId="@_profileId"
+                            Subject="Bug triage"
+                            EmptyTitle="No bugs found"
+                            EmptyMessage="There are no bug work items in your backlog, or they have all been resolved."
+                            InvalidMessage="Adjust the current filter selection to load bug triage."
+                            FailedMessage="Bug triage data could not be loaded right now."
+                            OnRecovery="@LoadBugsAsync">
+        <ChildContent Context="_">
         <div class="content" tabindex="0">
             <ResizableSplitter StorageKey="bugs-triage-splitter" 
                               DefaultLeftWidth="60" 
@@ -172,7 +141,8 @@
                 </RightContent>
             </ResizableSplitter>
         </div>
-    }
+        </ChildContent>
+    </CanonicalDataStateView>
 </div>
 
 @code {
@@ -201,6 +171,18 @@
         new("Bug Triage", null, disabled: true, icon: Icons.Material.Filled.BugReport)
     };
     private DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>> _dataState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.NotRequested();
+    private DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>> BugTriageState
+        => !string.IsNullOrWhiteSpace(_contextError)
+            ? DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.Invalid(
+                reason: _contextError,
+                data: default,
+                invalidFields: GlobalFilterValidationMapper.InferFieldsFromMessages([_contextError]),
+                validationMessages: [])
+            : !string.IsNullOrWhiteSpace(_errorMessage)
+                ? DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.Failed(_errorMessage)
+                : _dataState.UiState == UiDataState.Ready && !_bugs.Any()
+                    ? DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.Empty("There are no bug work items in your backlog, or they have all been resolved.")
+                    : _dataState;
 
     protected override async Task OnInitializedAsync()
     {
@@ -261,7 +243,7 @@
             var response = await WorkItemService.GetAllWithValidationStateAsync(productIds);
             _dataState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.FromResponse(response, "Bug triage data could not be loaded right now.");
 
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed)
             {
                 _bugs = new List<WorkItemWithValidationDto>();
                 return;

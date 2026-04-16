@@ -114,45 +114,38 @@
         </MudCollapse>
     </MudPaper>
 
-    <CanonicalFilterMetadataNotice Metadata="_filterNotice" />
-
-    @if (_isLoading)
-    {
-        <LoadingIndicator IsLoading="true" />
-    }
-    else if (_dataState.State == DataStateDto.NotReady)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="PR delivery insights"
-                        Reason="@_dataState.Reason"
-                        ProductOwnerId="@_profileId"
-                        OnRecovery="@ReloadAsync" />
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <DataStatePanel State="@_dataState.State"
-                        Subject="PR delivery insights"
-                        Reason="@_dataState.Reason"
-                        OnRecovery="@ReloadAsync" />
-    }
-    else if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
-    }
-    else if (_data != null)
-    {
+    <CanonicalDataStateView TData="PrDeliveryInsightsDto"
+                            State="@_insightsState"
+                            ProductOwnerId="@_profileId"
+                            Subject="PR delivery insights"
+                            EmptyMessage="No data for selected period."
+                            InvalidMessage="Adjust the selected team or sprint to load PR delivery insights."
+                            FailedMessage="The PR delivery insights request failed."
+                            OnRecovery="@ReloadAsync">
+        <NotRequestedContent>
+            @if (!_selectedTeamId.HasValue)
+            {
+                <MudAlert Severity="Severity.Info">Select a team to load PR delivery insights.</MudAlert>
+            }
+            else if (!_selectedSprintId.HasValue)
+            {
+                <MudAlert Severity="Severity.Info">Select a sprint to load PR delivery insights.</MudAlert>
+            }
+        </NotRequestedContent>
+        <ChildContent Context="_">
+        @{ var data = _data!; }
         @* ── Section 1: Category Summary Chips ──────────────────────────── *@
         <MudPaper Elevation="2" Class="pa-4 mb-4">
             <MudText Typo="Typo.h6" Class="mb-3">
                 <MudIcon Icon="@Icons.Material.Filled.Category" Class="mr-2" />
                 PR Classification Summary
-                @if (!string.IsNullOrEmpty(_data.TeamName))
+                @if (!string.IsNullOrEmpty(data.TeamName))
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">@_data.TeamName</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">@data.TeamName</MudChip>
                 }
-                @if (!string.IsNullOrEmpty(_data.SprintName))
+                @if (!string.IsNullOrEmpty(data.SprintName))
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-1">@_data.SprintName</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-1">@data.SprintName</MudChip>
                 }
             </MudText>
 
@@ -160,48 +153,48 @@
                 @* Delivery PRs *@
                 <MudItem xs="6" sm="3">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-success);">@_data.CategorySummary.DeliveryMappedCount</MudText>
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-success);">@data.CategorySummary.DeliveryMappedCount</MudText>
                         <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Delivery PRs</MudText>
-                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-success);">@(_data.CategorySummary.DeliveryMappedPct.ToString("F0"))%</MudText>
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-success);">@(data.CategorySummary.DeliveryMappedPct.ToString("F0"))%</MudText>
                     </MudPaper>
                 </MudItem>
 
                 @* Bug PRs *@
                 <MudItem xs="6" sm="3">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-error);">@_data.CategorySummary.BugCount</MudText>
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-error);">@data.CategorySummary.BugCount</MudText>
                         <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Bug PRs</MudText>
-                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-error);">@(_data.CategorySummary.BugPct.ToString("F0"))%</MudText>
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-error);">@(data.CategorySummary.BugPct.ToString("F0"))%</MudText>
                     </MudPaper>
                 </MudItem>
 
                 @* Disturbance PRs *@
                 <MudItem xs="6" sm="3">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning);">@_data.CategorySummary.DisturbanceCount</MudText>
+                        <MudText Typo="Typo.h5" Style="color: var(--mud-palette-warning);">@data.CategorySummary.DisturbanceCount</MudText>
                         <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Disturbance PRs</MudText>
-                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-warning);">@(_data.CategorySummary.DisturbancePct.ToString("F0"))%</MudText>
+                        <MudText Typo="Typo.caption" Style="color: var(--mud-palette-warning);">@(data.CategorySummary.DisturbancePct.ToString("F0"))%</MudText>
                     </MudPaper>
                 </MudItem>
 
                 @* Unmapped PRs *@
                 <MudItem xs="6" sm="3">
                     <MudPaper Elevation="1" Class="pa-3 text-center">
-                        <MudText Typo="Typo.h5" Color="Color.Default">@_data.CategorySummary.UnmappedCount</MudText>
+                        <MudText Typo="Typo.h5" Color="Color.Default">@data.CategorySummary.UnmappedCount</MudText>
                         <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Unmapped PRs</MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">@(_data.CategorySummary.UnmappedPct.ToString("F0"))%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@(data.CategorySummary.UnmappedPct.ToString("F0"))%</MudText>
                     </MudPaper>
                 </MudItem>
             </MudGrid>
 
             @* Total *@
             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
-                Total: @_data.CategorySummary.TotalPrs PRs in scope
+                Total: @data.CategorySummary.TotalPrs PRs in scope
             </MudText>
         </MudPaper>
 
         @* ── Section 2: Epic Friction Overview ──────────────────────────── *@
-        @if (_data.EpicBreakdown.Any())
+        @if (data.EpicBreakdown.Any())
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">
@@ -212,7 +205,7 @@
                     </MudTooltip>
                 </MudText>
 
-                <MudTable Items="@_data.EpicBreakdown"
+                <MudTable Items="@data.EpicBreakdown"
                           Dense="true"
                           Hover="true"
                           Striped="true"
@@ -285,7 +278,7 @@
         }
 
         @* ── Section 2b: Feature Breakdown ──────────────────────────────── *@
-        @if (_data.FeatureBreakdown.Any())
+        @if (data.FeatureBreakdown.Any())
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
@@ -296,7 +289,7 @@
                         <MudTooltip Text="Per-Feature aggregated PR metrics. PR/PBI ratio indicates how many PRs were needed per backlog item — a high ratio can signal scope creep or complex features.">
                             <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Default" Class="ml-1" />
                         </MudTooltip>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-1">@_data.FeatureBreakdown.Count entries</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Class="ml-1">@data.FeatureBreakdown.Count entries</MudChip>
                     </MudStack>
                     <MudIconButton Icon="@(_featureBreakdownExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
                                    Size="Size.Small"
@@ -306,7 +299,7 @@
 
                 <MudCollapse Expanded="_featureBreakdownExpanded">
                     <MudDivider Class="my-2" />
-                    <MudTable Items="@_data.FeatureBreakdown"
+                    <MudTable Items="@data.FeatureBreakdown"
                               Dense="true"
                               Hover="true"
                               Striped="true"
@@ -381,7 +374,7 @@
                 </MudStack>
             </MudStack>
 
-            <PullRequestDeliveryScatterSvg Data="@_data.ScatterPoints"
+            <PullRequestDeliveryScatterSvg Data="@data.ScatterPoints"
                                            Height="380"
                                            ShowMedianLine="true"
                                            ShowP90Line="true"
@@ -391,7 +384,7 @@
         </MudPaper>
 
         @* ── Section 4: Outlier PR List (top 10) ─────────────────────────── *@
-        @if (_data.Outliers.Any())
+        @if (data.Outliers.Any())
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudText Typo="Typo.h6" Class="mb-3">
@@ -402,7 +395,7 @@
                     </MudTooltip>
                 </MudText>
 
-                <MudTable Items="@_data.Outliers.Take(10)"
+                <MudTable Items="@data.Outliers.Take(10)"
                           Dense="true"
                           Hover="true"
                           Striped="true"
@@ -460,7 +453,7 @@
         }
 
         @* ── Section 5: Team Improvement Tips ───────────────────────────── *@
-        @if (_data.ImprovementTips.Any())
+        @if (data.ImprovementTips.Any())
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-left: 4px solid var(--mud-palette-warning);">
                 <MudText Typo="Typo.h6" Class="mb-3">
@@ -472,7 +465,7 @@
                 </MudText>
 
                 <MudGrid Spacing="3">
-                    @foreach (var tip in _data.ImprovementTips)
+                    @foreach (var tip in data.ImprovementTips)
                     {
                         <MudItem xs="12" md="4">
                             <MudPaper Elevation="1" Class="pa-3" Style="height: 100%; border-top: 3px solid var(--mud-palette-warning-lighten);">
@@ -503,7 +496,7 @@
         }
 
         @* ── Section 6: Diagnostics (optional, hidden by default) ─────────── *@
-        @if (_data.FeatureBreakdown.Any() || _data.EpicBreakdown.Any())
+        @if (data.FeatureBreakdown.Any() || data.EpicBreakdown.Any())
         {
             <MudPaper Elevation="2" Class="pa-4 mb-4">
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center"
@@ -526,7 +519,7 @@
                     <MudDivider Class="my-3" />
 
                     @* Feature Complexity Table *@
-                    @if (_data.FeatureBreakdown.Any())
+                    @if (data.FeatureBreakdown.Any())
                     {
                         <MudText Typo="Typo.subtitle1" Class="mb-2" Style="font-weight: 600;">
                             <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Class="mr-1" />
@@ -535,7 +528,7 @@
                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
                             PR/PBI ratio: number of PRs per Product Backlog Item. A high ratio indicates complex features requiring many code changes.
                         </MudText>
-                        <MudTable Items="@_data.FeatureBreakdown"
+                        <MudTable Items="@data.FeatureBreakdown"
                                   Dense="true"
                                   Hover="true"
                                   Striped="true"
@@ -596,17 +589,17 @@
                     }
 
                     @* Bug PR Distribution per Epic *@
-                    @if (_data.EpicBreakdown.Any())
+                    @if (data.EpicBreakdown.Any())
                     {
                         <MudText Typo="Typo.subtitle1" Class="mb-2" Style="font-weight: 600;">
                             <MudIcon Icon="@Icons.Material.Filled.PestControl" Size="Size.Small" Class="mr-1" Color="Color.Error" />
                             Bug PR Distribution
                         </MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                            Bug PRs (@_data.CategorySummary.BugCount total, @(_data.CategorySummary.BugPct.ToString("F0"))%) are linked to Bug work items without a traceable Feature or Epic.
+                            Bug PRs (@data.CategorySummary.BugCount total, @(data.CategorySummary.BugPct.ToString("F0"))%) are linked to Bug work items without a traceable Feature or Epic.
                             The table below shows Epic-level friction metrics for delivery-mapped PRs as comparison context.
                         </MudText>
-                        <MudTable Items="@_data.EpicBreakdown"
+                        <MudTable Items="@data.EpicBreakdown"
                                   Dense="true"
                                   Hover="true"
                                   Striped="true"
@@ -653,19 +646,8 @@
                 </MudCollapse>
             </MudPaper>
         }
-    }
-    else
-    {
-        @* Empty / no data state *@
-        <MudPaper Elevation="2" Class="pa-6 mb-4 text-center">
-            <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
-            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No PR data available</MudText>
-            <MudAlert Severity="Severity.Info" Class="mt-3">
-                Select a team and sprint to load PR delivery data.
-                All data is read from the local cache — no live Azure DevOps calls are made.
-            </MudAlert>
-        </MudPaper>
-    }
+        </ChildContent>
+    </CanonicalDataStateView>
 
 </MudContainer>
 
@@ -741,8 +723,6 @@
 
 @code {
     // ── State ─────────────────────────────────────────────────────────────
-    private bool _isLoading = true;
-    private string? _errorMessage;
     private List<BreadcrumbItem> _breadcrumbs = new();
 
     // Filter panel state
@@ -756,8 +736,7 @@
     // Data
     private int? _profileId;
     private PrDeliveryInsightsDto? _data;
-    private CanonicalFilterNoticeModel? _filterNotice;
-    private DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>> _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.NotRequested();
+    private DataStateViewModel<PrDeliveryInsightsDto> _insightsState = DataStateViewModel<PrDeliveryInsightsDto>.NotRequested();
 
     // Drawer
     private bool _prDrawerOpen;
@@ -791,13 +770,8 @@
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Failed("PR delivery insights could not be loaded right now.");
+            _insightsState = DataStateViewModel<PrDeliveryInsightsDto>.Failed("PR delivery insights could not be loaded right now.");
             _data = null;
-            _filterNotice = null;
-        }
-        finally
-        {
-            _isLoading = false;
         }
     }
 
@@ -805,28 +779,37 @@
 
     private async Task LoadInsightsAsync()
     {
-        if (!PageFilterExecutionGate.CanExecuteQueries(GlobalFilterStore.CurrentUsage))
+        var evaluation = PageFilterExecutionGate.Evaluate(GlobalFilterStore.CurrentUsage);
+        if (!evaluation.CanExecuteQueries)
         {
             _data = null;
-            _filterNotice = null;
+            _insightsState = DataStateViewModel<PrDeliveryInsightsDto>.Invalid("Select a valid team and sprint to load PR delivery insights.");
             return;
         }
 
         try
         {
-            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Loading();
+            _insightsState = DataStateViewModel<PrDeliveryInsightsDto>.Loading();
             var response = await PullRequestStateService.GetDeliveryInsightsStateAsync(_profileId!.Value, _selectedSprintId, _selectedTeamId, CancellationToken.None);
-            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.FromResponse(response, "PR delivery insights could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            var envelopeState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.FromResponse(response, "PR delivery insights could not be loaded right now.");
+            _insightsState = CanonicalDataStateViewModelMapper.Unwrap(
+                envelopeState,
+                static envelope => envelope.Data,
+                "No data for selected period.",
+                "Adjust the selected team or sprint to load PR delivery insights.");
+            if (_insightsState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 _data = null;
-                _filterNotice = null;
                 return;
             }
 
-            var envelope = _dataState.Data;
-            _filterNotice = envelope is null ? null : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(envelope).FilterMetadata);
-            _data = envelope?.Data;
+            _data = _insightsState.Data;
+            if (_data?.CategorySummary.TotalPrs == 0)
+            {
+                _data = null;
+                _insightsState = DataStateViewModel<PrDeliveryInsightsDto>.Empty("No data for selected period.");
+                return;
+            }
 
             if (_data != null)
             {
@@ -835,9 +818,8 @@
         }
         catch (Exception)
         {
-            _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Failed("PR delivery insights could not be loaded right now.");
+            _insightsState = DataStateViewModel<PrDeliveryInsightsDto>.Failed("The PR delivery insights request failed.");
             _data = null;
-            _filterNotice = null;
         }
     }
 
@@ -883,14 +865,8 @@
 
     private async Task ReloadAsync()
     {
-        _isLoading    = true;
-        _errorMessage = null;
         _prDrawerOpen = false;
-        StateHasChanged();
-
         await LoadInsightsAsync();
-
-        _isLoading = false;
         StateHasChanged();
     }
 

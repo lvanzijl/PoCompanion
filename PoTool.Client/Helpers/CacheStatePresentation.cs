@@ -8,7 +8,6 @@ public enum UiDataState
     NotRequested,
     Loading,
     Ready,
-    NotReady,
     Failed,
     EmptyButValid,
     Invalid
@@ -23,7 +22,7 @@ public static class CacheStatePresentation
         {
             DataStateDto.Loading => UiDataState.Loading,
             DataStateDto.Available => UiDataState.Ready,
-            DataStateDto.NotReady => UiDataState.NotReady,
+            DataStateDto.NotReady => UiDataState.Loading,
             DataStateDto.Failed => UiDataState.Failed,
             DataStateDto.Empty => UiDataState.EmptyButValid,
             _ => UiDataState.NotRequested
@@ -34,7 +33,7 @@ public static class CacheStatePresentation
         {
             DataStateResultStatus.Ready => UiDataState.Ready,
             DataStateResultStatus.Empty => UiDataState.EmptyButValid,
-            DataStateResultStatus.NotReady => UiDataState.NotReady,
+            DataStateResultStatus.NotReady => UiDataState.Loading,
             DataStateResultStatus.Invalid => UiDataState.Invalid,
             DataStateResultStatus.Failed => UiDataState.Failed,
             DataStateResultStatus.Loading => UiDataState.Loading,
@@ -54,11 +53,6 @@ public static class CacheStatePresentation
 
         return state switch
         {
-            UiDataState.NotReady => new CacheStateDisplayContent(
-                "Data not ready",
-                normalizedReason is null
-                    ? $"{normalizedSubject} is waiting for cached data. Cache not built yet for this view."
-                    : $"{normalizedReason} Cache not built yet for this view."),
             UiDataState.Invalid => new CacheStateDisplayContent(
                 "Filter needs attention",
                 normalizedReason ?? $"{normalizedSubject} could not be loaded for the current filter selection."),

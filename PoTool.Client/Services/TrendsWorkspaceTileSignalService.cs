@@ -134,14 +134,19 @@ public sealed record StatusTileSignal(
         return new(TileSignalKind.InsufficientData, "Insufficient data", tooltip, TileSignalTone.Neutral);
     }
 
-    public static StatusTileSignal NotReady(string tooltip)
+    public static StatusTileSignal Loading(string tooltip)
     {
-        return new(TileSignalKind.NotReady, "Data not ready", tooltip, TileSignalTone.Neutral);
+        return new(TileSignalKind.Loading, "Loading", tooltip, TileSignalTone.Neutral);
     }
 
     public static StatusTileSignal Failed(string tooltip)
     {
-        return new(TileSignalKind.Failed, "Data unavailable", tooltip, TileSignalTone.Negative);
+        return new(TileSignalKind.Failed, "Failed to load data", tooltip, TileSignalTone.Negative);
+    }
+
+    public static StatusTileSignal InvalidFilter(string tooltip)
+    {
+        return new(TileSignalKind.InvalidFilter, "Invalid filter", tooltip, TileSignalTone.Caution);
     }
 
     public static StatusTileSignal NoData(string tooltip)
@@ -160,13 +165,15 @@ public enum TileSignalKind
     Stable,
     Unstable,
     InsufficientData,
-    NotReady,
+    Loading,
     Failed,
+    InvalidFilter,
     NoData
 }
 
 public enum TileSignalTone
 {
     Neutral,
-    Negative
+    Negative,
+    Caution
 }
