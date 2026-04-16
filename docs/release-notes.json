@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-16",
+    "type": "Changed",
+    "title": "Canonical UI data-state normalization now removes page-level Not Ready handling",
+    "impact": "Cache-backed pages and workspace tiles now normalize Not Ready responses into the governed loading state before UI rendering, plan-board and roadmap summaries reuse the same canonical fallback path as the rest of the app, and governance audits now block new page/component references to Not Ready state tokens or direct DataStatePanel usage.",
+    "area": "Home / Planning / Delivery / Pull Requests / Pipelines / Validation",
+    "link": "/home"
+  },
+  {
     "date": "2026-04-15",
     "type": "Changed",
     "title": "Shared data-state rendering now expands beyond trend pages",
