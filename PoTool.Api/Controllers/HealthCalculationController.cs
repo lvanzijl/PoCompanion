@@ -11,6 +11,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public class HealthCalculationController : ControllerBase
 {
     private readonly BacklogHealthCalculator _calculator;

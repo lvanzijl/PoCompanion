@@ -6,6 +6,7 @@ namespace PoTool.Api.Controllers;
 
 [ApiController]
 [Route("api/onboarding/lookups")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public sealed class OnboardingLookupController : ControllerBase
 {
     private readonly IOnboardingLookupHandler _handler;

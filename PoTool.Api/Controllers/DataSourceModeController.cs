@@ -8,6 +8,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/datasource")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public sealed class DataSourceModeController : ControllerBase
 {
     private readonly IDataSourceModeProvider _modeProvider;

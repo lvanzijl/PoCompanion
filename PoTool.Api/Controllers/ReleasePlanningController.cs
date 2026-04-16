@@ -11,6 +11,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[DataSourceMode(RouteIntent.CacheOnlyAnalyticalRead)]
 public class ReleasePlanningController : ControllerBase
 {
     private readonly IMediator _mediator;

@@ -57,7 +57,7 @@ public static class SharedDtoActionResultContractResolver
             return false;
         }
 
-        expectedType = DataSourceModeConfiguration.RequiresCache(requestPath)
+        expectedType = DataSourceModeEndpointMetadataResolver.RequiresCache(methodInfo, requestPath)
             ? typeof(DataStateResponseDto<>).MakeGenericType(candidateType)
             : candidateType;
         return true;

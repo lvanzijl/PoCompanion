@@ -28,7 +28,7 @@ public sealed class WorkspaceGuardMiddleware
         await _next(context);
 
         var path = context.Request.Path.Value;
-        var requiresCache = DataSourceModeConfiguration.RequiresCache(path);
+        var requiresCache = DataSourceModeEndpointMetadataResolver.RequiresCache(context.GetEndpoint(), path);
 
         if (requiresCache && modeProvider.Mode == DataSourceMode.Live)
         {

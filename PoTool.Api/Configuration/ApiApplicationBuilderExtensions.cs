@@ -201,13 +201,16 @@ public static class ApiApplicationBuilderExtensions
         app.MapControllers();
 
         // Map SignalR hub for cache sync progress updates
-        app.MapHub<CacheSyncHub>("/hubs/cachesync");
+        app.MapHub<CacheSyncHub>("/hubs/cachesync")
+            .WithDataSourceMode(RouteIntent.LiveAllowed);
         
         // Map SignalR hub for TFS config progress updates
-        app.MapHub<TfsConfigHub>("/hubs/tfsconfig");
+        app.MapHub<TfsConfigHub>("/hubs/tfsconfig")
+            .WithDataSourceMode(RouteIntent.LiveAllowed);
 
         // Health check endpoint
-        app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }));
+        app.MapGet("/health", () => Results.Ok(new { Status = "Healthy", Timestamp = DateTime.UtcNow }))
+            .WithDataSourceMode(RouteIntent.LiveAllowed);
 
         // Add minimal endpoints to manage TFS config from client
         app.MapGet("/api/tfsconfig", async Task<IResult> (TfsConfigurationService svc) =>
@@ -218,7 +221,8 @@ public static class ApiApplicationBuilderExtensions
         })
         .Produces<TfsConfig>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status204NoContent)
-        .WithName("GetTfsConfig");
+        .WithName("GetTfsConfig")
+        .WithDataSourceMode(RouteIntent.LiveAllowed);
 
         app.MapPost("/api/tfsconfig", async (TfsConfigurationService svc, TfsConfigRequest req) =>
         {
@@ -232,7 +236,8 @@ public static class ApiApplicationBuilderExtensions
                 req.TimeoutSeconds,
                 req.ApiVersion ?? "7.0");
             return Results.Ok();
-        });
+        })
+        .WithDataSourceMode(RouteIntent.LiveAllowed);
 
         app.MapGet("/api/tfsvalidate", async (ITfsClient client, TfsConfigurationService configService, ILogger<Program> logger) =>
         {
@@ -279,7 +284,8 @@ public static class ApiApplicationBuilderExtensions
                     },
                     statusCode: 500);
             }
-        });
+        })
+        .WithDataSourceMode(RouteIntent.LiveAllowed);
 
         app.MapPost("/api/tfsverify", async (ITfsClient client, TfsConfigurationService configService, TfsVerifyRequest req, CancellationToken ct) =>
         {
@@ -302,7 +308,8 @@ public static class ApiApplicationBuilderExtensions
 
             return Results.Ok(report);
         })
-        .Produces<TfsVerificationReport>(StatusCodes.Status200OK);
+        .Produces<TfsVerificationReport>(StatusCodes.Status200OK)
+        .WithDataSourceMode(RouteIntent.LiveAllowed);
 
         // Combined save, test, and verify with SignalR progress broadcasting
         app.MapPost("/api/tfsconfig/save-and-verify", async (
@@ -420,10 +427,13 @@ public static class ApiApplicationBuilderExtensions
             {
                 await writer.FlushAsync(ct);
             }
-        });
+        })
+        .WithDataSourceMode(RouteIntent.LiveAllowed);
 
         // Fallback to index.html for client-side routing
         app.MapFallbackToFile("index.html");
+
+        DataSourceModeEndpointValidation.ValidateManagedEndpoints(app.Services);
 
         return app;
     }

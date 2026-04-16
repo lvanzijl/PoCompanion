@@ -11,6 +11,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public class BugTriageController : ControllerBase
 {
     private readonly BugTriageStateService _triageStateService;

@@ -12,6 +12,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/buildquality")]
+[DataSourceMode(RouteIntent.CacheOnlyAnalyticalRead)]
 public sealed class BuildQualityController : ControllerBase
 {
     private readonly IMediator _mediator;

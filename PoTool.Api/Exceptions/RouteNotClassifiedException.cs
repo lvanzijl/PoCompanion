@@ -6,7 +6,7 @@ namespace PoTool.Api.Exceptions;
 public sealed class RouteNotClassifiedException : InvalidOperationException
 {
     public RouteNotClassifiedException(string? path)
-        : base($"Route '{path ?? "<null>"}' is not classified in DataSourceModeConfiguration. Unknown fallback is disabled.")
+        : base($"Route '{path ?? "<null>"}' is not classified by endpoint metadata or the DataSourceModeConfiguration fallback. Unknown fallback is disabled.")
     {
         Path = path;
     }

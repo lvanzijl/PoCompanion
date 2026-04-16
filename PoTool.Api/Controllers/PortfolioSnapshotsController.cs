@@ -7,6 +7,7 @@ namespace PoTool.Api.Controllers;
 
 [ApiController]
 [Route("api/portfolio/snapshots")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public sealed class PortfolioSnapshotsController : ControllerBase
 {
     private readonly IMediator _mediator;

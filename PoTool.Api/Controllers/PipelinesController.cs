@@ -13,6 +13,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[DataSourceMode(RouteIntent.CacheOnlyAnalyticalRead)]
 public class PipelinesController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -161,6 +162,7 @@ public class PipelinesController : ControllerBase
     /// This endpoint remains live-allowed and is intentionally separate from cache-only analytical reads.
     /// </summary>
     [HttpGet("definitions")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     public async Task<ActionResult<IEnumerable<PipelineDefinitionDto>>> GetDefinitions(
         [FromQuery] int? productId = null,
         [FromQuery] int? repositoryId = null,
