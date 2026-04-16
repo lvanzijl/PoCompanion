@@ -20336,11 +20336,11 @@ namespace PoTool.Client.ApiClient
     public partial interface IStartupClient
     {
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<StartupReadinessDto> GetStartupReadinessAsync();
+        System.Threading.Tasks.Task<StartupStateResponseDto> GetStartupStateAsync(string? returnUrl, int? profileHintId);
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<StartupReadinessDto> GetStartupReadinessAsync(System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<StartupStateResponseDto> GetStartupStateAsync(string? returnUrl, int? profileHintId, System.Threading.CancellationToken cancellationToken);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<System.Collections.Generic.ICollection<TfsProjectDto>> GetTfsProjectsAsync(string? organizationUrl);
@@ -20414,14 +20414,14 @@ namespace PoTool.Client.ApiClient
         partial void ProcessResponse(System.Net.Http.HttpClient client, System.Net.Http.HttpResponseMessage response);
 
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<StartupReadinessDto> GetStartupReadinessAsync()
+        public virtual System.Threading.Tasks.Task<StartupStateResponseDto> GetStartupStateAsync(string? returnUrl, int? profileHintId)
         {
-            return GetStartupReadinessAsync(System.Threading.CancellationToken.None);
+            return GetStartupStateAsync(returnUrl, profileHintId, System.Threading.CancellationToken.None);
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<StartupReadinessDto> GetStartupReadinessAsync(System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<StartupStateResponseDto> GetStartupStateAsync(string? returnUrl, int? profileHintId, System.Threading.CancellationToken cancellationToken)
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -20434,8 +20434,21 @@ namespace PoTool.Client.ApiClient
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                     if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
-                    // Operation Path: "api/Startup/readiness"
-                    urlBuilder_.Append("api/Startup/readiness");
+                    // Operation Path: "api/startup-state"
+                    urlBuilder_.Append("api/startup-state");
+                    urlBuilder_.Append('?');
+                    if (returnUrl != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("returnUrl")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(returnUrl, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (profileHintId != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("profileHintId")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(profileHintId, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (urlBuilder_[urlBuilder_.Length - 1] is '&' or '?')
+                    {
+                        urlBuilder_.Length--;
+                    }
 
                     PrepareRequest(client_, request_, urlBuilder_);
 
@@ -20462,7 +20475,7 @@ namespace PoTool.Client.ApiClient
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<StartupReadinessDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<StartupStateResponseDto>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);

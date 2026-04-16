@@ -1,8 +1,7 @@
 @page "/startup-blocked"
-@using System.Web
 @using PoTool.Client.Components.Common
 @using PoTool.Client.Services
-@inject NavigationManager NavigationManager
+@inject StartupGateCoordinator StartupGateCoordinator
 
 <PageTitle>Startup Blocked - PO Companion</PageTitle>
 
@@ -21,9 +20,10 @@
 
     protected override void OnInitialized()
     {
-        var uri = new Uri(NavigationManager.Uri);
-        var query = HttpUtility.ParseQueryString(uri.Query);
-        _reason = query["message"] ?? _reason;
-        _hint = query["hint"] ?? _hint;
+        if (StartupGateCoordinator.LastResolution is { } resolution)
+        {
+            _reason = resolution.Reason;
+            _hint = resolution.RecoveryHint;
+        }
     }
 }

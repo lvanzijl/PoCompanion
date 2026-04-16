@@ -8,388 +8,248 @@ namespace PoTool.Tests.Unit.Services;
 public sealed class StartupOrchestratorServiceTests
 {
     [TestMethod]
-    public async Task ResolveStartupStateAsync_BackendFailure_ReturnsBlockedState()
+    public async Task ResolveStartupStateAsync_BackendFailure_ReturnsBlockingRoute()
     {
         var (_, service, _, _) = CreateSystemUnderTest(
             _ => new HttpResponseMessage(System.Net.HttpStatusCode.ServiceUnavailable));
 
         var result = await service.ResolveStartupStateAsync("home");
 
-        Assert.AreEqual(StartupResolutionState.Blocked, result.State);
-        Assert.AreEqual(StartupBlockedReason.BackendUnavailable, result.BlockedReason);
-        Assert.AreEqual("/startup-blocked?message=Startup%20readiness%20is%20unavailable%20%28HTTP%20503%29.&hint=Retry%20after%20confirming%20the%20backend%20is%20available.", result.TargetUri);
+        Assert.IsNull(result.Contract);
+        Assert.AreEqual("/startup-blocked", result.TargetUri);
+        Assert.IsFalse(result.ShouldRenderCurrentRoute);
     }
 
     [TestMethod]
-    public async Task ResolveStartupStateAsync_MissingConfiguration_ReturnsBlockedState()
+    public async Task ResolveStartupStateAsync_NoProfile_UsesAuthoritativeProfilesRoute()
     {
-        var readinessJson = """
+        var contractJson = """
             {
-              "isMockDataEnabled": false,
-              "hasSavedTfsConfig": false,
-              "hasTestedConnectionSuccessfully": false,
-              "hasVerifiedTfsApiSuccessfully": false,
-              "hasAnyProfile": false,
+              "startupState": 0,
+              "targetRoute": "/profiles?returnUrl=%2Fhome%2Fdelivery%2Fexecution%3FsprintId%3D7",
+              "returnUrl": "/home/delivery/execution?sprintId=7",
               "activeProfileId": null,
-              "missingRequirementMessage": "Configuration required."
-            }
-            """;
-
-        var (_, service, preferences, _) = CreateSystemUnderTest(
-            request => request.RequestUri!.AbsolutePath switch
-            {
-                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
-                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
-            },
-            cachedProfileId: 7);
-
-        var result = await service.ResolveStartupStateAsync("/");
-
-        Assert.AreEqual(StartupResolutionState.Blocked, result.State);
-        Assert.AreEqual(StartupBlockedReason.MissingConfiguration, result.BlockedReason);
-        Assert.IsNull(preferences.StoredIntValue);
-    }
-
-    [TestMethod]
-    public async Task ResolveStartupStateAsync_NoProfiles_ReturnsNoProfile()
-    {
-        var readinessJson = """
-            {
-              "isMockDataEnabled": false,
-              "hasSavedTfsConfig": true,
-              "hasTestedConnectionSuccessfully": true,
-              "hasVerifiedTfsApiSuccessfully": true,
-              "hasAnyProfile": false,
-              "activeProfileId": null,
-              "missingRequirementMessage": null
+              "syncStatus": 0,
+              "blockedReason": null,
+              "diagnostics": {
+                "hasSavedTfsConfig": true,
+                "hasTestedConnectionSuccessfully": true,
+                "hasVerifiedTfsApiSuccessfully": true,
+                "hasAnyProfile": true,
+                "serverActiveProfilePresent": false,
+                "clientHintProvided": false,
+                "clientHintApplied": false,
+                "clientHintRejected": false,
+                "cacheStatePresent": false,
+                "syncCompletedSuccessfully": false,
+                "syncDataPresent": false,
+                "syncAttemptWithinTolerance": false
+              }
             }
             """;
 
         var (_, service, _, _) = CreateSystemUnderTest(
             request => request.RequestUri!.AbsolutePath switch
             {
-                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
+                "/api/startup-state" => CreateJsonResponse(contractJson),
                 _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
             });
 
         var result = await service.ResolveStartupStateAsync("home/delivery/execution?sprintId=7");
 
-        Assert.AreEqual(StartupResolutionState.NoProfile, result.State);
+        Assert.IsNotNull(result.Contract);
+        Assert.AreEqual(StartupStateDto.NoProfile, result.Contract.StartupState);
         Assert.AreEqual("/profiles?returnUrl=%2Fhome%2Fdelivery%2Fexecution%3FsprintId%3D7", result.TargetUri);
     }
 
     [TestMethod]
-    public async Task ResolveStartupStateAsync_InvalidServerProfile_ReturnsProfileInvalid()
+    public async Task ResolveStartupStateAsync_ProfileInvalid_ClearsClientHint()
     {
-        var readinessJson = """
+        var contractJson = """
             {
-              "isMockDataEnabled": false,
-              "hasSavedTfsConfig": true,
-              "hasTestedConnectionSuccessfully": true,
-              "hasVerifiedTfsApiSuccessfully": true,
-              "hasAnyProfile": true,
-              "activeProfileId": 42,
-              "missingRequirementMessage": null
+              "startupState": 1,
+              "targetRoute": "/profiles?returnUrl=%2Fhome",
+              "returnUrl": "/home",
+              "activeProfileId": null,
+              "syncStatus": 0,
+              "blockedReason": null,
+              "diagnostics": {
+                "hasSavedTfsConfig": true,
+                "hasTestedConnectionSuccessfully": true,
+                "hasVerifiedTfsApiSuccessfully": true,
+                "hasAnyProfile": true,
+                "serverActiveProfilePresent": false,
+                "clientHintProvided": true,
+                "clientHintApplied": false,
+                "clientHintRejected": true,
+                "cacheStatePresent": false,
+                "syncCompletedSuccessfully": false,
+                "syncDataPresent": false,
+                "syncAttemptWithinTolerance": false
+              }
             }
             """;
 
         var (profileService, service, preferences, _) = CreateSystemUnderTest(
             request => request.RequestUri!.AbsolutePath switch
             {
-                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
+                "/api/startup-state" => CreateJsonResponse(contractJson),
                 _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
             },
-            cachedProfileId: 42);
+            storedProfileHintId: 42);
 
         var result = await service.ResolveStartupStateAsync("/home");
 
-        Assert.AreEqual(StartupResolutionState.ProfileInvalid, result.State);
-        Assert.IsNull(profileService.LastSetActiveProfileId);
+        Assert.AreEqual(StartupStateDto.ProfileInvalid, result.Contract?.StartupState);
         Assert.IsNull(preferences.StoredIntValue);
+        Assert.IsNull(profileService.CachedActiveProfileId);
     }
 
     [TestMethod]
-    public async Task ResolveStartupStateAsync_ServerProfileWinsClientMismatch()
+    public async Task ResolveStartupStateAsync_ProfileValidNoSync_UsesSyncGateRoute()
     {
-        var readinessJson = """
+        var contractJson = """
             {
-              "isMockDataEnabled": false,
-              "hasSavedTfsConfig": true,
-              "hasTestedConnectionSuccessfully": true,
-              "hasVerifiedTfsApiSuccessfully": true,
-              "hasAnyProfile": true,
-              "activeProfileId": 9,
-              "missingRequirementMessage": null
+              "startupState": 2,
+              "targetRoute": "/sync-gate?returnUrl=%2Fhome%2Fpipeline-insights",
+              "returnUrl": "/home/pipeline-insights",
+              "activeProfileId": 7,
+              "syncStatus": 1,
+              "blockedReason": null,
+              "diagnostics": {
+                "hasSavedTfsConfig": true,
+                "hasTestedConnectionSuccessfully": true,
+                "hasVerifiedTfsApiSuccessfully": true,
+                "hasAnyProfile": true,
+                "serverActiveProfilePresent": true,
+                "clientHintProvided": true,
+                "clientHintApplied": false,
+                "clientHintRejected": false,
+                "cacheStatePresent": true,
+                "syncCompletedSuccessfully": false,
+                "syncDataPresent": false,
+                "syncAttemptWithinTolerance": false
+              }
             }
             """;
-        var cacheJson = """
-            {
-              "productOwnerId": 9,
-              "syncStatus": 2,
-              "lastAttemptSync": "2026-04-16T07:15:01Z",
-              "lastSuccessfulSync": "2026-04-16T07:15:00Z",
-              "workItemCount": 4,
-              "pullRequestCount": 1,
-              "pipelineCount": 1,
-              "workItemWatermark": "2026-04-16T07:14:00Z",
-              "pullRequestWatermark": "2026-04-16T07:14:00Z",
-              "pipelineFinishWatermark": "2026-04-16T07:14:00Z"
-            }
-            """;
-
-        var profiles = new[]
-        {
-            CreateProfile(7, "Alice"),
-            CreateProfile(9, "Bob")
-        };
 
         var (_, service, preferences, _) = CreateSystemUnderTest(
             request => request.RequestUri!.AbsolutePath switch
             {
-                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
-                "/api/CacheSync/9" => CreateJsonResponse(cacheJson),
+                "/api/startup-state" => CreateJsonResponse(contractJson),
                 _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
             },
-            cachedProfileId: 7,
-            profiles: profiles);
+            storedProfileHintId: 7);
 
-        var result = await service.ResolveStartupStateAsync("/home");
+        var result = await service.ResolveStartupStateAsync("/home/pipeline-insights");
 
-        Assert.AreEqual(StartupResolutionState.Ready, result.State);
-        Assert.AreEqual(9, result.ActiveProfileId);
-        Assert.AreEqual(9, preferences.StoredIntValue);
+        Assert.AreEqual(StartupStateDto.ProfileValid_NoSync, result.Contract?.StartupState);
+        Assert.AreEqual("/sync-gate?returnUrl=%2Fhome%2Fpipeline-insights", result.TargetUri);
+        Assert.AreEqual(7, preferences.StoredIntValue);
     }
 
     [TestMethod]
-    public async Task ResolveStartupStateAsync_ValidHintRestoresServerSelection()
+    public async Task ResolveStartupStateAsync_Ready_UsesServerTargetWithoutClientInference()
     {
-        var readinessJson = """
+        var contractJson = """
             {
-              "isMockDataEnabled": false,
-              "hasSavedTfsConfig": true,
-              "hasTestedConnectionSuccessfully": true,
-              "hasVerifiedTfsApiSuccessfully": true,
-              "hasAnyProfile": true,
-              "activeProfileId": null,
-              "missingRequirementMessage": null
-            }
-            """;
-        var cacheJson = """
-            {
-              "productOwnerId": 7,
-              "syncStatus": 2,
-              "lastAttemptSync": "2026-04-16T07:15:02Z",
-              "lastSuccessfulSync": "2026-04-16T07:15:00Z",
-              "workItemCount": 2,
-              "pullRequestCount": 0,
-              "pipelineCount": 0,
-              "workItemWatermark": "2026-04-16T07:14:00Z",
-              "pullRequestWatermark": null,
-              "pipelineFinishWatermark": null
+              "startupState": 3,
+              "targetRoute": "/home/delivery/execution?sprintId=3",
+              "returnUrl": "/home/delivery/execution?sprintId=3",
+              "activeProfileId": 9,
+              "syncStatus": 3,
+              "blockedReason": null,
+              "diagnostics": {
+                "hasSavedTfsConfig": true,
+                "hasTestedConnectionSuccessfully": true,
+                "hasVerifiedTfsApiSuccessfully": true,
+                "hasAnyProfile": true,
+                "serverActiveProfilePresent": true,
+                "clientHintProvided": true,
+                "clientHintApplied": false,
+                "clientHintRejected": false,
+                "cacheStatePresent": true,
+                "syncCompletedSuccessfully": true,
+                "syncDataPresent": true,
+                "syncAttemptWithinTolerance": true
+              }
             }
             """;
 
         var (profileService, service, preferences, _) = CreateSystemUnderTest(
             request => request.RequestUri!.AbsolutePath switch
             {
-                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
-                "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
+                "/api/startup-state" => CreateJsonResponse(contractJson),
                 _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
             },
-            cachedProfileId: 7,
-            profiles: new[] { CreateProfile(7, "Marina") });
-
-        var result = await service.ResolveStartupStateAsync("/home");
-
-        Assert.AreEqual(StartupResolutionState.Ready, result.State);
-        Assert.AreEqual(7, profileService.LastSetActiveProfileId);
-        Assert.AreEqual(7, preferences.StoredIntValue);
-    }
-
-    [TestMethod]
-    public async Task ResolveStartupStateAsync_NoSuccessfulSync_ReturnsProfileValidNoSync()
-    {
-        var readinessJson = """
-            {
-              "isMockDataEnabled": false,
-              "hasSavedTfsConfig": true,
-              "hasTestedConnectionSuccessfully": true,
-              "hasVerifiedTfsApiSuccessfully": true,
-              "hasAnyProfile": true,
-              "activeProfileId": 7,
-              "missingRequirementMessage": null
-            }
-            """;
-        var cacheJson = """
-            {
-              "productOwnerId": 7,
-              "syncStatus": 0,
-              "lastSuccessfulSync": null
-            }
-            """;
-
-        var (_, service, _, _) = CreateSystemUnderTest(
-            request => request.RequestUri!.AbsolutePath switch
-            {
-                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
-                "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
-                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
-            },
-            cachedProfileId: 7,
-            profiles: new[] { CreateProfile(7, "Marina") });
-
-        var result = await service.ResolveStartupStateAsync("/home/pipeline-insights");
-
-        Assert.AreEqual(StartupResolutionState.ProfileValid_NoSync, result.State);
-        Assert.AreEqual("/sync-gate?returnUrl=%2Fhome%2Fpipeline-insights", result.TargetUri);
-    }
-
-    [TestMethod]
-    public async Task ResolveStartupStateAsync_LaterFailedAttemptRejectsStaleSync()
-    {
-        var readinessJson = """
-            {
-              "isMockDataEnabled": false,
-              "hasSavedTfsConfig": true,
-              "hasTestedConnectionSuccessfully": true,
-              "hasVerifiedTfsApiSuccessfully": true,
-              "hasAnyProfile": true,
-              "activeProfileId": 7,
-              "missingRequirementMessage": null
-            }
-            """;
-        var cacheJson = """
-            {
-              "productOwnerId": 7,
-              "syncStatus": 2,
-              "lastAttemptSync": "2026-04-16T07:30:30Z",
-              "lastSuccessfulSync": "2026-04-16T07:15:00Z",
-              "workItemCount": 4,
-              "pullRequestCount": 1,
-              "pipelineCount": 1,
-              "workItemWatermark": "2026-04-16T07:14:00Z"
-            }
-            """;
-
-        var (_, service, _, _) = CreateSystemUnderTest(
-            request => request.RequestUri!.AbsolutePath switch
-            {
-                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
-                "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
-                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
-            },
-            cachedProfileId: 7,
-            profiles: new[] { CreateProfile(7, "Marina") });
-
-        var result = await service.ResolveStartupStateAsync("/home");
-
-        Assert.AreEqual(StartupResolutionState.ProfileValid_NoSync, result.State);
-        StringAssert.Contains(result.Reason, "invalidated");
-    }
-
-    [TestMethod]
-    public async Task ResolveStartupStateAsync_MissingWatermarkRejectsPartialSync()
-    {
-        var readinessJson = """
-            {
-              "isMockDataEnabled": false,
-              "hasSavedTfsConfig": true,
-              "hasTestedConnectionSuccessfully": true,
-              "hasVerifiedTfsApiSuccessfully": true,
-              "hasAnyProfile": true,
-              "activeProfileId": 7,
-              "missingRequirementMessage": null
-            }
-            """;
-        var cacheJson = """
-            {
-              "productOwnerId": 7,
-              "syncStatus": 2,
-              "lastAttemptSync": "2026-04-16T07:15:01Z",
-              "lastSuccessfulSync": "2026-04-16T07:15:00Z",
-              "workItemCount": 4,
-              "pullRequestCount": 1,
-              "pipelineCount": 1,
-              "workItemWatermark": null
-            }
-            """;
-
-        var (_, service, _, _) = CreateSystemUnderTest(
-            request => request.RequestUri!.AbsolutePath switch
-            {
-                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
-                "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
-                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
-            },
-            cachedProfileId: 7,
-            profiles: new[] { CreateProfile(7, "Marina") });
-
-        var result = await service.ResolveStartupStateAsync("/home");
-
-        Assert.AreEqual(StartupResolutionState.ProfileValid_NoSync, result.State);
-        StringAssert.Contains(result.Reason, "work item watermark");
-    }
-
-    [TestMethod]
-    public async Task ResolveStartupStateAsync_DeepLinkReady_PreservesRequestedRoute()
-    {
-        var readinessJson = """
-            {
-              "isMockDataEnabled": false,
-              "hasSavedTfsConfig": true,
-              "hasTestedConnectionSuccessfully": true,
-              "hasVerifiedTfsApiSuccessfully": true,
-              "hasAnyProfile": true,
-              "activeProfileId": 7,
-              "missingRequirementMessage": null
-            }
-            """;
-        var cacheJson = """
-            {
-              "productOwnerId": 7,
-              "syncStatus": 2,
-              "lastAttemptSync": "2026-04-16T07:15:02Z",
-              "lastSuccessfulSync": "2026-04-16T07:15:00Z",
-              "workItemCount": 2,
-              "pullRequestCount": 0,
-              "pipelineCount": 0,
-              "workItemWatermark": "2026-04-16T07:14:00Z"
-            }
-            """;
-
-        var (_, service, _, _) = CreateSystemUnderTest(
-            request => request.RequestUri!.AbsolutePath switch
-            {
-                "/api/Startup/readiness" => CreateJsonResponse(readinessJson),
-                "/api/CacheSync/7" => CreateJsonResponse(cacheJson),
-                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
-            },
-            cachedProfileId: 7,
-            profiles: new[] { CreateProfile(7, "Marina") });
+            storedProfileHintId: 7);
 
         var result = await service.ResolveStartupStateAsync("/home/delivery/execution?sprintId=3");
 
-        Assert.AreEqual(StartupResolutionState.Ready, result.State);
+        Assert.AreEqual(StartupStateDto.Ready, result.Contract?.StartupState);
         Assert.AreEqual("/home/delivery/execution?sprintId=3", result.TargetUri);
+        Assert.IsTrue(result.ShouldRenderCurrentRoute);
+        Assert.AreEqual(9, preferences.StoredIntValue);
+        Assert.AreEqual(9, profileService.CachedActiveProfileId);
+    }
+
+    [TestMethod]
+    public async Task ResolveStartupStateAsync_Blocked_UsesServerBlockedRoute()
+    {
+        var contractJson = """
+            {
+              "startupState": 4,
+              "targetRoute": "/startup-blocked",
+              "returnUrl": "/home",
+              "activeProfileId": null,
+              "syncStatus": 0,
+              "blockedReason": 0,
+              "diagnostics": {
+                "hasSavedTfsConfig": false,
+                "hasTestedConnectionSuccessfully": false,
+                "hasVerifiedTfsApiSuccessfully": false,
+                "hasAnyProfile": false,
+                "serverActiveProfilePresent": false,
+                "clientHintProvided": false,
+                "clientHintApplied": false,
+                "clientHintRejected": false,
+                "cacheStatePresent": false,
+                "syncCompletedSuccessfully": false,
+                "syncDataPresent": false,
+                "syncAttemptWithinTolerance": false
+              }
+            }
+            """;
+
+        var (_, service, _, _) = CreateSystemUnderTest(
+            request => request.RequestUri!.AbsolutePath switch
+            {
+                "/api/startup-state" => CreateJsonResponse(contractJson),
+                _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound)
+            });
+
+        var result = await service.ResolveStartupStateAsync("/");
+
+        Assert.AreEqual(StartupStateDto.Blocked, result.Contract?.StartupState);
+        Assert.AreEqual("/startup-blocked", result.TargetUri);
+        StringAssert.Contains(result.Reason, "configuration");
     }
 
     private static (StubProfileService ProfileService, StartupOrchestratorService Service, StubPreferencesService Preferences, HttpClient HttpClient) CreateSystemUnderTest(
         Func<HttpRequestMessage, HttpResponseMessage> handler,
-        int? cachedProfileId = null,
-        IEnumerable<ProfileDto>? profiles = null)
+        int? storedProfileHintId = null)
     {
         var httpClient = new HttpClient(new StubHttpMessageHandler(handler))
         {
             BaseAddress = new Uri("http://localhost")
         };
-        var preferencesService = new StubPreferencesService(cachedProfileId);
-        var profileService = new StubProfileService(profiles ?? Array.Empty<ProfileDto>(), cachedProfileId);
+        var preferencesService = new StubPreferencesService(storedProfileHintId);
+        var profileService = new StubProfileService();
 
         var service = new StartupOrchestratorService(
             new StartupClient(httpClient),
-            new CacheSyncService(httpClient, new CacheSyncClient(httpClient)),
-            profileService,
-            preferencesService);
+            preferencesService,
+            profileService);
 
         return (profileService, service, preferencesService, httpClient);
     }
@@ -400,19 +260,6 @@ public sealed class StartupOrchestratorServiceTests
         {
             Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
         };
-    }
-
-    private static ProfileDto CreateProfile(int id, string name)
-    {
-        return new ProfileDto(
-            id,
-            name,
-            [],
-            ProfilePictureType.Default,
-            0,
-            null,
-            DateTimeOffset.UtcNow,
-            DateTimeOffset.UtcNow);
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler
@@ -460,26 +307,16 @@ public sealed class StartupOrchestratorServiceTests
 
     private sealed class StubProfileService : IProfileService
     {
-        private readonly Dictionary<int, ProfileDto> _profiles;
-
-        public StubProfileService(IEnumerable<ProfileDto> profiles, int? cachedProfileId)
-        {
-            _profiles = profiles.ToDictionary(profile => profile.Id);
-            CachedActiveProfileId = cachedProfileId;
-        }
-
         public int? CachedActiveProfileId { get; private set; }
 
-        public int? LastSetActiveProfileId { get; private set; }
-
         public Task<IEnumerable<ProfileDto>> GetAllProfilesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IEnumerable<ProfileDto>>(_profiles.Values);
+            => throw new NotSupportedException();
 
         public Task<ProfileDto?> GetProfileByIdAsync(int id, CancellationToken cancellationToken = default)
-            => Task.FromResult(_profiles.GetValueOrDefault(id));
+            => throw new NotSupportedException();
 
         public Task<ProfileDto?> GetActiveProfileAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(CachedActiveProfileId.HasValue ? _profiles.GetValueOrDefault(CachedActiveProfileId.Value) : null);
+            => throw new NotSupportedException();
 
         public Task<ProfileDto> CreateProfileAsync(string name, List<int> goalIds, ProfilePictureType pictureType = ProfilePictureType.Default, int? defaultPictureId = null, string? customPicturePath = null, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();
@@ -491,11 +328,7 @@ public sealed class StartupOrchestratorServiceTests
             => throw new NotSupportedException();
 
         public Task<SettingsDto> SetActiveProfileAsync(int? profileId, CancellationToken cancellationToken = default)
-        {
-            CachedActiveProfileId = profileId;
-            LastSetActiveProfileId = profileId;
-            return Task.FromResult(new SettingsDto(1, profileId, DateTimeOffset.UtcNow));
-        }
+            => throw new NotSupportedException();
 
         public Task<ProfileDto> CreateAndActivateProfileAsync(string name, List<int> goalIds, ProfilePictureType pictureType = ProfilePictureType.Default, int? defaultPictureId = null, string? customPicturePath = null, CancellationToken cancellationToken = default)
             => throw new NotSupportedException();

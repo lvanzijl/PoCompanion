@@ -1,4 +1,5 @@
 using PoTool.Client.Services;
+using PoTool.Shared.Settings;
 
 namespace PoTool.Tests.Unit.Services;
 
@@ -18,12 +19,16 @@ public sealed class StartupGateCoordinatorTests
         Assert.IsNull(coordinator.Snapshot.PendingNavigationUri);
 
         orchestrator.Complete(new StartupStateResolution(
-            StartupResolutionState.Ready,
-            Readiness: null,
-            RequestedReadyUri: "/home/delivery/execution?sprintId=3",
+            Contract: new StartupStateResponseDto(
+                StartupStateDto.Ready,
+                "/home/delivery/execution?sprintId=3",
+                "/home/delivery/execution?sprintId=3",
+                7,
+                StartupSyncStatusDto.Success,
+                BlockedReason: null,
+                Diagnostics: EmptyDiagnostics()),
             TargetUri: "/home/delivery/execution?sprintId=3",
             ShouldRenderCurrentRoute: true,
-            ActiveProfileId: 7,
             Reason: "Ready",
             RecoveryHint: "Continue."));
 
@@ -37,12 +42,16 @@ public sealed class StartupGateCoordinatorTests
     public async Task ResolveAsync_RedirectRequired_LeavesNavigationPending()
     {
         var orchestrator = new StaticStartupOrchestrator(new StartupStateResolution(
-            StartupResolutionState.NoProfile,
-            Readiness: null,
-            RequestedReadyUri: "/home",
+            Contract: new StartupStateResponseDto(
+                StartupStateDto.NoProfile,
+                "/profiles?returnUrl=%2Fhome",
+                "/home",
+                ActiveProfileId: null,
+                StartupSyncStatusDto.NotApplicable,
+                BlockedReason: null,
+                Diagnostics: EmptyDiagnostics()),
             TargetUri: "/profiles?returnUrl=%2Fhome",
             ShouldRenderCurrentRoute: false,
-            ActiveProfileId: null,
             Reason: "No profile",
             RecoveryHint: "Select one."));
 
@@ -59,12 +68,16 @@ public sealed class StartupGateCoordinatorTests
     public async Task ResolveAsync_DeepLinkReady_RendersCurrentRoute()
     {
         var orchestrator = new StaticStartupOrchestrator(new StartupStateResolution(
-            StartupResolutionState.Ready,
-            Readiness: null,
-            RequestedReadyUri: "/home/pipeline-insights",
+            Contract: new StartupStateResponseDto(
+                StartupStateDto.Ready,
+                "/home/pipeline-insights",
+                "/home/pipeline-insights",
+                7,
+                StartupSyncStatusDto.Success,
+                BlockedReason: null,
+                Diagnostics: EmptyDiagnostics()),
             TargetUri: "/home/pipeline-insights",
             ShouldRenderCurrentRoute: true,
-            ActiveProfileId: 7,
             Reason: "Ready",
             RecoveryHint: "Continue."));
 
@@ -75,6 +88,23 @@ public sealed class StartupGateCoordinatorTests
         Assert.IsTrue(coordinator.Snapshot.ShouldRenderRouter);
         Assert.IsNull(coordinator.Snapshot.PendingNavigationUri);
         Assert.AreEqual("/home/pipeline-insights", coordinator.LastResolution?.TargetUri);
+    }
+
+    private static StartupDiagnosticFlagsDto EmptyDiagnostics()
+    {
+        return new(
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false);
     }
 
     private sealed class StaticStartupOrchestrator : IStartupOrchestratorService

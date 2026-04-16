@@ -1,8 +1,6 @@
-using Mediator;
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Core.Contracts;
 using PoTool.Shared.Settings;
-using PoTool.Core.Settings.Queries;
 
 namespace PoTool.Api.Controllers;
 
@@ -13,25 +11,11 @@ namespace PoTool.Api.Controllers;
 [Route("api/[controller]")]
 public class StartupController : ControllerBase
 {
-    private readonly IMediator _mediator;
     private readonly ITfsClient _tfsClient;
 
-    public StartupController(IMediator mediator, ITfsClient tfsClient)
+    public StartupController(ITfsClient tfsClient)
     {
-        _mediator = mediator;
         _tfsClient = tfsClient;
-    }
-
-    /// <summary>
-    /// Gets the startup readiness state.
-    /// Used by the Startup Orchestrator to determine where to route the user.
-    /// </summary>
-    [HttpGet("readiness")]
-    [ProducesResponseType(typeof(StartupReadinessDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<StartupReadinessDto>> GetStartupReadiness(CancellationToken cancellationToken)
-    {
-        var readiness = await _mediator.Send(new GetStartupReadinessQuery(), cancellationToken);
-        return Ok(readiness);
     }
 
     /// <summary>

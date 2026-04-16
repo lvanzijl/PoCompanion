@@ -1,4 +1,3 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Client.Services;
 
 namespace PoTool.Tests.Unit.Services;
@@ -25,55 +24,28 @@ public class StartupGuardRouteMatcherTests
     }
 
     [TestMethod]
-    public void GetTargetUri_SyncRoute_UsesSyncGate()
+    public void IsCurrentTarget_MatchingRoute_ReturnsTrue()
     {
-        var target = StartupNavigationTargetResolver.GetTargetUri(
-            StartupResolutionState.ProfileValid_NoSync,
-            "/home",
-            "Sync required",
-            "Open sync gate.");
+        var isCurrentTarget = StartupNavigationTargetResolver.IsCurrentTarget(
+            "/sync-gate?returnUrl=%2Fhome",
+            "/sync-gate?returnUrl=%2Fhome");
 
-        Assert.AreEqual("/sync-gate?returnUrl=%2Fhome", target);
+        Assert.IsTrue(isCurrentTarget);
     }
 
     [TestMethod]
-    public void GetTargetUri_ProfilesRoute_PreservesDeepLinkReturnUrl()
+    public void IsCurrentTarget_DifferentQuery_ReturnsFalse()
     {
-        var target = StartupNavigationTargetResolver.GetTargetUri(
-            StartupResolutionState.NoProfile,
-            "/home/delivery/execution?sprintId=7",
-            "Profile selection required",
-            "Select a profile.");
+        var isCurrentTarget = StartupNavigationTargetResolver.IsCurrentTarget(
+            "/profiles?returnUrl=%2Fhome",
+            "/profiles?returnUrl=%2Fhome%2Fdelivery");
 
-        Assert.AreEqual("/profiles?returnUrl=%2Fhome%2Fdelivery%2Fexecution%3FsprintId%3D7", target);
+        Assert.IsFalse(isCurrentTarget);
     }
 
     [TestMethod]
-    public void GetTargetUri_BlockingRoute_UsesStartupBlockedPage()
+    public void GetBlockingRoute_ReturnsStartupBlocked()
     {
-        var target = StartupNavigationTargetResolver.GetTargetUri(
-            StartupResolutionState.Blocked,
-            "/home",
-            "Startup failed",
-            "Retry startup.");
-
-        StringAssert.StartsWith(target, "/startup-blocked?message=");
-        StringAssert.Contains(target, "hint=");
-    }
-
-    [TestMethod]
-    public void ResolveRequestedReadyUri_StartupFlowRoute_UsesReturnUrl()
-    {
-        var requestedReadyUri = StartupNavigationTargetResolver.ResolveRequestedReadyUri("/sync-gate?returnUrl=%2Fhome%2Fdelivery");
-
-        Assert.AreEqual("/home/delivery", requestedReadyUri);
-    }
-
-    [TestMethod]
-    public void NormalizeReturnUrl_InvalidUrl_FallsBackToHome()
-    {
-        var normalized = StartupReturnUrlHelper.NormalizeOrDefault("//evil.example");
-
-        Assert.AreEqual("/home", normalized);
+        Assert.AreEqual("/startup-blocked", StartupNavigationTargetResolver.GetBlockingRoute());
     }
 }

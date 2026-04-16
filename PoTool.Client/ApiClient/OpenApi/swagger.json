@@ -7511,26 +7511,6 @@
         }
       }
     },
-    "/api/Startup/readiness": {
-      "get": {
-        "tags": [
-          "Startup"
-        ],
-        "operationId": "Startup_GetStartupReadiness",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StartupReadinessDto"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/Startup/tfs-projects": {
       "get": {
         "tags": [
@@ -9282,6 +9262,44 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DataStateResponseDtoOfHealthWorkspaceProductSummaryDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/startup-state": {
+      "get": {
+        "operationId": "GetStartupState",
+        "parameters": [
+          {
+            "name": "returnUrl",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "profileHintId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartupStateResponseDto"
                 }
               }
             }
@@ -20996,36 +21014,6 @@
           }
         }
       },
-      "StartupReadinessDto": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "isMockDataEnabled": {
-            "type": "boolean"
-          },
-          "hasSavedTfsConfig": {
-            "type": "boolean"
-          },
-          "hasTestedConnectionSuccessfully": {
-            "type": "boolean"
-          },
-          "hasVerifiedTfsApiSuccessfully": {
-            "type": "boolean"
-          },
-          "hasAnyProfile": {
-            "type": "boolean"
-          },
-          "activeProfileId": {
-            "type": "integer",
-            "format": "int32",
-            "nullable": true
-          },
-          "missingRequirementMessage": {
-            "type": "string",
-            "nullable": true
-          }
-        }
-      },
       "TfsProjectDto": {
         "type": "object",
         "additionalProperties": false,
@@ -22761,6 +22749,139 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          }
+        }
+      },
+      "StartupStateDto": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "NoProfile",
+          "ProfileInvalid",
+          "ProfileValid_NoSync",
+          "Ready",
+          "Blocked"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "StartupSyncStatusDto": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "NotApplicable",
+          "Missing",
+          "InProgress",
+          "Success",
+          "SuccessWithWarnings",
+          "Failed",
+          "Invalidated",
+          "MissingData"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "StartupBlockedReasonDto": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "MissingConfiguration",
+          "InvalidActiveProfile",
+          "UnexpectedFailure"
+        ],
+        "enum": [
+          0,
+          1,
+          2
+        ]
+      },
+      "StartupDiagnosticFlagsDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "hasSavedTfsConfig": {
+            "type": "boolean"
+          },
+          "hasTestedConnectionSuccessfully": {
+            "type": "boolean"
+          },
+          "hasVerifiedTfsApiSuccessfully": {
+            "type": "boolean"
+          },
+          "hasAnyProfile": {
+            "type": "boolean"
+          },
+          "serverActiveProfilePresent": {
+            "type": "boolean"
+          },
+          "clientHintProvided": {
+            "type": "boolean"
+          },
+          "clientHintApplied": {
+            "type": "boolean"
+          },
+          "clientHintRejected": {
+            "type": "boolean"
+          },
+          "cacheStatePresent": {
+            "type": "boolean"
+          },
+          "syncCompletedSuccessfully": {
+            "type": "boolean"
+          },
+          "syncDataPresent": {
+            "type": "boolean"
+          },
+          "syncAttemptWithinTolerance": {
+            "type": "boolean"
+          }
+        }
+      },
+      "StartupStateResponseDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "startupState": {
+            "$ref": "#/components/schemas/StartupStateDto"
+          },
+          "targetRoute": {
+            "type": "string"
+          },
+          "returnUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "activeProfileId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "syncStatus": {
+            "$ref": "#/components/schemas/StartupSyncStatusDto"
+          },
+          "blockedReason": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/StartupBlockedReasonDto"
+              }
+            ],
+            "nullable": true
+          },
+          "diagnostics": {
+            "$ref": "#/components/schemas/StartupDiagnosticFlagsDto"
           }
         }
       }
