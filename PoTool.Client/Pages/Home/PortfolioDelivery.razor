@@ -49,11 +49,7 @@
                         NotReadyMessage="Portfolio delivery will load once the cache is ready."
                         OnRecovery="@LoadInitialDataAsync">
         <NotRequestedContent>
-            @if (!string.IsNullOrEmpty(_errorMessage))
-            {
-                <MudAlert Severity="Severity.Error">@_errorMessage</MudAlert>
-            }
-            else if (_data == null && !_deliveryLoading && _selectedSprintIds.Count == 0 && _sprints.Any())
+            @if (_selectedSprintIds.Count == 0 && _sprints.Any())
             {
                 <MudPaper Elevation="1" Class="pa-6 text-center">
                     <MudIcon Icon="@Icons.Material.Filled.DateRange" Color="Color.Secondary" Style="font-size: 2.5rem;" />
@@ -73,26 +69,25 @@
             }
         </NotRequestedContent>
         <ChildContent Context="_">
+        @{ var data = _data!; }
         @if (_deliveryLoading)
         {
             <MudProgressLinear Indeterminate="true" Color="Color.Warning" Class="mb-4" />
         }
 
-        @if (_data != null)
-        {
             @* ── Section header *@
             <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-1" Spacing="1">
                 <MudText Typo="Typo.overline" Color="Color.Secondary">
-                    @if (_data.SprintCount == 1)
+                    @if (data.SprintCount == 1)
                     {
                         <text>Single sprint snapshot</text>
                     }
                     else
                     {
-                        <text>Aggregated snapshot — @_data.SprintCount sprints</text>
+                        <text>Aggregated snapshot — @data.SprintCount sprints</text>
                     }
                 </MudText>
-                @if (_data.SprintCount > 1)
+                @if (data.SprintCount > 1)
                 {
                     <MudTooltip Text="Multiple sprints selected. All metrics are aggregated (summed) across the sprint range. This is a composition view — no time trends are shown.">
                         <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
@@ -110,37 +105,37 @@
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Completed PBIs</MudText>
-                            <MudText Typo="Typo.h5" Color="Color.Success">@_data.Summary.TotalCompletedPbis</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Success">@data.Summary.TotalCompletedPbis</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Delivered Effort (hours)</MudText>
-                            <MudText Typo="Typo.h5">@_data.Summary.TotalCompletedEffort</MudText>
+                            <MudText Typo="Typo.h5">@data.Summary.TotalCompletedEffort</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Avg. Progress</MudText>
-                            <MudText Typo="Typo.h5">@_data.Summary.AverageProgressPercent.ToString("F0")<MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true">%</MudText></MudText>
+                            <MudText Typo="Typo.h5">@data.Summary.AverageProgressPercent.ToString("F0")<MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true">%</MudText></MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Created</MudText>
-                            <MudText Typo="Typo.h5" Color="@(_data.Summary.TotalBugsCreated > 0 ? Color.Warning : Color.Default)">@_data.Summary.TotalBugsCreated</MudText>
+                            <MudText Typo="Typo.h5" Color="@(data.Summary.TotalBugsCreated > 0 ? Color.Warning : Color.Default)">@data.Summary.TotalBugsCreated</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Worked</MudText>
-                            <MudText Typo="Typo.h5">@_data.Summary.TotalBugsWorked</MudText>
+                            <MudText Typo="Typo.h5">@data.Summary.TotalBugsWorked</MudText>
                         </MudPaper>
                     </MudItem>
                     <MudItem xs="6" sm="4" md="2">
                         <MudPaper Outlined="true" Class="pa-2 text-center">
                             <MudText Typo="Typo.caption" Color="Color.Secondary">Bugs Closed</MudText>
-                            <MudText Typo="Typo.h5" Color="@(_data.Summary.TotalBugsClosed > 0 ? Color.Success : Color.Default)">@_data.Summary.TotalBugsClosed</MudText>
+                            <MudText Typo="Typo.h5" Color="@(data.Summary.TotalBugsClosed > 0 ? Color.Success : Color.Default)">@data.Summary.TotalBugsClosed</MudText>
                         </MudPaper>
                     </MudItem>
                 </MudGrid>
@@ -158,13 +153,13 @@
                                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
                             </MudTooltip>
                         </MudText>
-                        @if (_data.Products.Count == 0)
+                        @if (data.Products.Count == 0)
                         {
                             <MudText Typo="Typo.body2" Color="Color.Secondary">No delivery data available.</MudText>
                         }
                         else
                         {
-                            @foreach (var product in _data.Products)
+                            @foreach (var product in data.Products)
                             {
                                 <MudStack Class="mb-2" Spacing="0">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -194,13 +189,13 @@
                                 <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" Class="ml-1" />
                             </MudTooltip>
                         </MudText>
-                        @if (_data.TopFeatures.Count == 0)
+                        @if (data.TopFeatures.Count == 0)
                         {
                             <MudText Typo="Typo.body2" Color="Color.Secondary">No feature delivery data available for the selected sprint range.</MudText>
                         }
                         else
                         {
-                            @foreach (var feature in _data.TopFeatures)
+                            @foreach (var feature in data.TopFeatures)
                             {
                                 <MudStack Class="mb-2" Spacing="0">
                                     <MudStack Row="true" Justify="Justify.SpaceBetween">
@@ -233,7 +228,7 @@
             </MudGrid>
 
             @* ── Bug distribution summary ── *@
-            @if (_data.Products.Any(p => p.BugsCreated > 0 || p.BugsWorked > 0 || p.BugsClosed > 0))
+            @if (data.Products.Any(p => p.BugsCreated > 0 || p.BugsWorked > 0 || p.BugsClosed > 0))
             {
                 <MudPaper Elevation="2" Class="pa-3 mb-3">
                     <MudText Typo="Typo.subtitle1" Class="mb-2">
@@ -254,7 +249,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var product in _data.Products.OrderByDescending(p => p.BugsCreated))
+                            @foreach (var product in data.Products.OrderByDescending(p => p.BugsCreated))
                             {
                                 var net = product.BugsCreated - product.BugsClosed;
                                 <tr>
@@ -293,7 +288,7 @@
                     </MudSimpleTable>
                 </MudPaper>
             }
-            else if (_data.HasData)
+            else if (data.HasData)
             {
                 <MudPaper Elevation="2" Class="pa-3 mb-3">
                     <MudText Typo="Typo.subtitle1" Class="mb-2">
@@ -303,7 +298,6 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">No bug activity recorded for the selected sprint range.</MudText>
                 </MudPaper>
             }
-        }
 
         </ChildContent>
     </TrendDataStateView>

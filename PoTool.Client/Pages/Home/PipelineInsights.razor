@@ -72,7 +72,7 @@
             </MudItem>
         </MudGrid>
 
-        @if (_insightsData is not null && _togglesDirty)
+        @if (HasInsightsData && _togglesDirty)
         {
             <MudStack Row="true" Class="mt-3">
                 <MudButton Variant="Variant.Filled"
@@ -504,6 +504,8 @@
     private bool _togglesDirty =>
         _includePartiallySucceeded != _prevIncludePartial ||
         _includeCanceled           != _prevIncludeCanceled;
+
+    private bool HasInsightsData => _insightsState.Data is not null;
 
     private double? _sloDurationMinutes;
 

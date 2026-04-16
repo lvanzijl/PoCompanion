@@ -2,6 +2,14 @@
   {
     "date": "2026-04-16",
     "type": "Changed",
+    "title": "Core analytics read surfaces now enforce canonical data-state rendering systemically",
+    "impact": "Pipeline Insights, PR Delivery Insights, Pull Request Insights, Portfolio Flow Trend, Sprint Execution, Product Roadmaps, and shared effort/capacity/flow/forecast panels now route read-state loading, empty, invalid-filter, and failure behavior through governed canonical data-state rendering instead of page-local fallback UI, and the read-surface governance audit now discovers covered pages and panels by pattern with explicit mutation-flow exclusions instead of relying on a fixed file allowlist.",
+    "area": "Home / Planning / Delivery / Pull Requests / Pipelines / Metrics",
+    "link": "/home/pipeline-insights"
+  },
+  {
+    "date": "2026-04-16",
+    "type": "Changed",
     "title": "More planning and health read surfaces now use one canonical data-state renderer",
     "impact": "Backlog Health, Multi-Product Planning, Sprint Activity, Plan Board, the dependency panel, and the timeline panel now route loading, empty, invalid-filter, and failure handling through DataStateViewModel<T> plus CanonicalDataStateView instead of local null checks, manual loading flags, or ad-hoc error UI, and new governance audits block those legacy patterns from returning on the governed read surfaces.",
     "area": "Planning / Health / Delivery / Work Items",

@@ -38,6 +38,7 @@ public static class CanonicalDataStateViewModelMapper
             UiDataState.Failed => DataStateViewModel<TPayload>.Failed(envelopeState.Reason),
             UiDataState.Invalid => DataStateViewModel<TPayload>.Invalid(envelopeState.Reason ?? invalidMessage),
             UiDataState.EmptyButValid => DataStateViewModel<TPayload>.Empty(envelopeState.Reason ?? emptyMessage),
+            UiDataState.Ready => DataStateViewModel<TPayload>.Empty(envelopeState.Reason ?? emptyMessage),
             _ => DataStateViewModel<TPayload>.NotRequested()
         };
     }

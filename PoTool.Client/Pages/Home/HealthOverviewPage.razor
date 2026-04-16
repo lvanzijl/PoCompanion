@@ -61,56 +61,15 @@
     </MudPaper>
 
     <MudPaper Elevation="1" Class="pa-4 mb-4">
-        @if (!string.IsNullOrWhiteSpace(_loadError))
-        {
-            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mb-4">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
-                    <MudText Typo="Typo.body2">@_loadError</MudText>
-                    <CompactButton ButtonRole="ButtonRole.Utility"
-                                   Icon="@Icons.Material.Filled.Refresh"
-                                   OnClick="RetryLoadAsync">
-                        Retry
-                    </CompactButton>
-                </MudStack>
-            </MudAlert>
-        }
-        else if (_isLoading)
-        {
-            <MudGrid Spacing="2">
-                @for (var index = 0; index < 3; index++)
-                {
-                    <MudItem xs="12" md="6" lg="4" @key="@($"build-quality-placeholder-{index}")">
-                        <MudCard Elevation="2">
-                            <MudCardContent>
-                                <MudSkeleton SkeletonType="SkeletonType.Text" Height="28px" Width="160px" Class="mb-3" />
-                                <MudGrid Spacing="2">
-                                    <MudItem xs="12" md="4">
-                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
-                                    </MudItem>
-                                    <MudItem xs="12" md="4">
-                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
-                                    </MudItem>
-                                    <MudItem xs="12" md="4">
-                                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="120px" />
-                                    </MudItem>
-                                </MudGrid>
-                            </MudCardContent>
-                        </MudCard>
-                    </MudItem>
-                }
-            </MudGrid>
-        }
-        else
-        {
-            <CanonicalDataStateView TData="SharedBuildQualityPageDto"
-                                    State="@_buildQualityViewState"
-                                    ProductOwnerId="@_activeProfileId"
-                                    Subject="Build Quality overview"
-                                    EmptyMessage="No Build Quality data is available for the active Product Owner yet."
-                                    FailedMessage="Build Quality overview unavailable right now."
-                                    FilterNotice="@_buildQualityFilterNotice"
-                                    OnRecovery="@RetryLoadAsync">
-                <ChildContent Context="buildQualityPage">
+        <CanonicalDataStateView TData="SharedBuildQualityPageDto"
+                                State="@_buildQualityViewState"
+                                ProductOwnerId="@_activeProfileId"
+                                Subject="Build Quality overview"
+                                EmptyMessage="No Build Quality data is available for the active Product Owner yet."
+                                FailedMessage="Build Quality overview unavailable right now."
+                                FilterNotice="@_buildQualityFilterNotice"
+                                OnRecovery="@RetryLoadAsync">
+            <ChildContent Context="buildQualityPage">
             <MudStack Spacing="2" Class="mb-4">
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     Showing default-branch Build Quality for @GetWindowLabel().
@@ -133,9 +92,8 @@
                     }
                 </MudGrid>
             </MudStack>
-                </ChildContent>
-            </CanonicalDataStateView>
-        }
+            </ChildContent>
+        </CanonicalDataStateView>
     </MudPaper>
 </MudContainer>
 
@@ -150,10 +108,8 @@
     private CanonicalFilterMetadata? _buildQualityFilterMetadata;
     private CanonicalFilterNoticeModel? _buildQualityFilterNotice;
     private DataStateViewModel<SharedBuildQualityPageDto> _buildQualityViewState = DataStateViewModel<SharedBuildQualityPageDto>.NotRequested();
-    private string? _loadError;
     private string? _selectedProductName;
     private int? _activeProfileId;
-    private bool _isLoading = true;
     private DateTimeOffset _windowStartUtc;
     private DateTimeOffset _windowEndUtc;
 
@@ -180,8 +136,6 @@
 
     private async Task LoadOverviewAsync()
     {
-        _isLoading = true;
-        _loadError = null;
         _buildQualityPage = null;
         _buildQualityFilterNotice = null;
         _buildQualityViewState = DataStateViewModel<SharedBuildQualityPageDto>.Loading();
@@ -198,7 +152,7 @@
             var activeProfile = await ProfileService.GetActiveProfileAsync(_lifetimeCts.Token);
             if (activeProfile is null)
             {
-                _loadError = "No active profile selected.";
+                _buildQualityViewState = DataStateViewModel<SharedBuildQualityPageDto>.Failed("No active profile selected.");
                 return;
             }
 
@@ -243,7 +197,6 @@
         }
         finally
         {
-            _isLoading = false;
             await InvokeAsync(StateHasChanged);
         }
     }
