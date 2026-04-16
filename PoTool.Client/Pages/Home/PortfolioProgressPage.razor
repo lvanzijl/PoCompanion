@@ -463,7 +463,7 @@
                 productFilter,
                 CancellationToken.None);
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioProgressTrendDto>>.FromResponse(response, "Portfolio flow could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed || _dataState.UiState == UiDataState.Invalid)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 _trendData = null;
                 return;

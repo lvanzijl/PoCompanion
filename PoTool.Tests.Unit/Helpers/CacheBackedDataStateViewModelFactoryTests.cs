@@ -1,5 +1,6 @@
 using PoTool.Client.Helpers;
 using PoTool.Client.Models;
+using PoTool.Shared.DataState;
 using PoTool.Shared.Metrics;
 
 namespace PoTool.Tests.Unit.Helpers;
@@ -15,9 +16,11 @@ public sealed class CacheBackedDataStateViewModelFactoryTests
         var viewModel = result.ToViewModel("fallback");
 
         Assert.AreEqual(UiDataState.Loading, viewModel.UiState);
+        Assert.AreEqual(DataStateDto.Loading, viewModel.State);
         Assert.AreEqual("Cache warming", viewModel.Reason);
         Assert.AreEqual(30, viewModel.RetryAfterSeconds);
-        Assert.AreEqual(DataStateResultStatus.NotReady, viewModel.ResultStatus);
+        Assert.AreEqual(DataStateResultStatus.Loading, viewModel.ResultStatus);
+        Assert.IsTrue(viewModel.ShowCacheStatus);
     }
 
     [TestMethod]

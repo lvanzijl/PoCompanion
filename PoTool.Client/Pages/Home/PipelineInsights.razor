@@ -625,7 +625,7 @@
                 _includeCanceled,
                 CancellationToken.None);
             _dataState = DataStateViewModel<PipelineQueryResponseDto<PipelineInsightsDto>>.FromResponse(response, "Pipeline insights could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed || _dataState.UiState == UiDataState.Invalid)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 _insightsData = null;
                 return;
@@ -875,7 +875,7 @@
 
             var nonSuccessDetail = pipelineDetails
                 .Select(detail => detail.Detail)
-                .FirstOrDefault(detail => detail.State is CacheBackedClientState.NotReady or CacheBackedClientState.Failed or CacheBackedClientState.Unavailable);
+                .FirstOrDefault(detail => detail.ToViewModel("Pipeline build quality detail could not be loaded right now.").UiState is UiDataState.Loading or UiDataState.Failed);
             if (nonSuccessDetail is not null)
             {
                 _pipelineQualityErrorMessage = nonSuccessDetail.Reason ?? "Data not ready. Cache not built yet for one or more pipeline details.";

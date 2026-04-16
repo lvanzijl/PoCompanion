@@ -26,11 +26,19 @@ public sealed record DataStateViewModel<T>(
 
     public CanonicalFilterMetadata? FilterMetadata { get; init; }
 
+    public bool ShowCacheStatus { get; init; }
+
     public static DataStateViewModel<T> NotRequested()
         => new(DataStateDto.NotRequested);
 
     public static DataStateViewModel<T> Loading()
         => new(DataStateDto.Loading);
+
+    public static DataStateViewModel<T> Loading(string? reason, int? retryAfterSeconds = null, bool showCacheStatus = false)
+        => new(DataStateDto.Loading, Reason: reason, RetryAfterSeconds: retryAfterSeconds, ResultStatus: DataStateResultStatus.Loading)
+        {
+            ShowCacheStatus = showCacheStatus
+        };
 
     public static DataStateViewModel<T> Ready(T data)
         => new(DataStateDto.Available, data);
@@ -75,26 +83,29 @@ public sealed record DataStateViewModel<T>(
         var filterMetadata = ExtractFilterMetadata(response.Data);
         var invalidFields = filterMetadata?.InvalidFields ?? EmptyInvalidFields;
         var validationMessages = filterMetadata?.ValidationMessages ?? EmptyValidationMessages;
+        var normalizedState = NormalizeState(response.State);
 
         return new DataStateViewModel<T>(
-            response.State,
+            normalizedState,
             response.Data,
             response.Reason,
             response.RetryAfterSeconds,
-            DetermineResultStatus(response.State, invalidFields))
+            DetermineResultStatus(normalizedState, invalidFields))
         {
             InvalidFields = invalidFields,
             ValidationMessages = validationMessages,
-            FilterMetadata = filterMetadata
+            FilterMetadata = filterMetadata,
+            ShowCacheStatus = response.State == DataStateDto.NotReady
         };
     }
 
     public static DataStateViewModel<T> FromResult(DataStateResult<T> result)
-        => new(result.State, result.Data, result.Reason, result.RetryAfterSeconds, result.Status)
+        => new(NormalizeState(result.State), result.Data, result.Reason, result.RetryAfterSeconds, NormalizeStatus(result.Status))
         {
             InvalidFields = result.InvalidFields,
             ValidationMessages = result.ValidationMessages,
-            FilterMetadata = result.FilterMetadata
+            FilterMetadata = result.FilterMetadata,
+            ShowCacheStatus = result.Status == DataStateResultStatus.NotReady
         };
 
     private static DataStateResultStatus DetermineResultStatus(DataStateDto state, IReadOnlyList<string> invalidFields)
@@ -108,12 +119,17 @@ public sealed record DataStateViewModel<T>(
         {
             DataStateDto.Available => DataStateResultStatus.Ready,
             DataStateDto.Empty => DataStateResultStatus.Empty,
-            DataStateDto.NotReady => DataStateResultStatus.NotReady,
             DataStateDto.Failed => DataStateResultStatus.Failed,
             DataStateDto.Loading => DataStateResultStatus.Loading,
             _ => DataStateResultStatus.NotRequested
         };
     }
+
+    private static DataStateDto NormalizeState(DataStateDto state)
+        => state == DataStateDto.NotReady ? DataStateDto.Loading : state;
+
+    private static DataStateResultStatus NormalizeStatus(DataStateResultStatus status)
+        => status == DataStateResultStatus.NotReady ? DataStateResultStatus.Loading : status;
 
     private static CanonicalFilterMetadata? ExtractFilterMetadata(T? data)
         => ExtractKnownFilterMetadata(data);

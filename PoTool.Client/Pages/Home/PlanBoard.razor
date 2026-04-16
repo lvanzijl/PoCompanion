@@ -111,22 +111,12 @@
             </MudStack>
         </MudPaper>
     }
-    else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
+    else if (_projectPlanningSummaryState is not null
+        && _projectPlanningSummaryState.ToViewModel("Project planning summary could not be loaded right now.").UiState is UiDataState.Loading or UiDataState.Failed)
     {
         <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
                                 State="@_projectPlanningSummaryState.ToViewModel("Project planning summary could not be loaded right now.")"
                                 ProductOwnerId="@_activeProfileId"
-                                Subject="Project planning summary"
-                                FailedMessage="Project planning summary could not be loaded right now."
-                                OnRecovery="@LoadProjectPlanningSummaryAsync">
-            <ChildContent Context="_">
-            </ChildContent>
-        </CanonicalDataStateView>
-    }
-    else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
-    {
-        <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
-                                State="@_projectPlanningSummaryState.ToViewModel("Project planning summary could not be loaded right now.")"
                                 Subject="Project planning summary"
                                 FailedMessage="Project planning summary could not be loaded right now."
                                 OnRecovery="@LoadProjectPlanningSummaryAsync">
@@ -158,33 +148,19 @@
     {
         <LoadingIndicator IsLoading="true" />
     }
-    else if (_boardState.State == DataStateDto.NotReady)
+    else if (_boardState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.EmptyButValid or UiDataState.Invalid)
     {
         <CanonicalDataStateView TData="IReadOnlyList<WorkItemDto>"
                                 State="@_boardState"
                                 ProductOwnerId="@_activeProfileId"
                                 Subject="Plan Board"
+                                EmptyTitle="No plan board data available"
+                                EmptyMessage="No work items are available for the selected product."
                                 FailedMessage="Plan Board could not be loaded right now."
                                 OnRecovery="@RetryBoardLoadAsync">
             <ChildContent Context="_">
             </ChildContent>
         </CanonicalDataStateView>
-    }
-    else if (_boardState.State == DataStateDto.Failed)
-    {
-        <CanonicalDataStateView TData="IReadOnlyList<WorkItemDto>"
-                                State="@_boardState"
-                                Subject="Plan Board"
-                                FailedMessage="Plan Board could not be loaded right now."
-                                OnRecovery="@RetryBoardLoadAsync">
-            <ChildContent Context="_">
-            </ChildContent>
-        </CanonicalDataStateView>
-    }
-    else if (_boardState.State == DataStateDto.Empty)
-    {
-        <EmptyStateDisplay Title="No plan board data available"
-                           Message="@(_boardState.Reason ?? "No work items are available for the selected product.")" />
     }
     else
     {

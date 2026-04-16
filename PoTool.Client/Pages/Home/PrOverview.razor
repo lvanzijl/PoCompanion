@@ -617,7 +617,7 @@
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.Loading();
             var response = await PullRequestStateService.GetInsightsStateAsync(_profileId!.Value, _selectedSprintId, _selectedTeamId, _selectedRepository, CancellationToken.None);
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PullRequestInsightsDto>>.FromResponse(response, "Pull request insights could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed || _dataState.UiState == UiDataState.Invalid)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 _data = null;
                 return;

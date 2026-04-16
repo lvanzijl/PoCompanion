@@ -2,12 +2,11 @@
 @using PoTool.Client.Models
 @using PoTool.Client.Helpers
 @using PoTool.Shared.DataState
-
 @if (IsLoading || State.UiState == UiDataState.Loading)
 {
     <MudStack Spacing="2">
         <LoadingIndicator IsLoading="true" />
-        @if (State.State == DataStateDto.NotReady && ProductOwnerId.HasValue)
+        @if (State.ShowCacheStatus && ProductOwnerId.HasValue)
         {
             <CacheStatusSection ProductOwnerId="@ProductOwnerId.Value" />
         }
@@ -40,11 +39,11 @@ else if (State.UiState == UiDataState.Failed)
 else if (State.UiState == UiDataState.EmptyButValid)
 {
     <EmptyStateDisplay Title="@EmptyTitle"
-                      Message="@(State.Reason ?? EmptyMessage)" />
+                       Message="@(State.Reason ?? EmptyMessage)" />
 }
-else if (State.UiState == UiDataState.Ready && State.Data is not null)
+else if (State.UiState == UiDataState.Ready)
 {
-    @ChildContent(State.Data)
+    @ChildContent(State.Data!)
 }
 else
 {

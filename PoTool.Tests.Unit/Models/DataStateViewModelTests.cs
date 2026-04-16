@@ -53,6 +53,26 @@ public sealed class DataStateViewModelTests
     }
 
     [TestMethod]
+    public void FromResponse_NormalizesNotReadyToLoadingUiState()
+    {
+        var response = new DataStateResponseDto<string>
+        {
+            State = DataStateDto.NotReady,
+            Reason = "Cache is warming.",
+            RetryAfterSeconds = 15
+        };
+
+        var viewModel = DataStateViewModel<string>.FromResponse(response, "Fallback");
+
+        Assert.AreEqual(DataStateDto.Loading, viewModel.State);
+        Assert.AreEqual(DataStateResultStatus.Loading, viewModel.ResultStatus);
+        Assert.AreEqual(UiDataState.Loading, viewModel.UiState);
+        Assert.AreEqual("Cache is warming.", viewModel.Reason);
+        Assert.AreEqual(15, viewModel.RetryAfterSeconds);
+        Assert.IsTrue(viewModel.ShowCacheStatus);
+    }
+
+    [TestMethod]
     public void InvalidFactory_CreatesInvalidUiStateWithoutResponseEnvelope()
     {
         var viewModel = DataStateViewModel<string>.Invalid("Selected sprint range cannot be resolved.");

@@ -243,7 +243,7 @@
             var response = await WorkItemService.GetAllWithValidationStateAsync(productIds);
             _dataState = DataStateViewModel<IReadOnlyList<WorkItemWithValidationDto>>.FromResponse(response, "Bug triage data could not be loaded right now.");
 
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed)
             {
                 _bugs = new List<WorkItemWithValidationDto>();
                 return;

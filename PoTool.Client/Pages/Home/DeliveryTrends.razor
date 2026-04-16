@@ -433,7 +433,7 @@
             _filterNotice = _dataState.Data is null
                 ? null
                 : CanonicalClientResponseFactory.CreateNotice(CanonicalClientResponseFactory.Create(_dataState.Data).FilterMetadata);
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed || _dataState.UiState == UiDataState.Invalid)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 _trendMetrics.Clear();
                 return;

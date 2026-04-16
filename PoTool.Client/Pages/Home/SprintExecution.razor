@@ -76,22 +76,11 @@
     {
         <MudProgressLinear Indeterminate="true" Color="Color.Info" Class="mb-2" />
     }
-    else if (_dataState.State == DataStateDto.NotReady)
+    else if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.EmptyButValid or UiDataState.Invalid)
     {
         <CanonicalDataStateView TData="SprintQueryResponseDto<SprintExecutionDto>"
                                 State="@_dataState"
                                 ProductOwnerId="@_profileId"
-                                Subject="Sprint execution"
-                                FailedMessage="Sprint execution could not be loaded right now."
-                                OnRecovery="@LoadInitialDataAsync">
-            <ChildContent Context="_">
-            </ChildContent>
-        </CanonicalDataStateView>
-    }
-    else if (_dataState.State == DataStateDto.Failed)
-    {
-        <CanonicalDataStateView TData="SprintQueryResponseDto<SprintExecutionDto>"
-                                State="@_dataState"
                                 Subject="Sprint execution"
                                 FailedMessage="Sprint execution could not be loaded right now."
                                 OnRecovery="@LoadInitialDataAsync">
@@ -533,7 +522,7 @@
                 _selectedProductId,
                 CancellationToken.None);
             _dataState = DataStateViewModel<SprintQueryResponseDto<SprintExecutionDto>>.FromResponse(result, "Sprint execution data could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.EmptyButValid or UiDataState.Invalid)
             {
                 _data = null;
                 _filterNotice = null;

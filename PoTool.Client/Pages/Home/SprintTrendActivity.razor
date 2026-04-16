@@ -223,10 +223,11 @@
         => !string.IsNullOrWhiteSpace(_errorMessage)
             ? DataStateViewModel<WorkItemActivityDetailsDto>.Failed(_errorMessage)
             : _details is null
-                ? _dataState.State switch
+                ? _dataState.UiState switch
                 {
-                    DataStateDto.NotReady => new DataStateViewModel<WorkItemActivityDetailsDto>(DataStateDto.NotReady, Reason: _dataState.Reason, RetryAfterSeconds: _dataState.RetryAfterSeconds, ResultStatus: _dataState.ResultStatus),
-                    DataStateDto.Failed => DataStateViewModel<WorkItemActivityDetailsDto>.Failed(_dataState.Reason),
+                    UiDataState.Loading => DataStateViewModel<WorkItemActivityDetailsDto>.Loading(_dataState.Reason, _dataState.RetryAfterSeconds, _dataState.ShowCacheStatus),
+                    UiDataState.Failed => DataStateViewModel<WorkItemActivityDetailsDto>.Failed(_dataState.Reason),
+                    UiDataState.Invalid => DataStateViewModel<WorkItemActivityDetailsDto>.Invalid(_dataState.Reason),
                     _ => DataStateViewModel<WorkItemActivityDetailsDto>.Empty("No activity details available for this work item.")
                 }
                 : _dataState.UiState == UiDataState.Invalid
@@ -337,7 +338,7 @@
                 selectedSprint?.EndUtc,
                 CancellationToken.None);
             _dataState = DataStateViewModel<SprintQueryResponseDto<WorkItemActivityDetailsDto>>.FromResponse(response, "Sprint activity could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 return;
             }

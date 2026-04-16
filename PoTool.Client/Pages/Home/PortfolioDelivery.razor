@@ -471,7 +471,7 @@
                 GlobalFilterStore.GetState().ProductIds.Count > 0 ? GlobalFilterStore.GetState().ProductIds : null,
                 CancellationToken.None);
             _dataState = DataStateViewModel<DeliveryQueryResponseDto<PortfolioDeliveryDto>>.FromResponse(response, "Portfolio delivery data could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed || _dataState.UiState == UiDataState.Invalid)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 _data = null;
                 return;

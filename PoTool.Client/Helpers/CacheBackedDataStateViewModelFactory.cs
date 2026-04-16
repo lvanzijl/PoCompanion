@@ -17,11 +17,10 @@ public static class CacheBackedDataStateViewModelFactory
         {
             CacheBackedClientState.Success when result.Data is not null => DataStateViewModel<TData>.Ready(result.Data),
             CacheBackedClientState.Empty => DataStateViewModel<TData>.Empty(result.Reason),
-            CacheBackedClientState.NotReady => new DataStateViewModel<TData>(
-                PoTool.Shared.DataState.DataStateDto.NotReady,
-                Reason: result.Reason,
-                RetryAfterSeconds: result.RetryAfterSeconds,
-                ResultStatus: DataStateResultStatus.NotReady),
+            CacheBackedClientState.NotReady => DataStateViewModel<TData>.Loading(
+                result.Reason,
+                result.RetryAfterSeconds,
+                showCacheStatus: true),
             CacheBackedClientState.Failed or CacheBackedClientState.Unavailable => DataStateViewModel<TData>.Failed(result.Reason ?? missingResponseReason),
             _ => DataStateViewModel<TData>.Failed(result.Reason ?? missingResponseReason)
         };
@@ -40,11 +39,10 @@ public static class CacheBackedDataStateViewModelFactory
         {
             CacheBackedClientState.Success when result.Data is not null => CreateCanonicalReady(result.Data),
             CacheBackedClientState.Empty => DataStateViewModel<TData>.Empty(result.Reason),
-            CacheBackedClientState.NotReady => new DataStateViewModel<TData>(
-                PoTool.Shared.DataState.DataStateDto.NotReady,
-                Reason: result.Reason,
-                RetryAfterSeconds: result.RetryAfterSeconds,
-                ResultStatus: DataStateResultStatus.NotReady),
+            CacheBackedClientState.NotReady => DataStateViewModel<TData>.Loading(
+                result.Reason,
+                result.RetryAfterSeconds,
+                showCacheStatus: true),
             CacheBackedClientState.Failed or CacheBackedClientState.Unavailable => DataStateViewModel<TData>.Failed(result.Reason ?? missingResponseReason),
             _ => DataStateViewModel<TData>.Failed(result.Reason ?? missingResponseReason)
         };

@@ -401,10 +401,10 @@
             _bugTrendTotal = new Dictionary<string, int>();
             _bugTrendFixed = new Dictionary<string, int>();
             _bugTrendAdded = new Dictionary<string, int>();
-            _bugTrendSignal = TrendTileSignal.WithFallback(
-                _bugTrendState.State == DataStateDto.NotReady
-                    ? StatusTileSignal.Loading(_bugTrendState.Reason ?? "Bug trend data is still loading from the cache.")
-                    : StatusTileSignal.Failed(_bugTrendState.Reason ?? "Bug trend data could not be loaded right now."));
+                _bugTrendSignal = TrendTileSignal.WithFallback(
+                    _bugTrendState.UiState == UiDataState.Loading
+                        ? StatusTileSignal.Loading(_bugTrendState.Reason ?? "Bug trend data is still loading from the cache.")
+                        : StatusTileSignal.Failed(_bugTrendState.Reason ?? "Bug trend data could not be loaded right now."));
             return;
         }
 
@@ -625,7 +625,7 @@
             {
                 _prTrendFilterMetadata = null;
                 _prTrendSignal = TrendTileSignal.WithFallback(
-                    _prTrendState.State == DataStateDto.NotReady
+                    _prTrendState.UiState == UiDataState.Loading
                         ? StatusTileSignal.Loading(_prTrendState.Reason ?? "PR trend data is still loading from the cache.")
                         : StatusTileSignal.Failed(_prTrendState.Reason ?? "PR trend data could not be loaded right now."));
                 return;
@@ -670,7 +670,7 @@
             }
 
             _pipelineSignalFilterMetadata = null;
-            _pipelineSignal = buildQualityResponse.State == CacheBackedClientState.NotReady
+            _pipelineSignal = buildQualityResponse.ToViewModel("Pipeline signal data is still loading from the cache.").UiState == UiDataState.Loading
                 ? StatusTileSignal.Loading(buildQualityResponse.Reason ?? "Pipeline signal data is still loading from the cache.")
                 : StatusTileSignal.Failed(buildQualityResponse.Reason ?? "Pipeline signal data could not be loaded right now.");
         }

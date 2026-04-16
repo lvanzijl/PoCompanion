@@ -175,22 +175,12 @@
                 </MudStack>
             </MudPaper>
         }
-        else if (_projectPlanningSummaryState?.State == CacheBackedClientState.NotReady)
+        else if (_projectPlanningSummaryState is not null
+            && _projectPlanningSummaryState.ToViewModel("Project roadmap summary could not be loaded right now.").UiState is UiDataState.Loading or UiDataState.Failed)
         {
             <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
                                     State="@_projectPlanningSummaryState.ToViewModel("Project roadmap summary could not be loaded right now.")"
                                     ProductOwnerId="@_profileId"
-                                    Subject="Project roadmap summary"
-                                    FailedMessage="Project roadmap summary could not be loaded right now."
-                                    OnRecovery="@LoadProjectPlanningSummaryAsync">
-                <ChildContent Context="_">
-                </ChildContent>
-            </CanonicalDataStateView>
-        }
-        else if (_projectPlanningSummaryState?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
-        {
-            <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
-                                    State="@_projectPlanningSummaryState.ToViewModel("Project roadmap summary could not be loaded right now.")"
                                     Subject="Project roadmap summary"
                                     FailedMessage="Project roadmap summary could not be loaded right now."
                                     OnRecovery="@LoadProjectPlanningSummaryAsync">

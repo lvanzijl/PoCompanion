@@ -159,22 +159,11 @@
                     </MudStack>
                 </MudAlert>
             }
-            else if (_buildQualityResponse?.State == CacheBackedClientState.NotReady)
+            else if (_buildQualityResponse is not null && _buildQualityResponse.ToViewModel("Build Quality could not be loaded right now.").UiState is UiDataState.Loading or UiDataState.Failed)
             {
                 <CanonicalDataStateView TData="SharedDeliveryBuildQualityDto"
                                         State="@_buildQualityResponse.ToViewModel("Build Quality could not be loaded right now.")"
                                         ProductOwnerId="@_profileId"
-                                        Subject="Build Quality"
-                                        FailedMessage="Build Quality could not be loaded right now."
-                                        OnRecovery="@RetryBuildQualityLoadAsync">
-                    <ChildContent Context="_">
-                    </ChildContent>
-                </CanonicalDataStateView>
-            }
-            else if (_buildQualityResponse?.State is CacheBackedClientState.Failed or CacheBackedClientState.Unavailable)
-            {
-                <CanonicalDataStateView TData="SharedDeliveryBuildQualityDto"
-                                        State="@_buildQualityResponse.ToViewModel("Build Quality could not be loaded right now.")"
                                         Subject="Build Quality"
                                         FailedMessage="Build Quality could not be loaded right now."
                                         OnRecovery="@RetryBuildQualityLoadAsync">

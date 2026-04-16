@@ -803,7 +803,7 @@
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.Loading();
             var response = await PullRequestStateService.GetDeliveryInsightsStateAsync(_profileId!.Value, _selectedSprintId, _selectedTeamId, CancellationToken.None);
             _dataState = DataStateViewModel<PullRequestQueryResponseDto<PrDeliveryInsightsDto>>.FromResponse(response, "PR delivery insights could not be loaded right now.");
-            if (_dataState.State is DataStateDto.NotReady or DataStateDto.Failed || _dataState.UiState == UiDataState.Invalid)
+            if (_dataState.UiState is UiDataState.Loading or UiDataState.Failed or UiDataState.Invalid)
             {
                 _data = null;
                 return;
