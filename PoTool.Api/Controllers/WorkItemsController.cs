@@ -16,6 +16,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[DataSourceMode(RouteIntent.CacheOnlyAnalyticalRead)]
 public class WorkItemsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -236,6 +237,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="tfsId">The TFS work item ID to refresh.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("{tfsId:int}/refresh-from-tfs")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(string), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
@@ -262,6 +264,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="rootIds">Comma-separated list of root work item IDs.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("by-root-ids/refresh-from-tfs")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     public async Task<ActionResult<int>> RefreshByRootIdsFromTfs(
         [FromQuery] string rootIds,
         CancellationToken cancellationToken)
@@ -285,6 +288,7 @@ public class WorkItemsController : ControllerBase
     /// Updates the tags of a work item in TFS and refreshes the local cache.
     /// </summary>
     [HttpPost("{tfsId:int}/tags")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     public async Task<ActionResult<WorkItemDto>> UpdateTags(int tfsId, [FromBody] UpdateTagsRequest request, CancellationToken cancellationToken)
     {
         try
@@ -305,6 +309,7 @@ public class WorkItemsController : ControllerBase
     /// Updates the title and/or description of a work item in TFS and refreshes the local cache.
     /// </summary>
     [HttpPost("{tfsId:int}/title-description")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     public async Task<ActionResult<WorkItemDto>> UpdateTitleDescription(int tfsId, [FromBody] UpdateTitleDescriptionRequest request, CancellationToken cancellationToken)
     {
         try
@@ -329,6 +334,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="request">The new backlog priority value.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("{tfsId:int}/backlog-priority")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
@@ -356,6 +362,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="request">The new iteration path.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     [HttpPost("{tfsId:int}/iteration-path")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(string), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(string), StatusCodes.Status500InternalServerError)]
@@ -401,6 +408,7 @@ public class WorkItemsController : ControllerBase
     /// Used specifically for validating backlog root work item IDs in product creation/editing.
     /// </summary>
     [HttpPost("validate")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     [ProducesResponseType(typeof(ValidateWorkItemResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<ValidateWorkItemResponse>> ValidateWorkItem(
         [FromBody] ValidateWorkItemRequest request,
@@ -449,6 +457,7 @@ public class WorkItemsController : ControllerBase
     /// Used specifically for Add Profile flow where cache is not yet populated.
     /// </summary>
     [HttpGet("area-paths/from-tfs")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     public async Task<ActionResult<IEnumerable<string>>> GetAreaPathsFromTfs(CancellationToken cancellationToken)
     {
         try
@@ -468,6 +477,7 @@ public class WorkItemsController : ControllerBase
     /// Used specifically for Add Profile flow where cache is not yet populated.
     /// </summary>
     [HttpGet("goals/from-tfs")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     public async Task<ActionResult<IEnumerable<WorkItemDto>>> GetGoalsFromTfs(CancellationToken cancellationToken)
     {
         try
@@ -532,6 +542,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Work item state timeline or 404 if work item not found</returns>
     [HttpGet("{id:int}/state-timeline")]
+    [DataSourceMode(RouteIntent.BlockedAmbiguous)]
     public async Task<ActionResult<WorkItemStateTimelineDto>> GetStateTimeline(
         int id,
         CancellationToken cancellationToken)
@@ -562,6 +573,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Revision history for the work item</returns>
     [HttpGet("{workItemId:int}/revisions")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     public async Task<ActionResult<IEnumerable<WorkItemRevisionDto>>> GetWorkItemRevisions(
         int workItemId,
         CancellationToken cancellationToken)
@@ -753,6 +765,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result of batch fix operation showing success/failure for each item</returns>
     [HttpPost("fix-validation-violations")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     public async Task<ActionResult<FixValidationViolationResultDto>> FixValidationViolations(
         [FromBody] FixValidationViolationBatchCommand command,
         CancellationToken cancellationToken = default)
@@ -782,6 +795,7 @@ public class WorkItemsController : ControllerBase
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result of bulk assignment operation showing success/failure for each item</returns>
     [HttpPost("bulk-assign-effort")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     public async Task<ActionResult<BulkEffortAssignmentResultDto>> BulkAssignEffort(
         [FromBody] BulkAssignEffortCommand command,
         CancellationToken cancellationToken = default)
@@ -836,6 +850,7 @@ public class WorkItemsController : ControllerBase
     /// Returns severity values as they appear in TFS (e.g., "1 - Critical", "2 - High", etc.).
     /// </summary>
     [HttpGet("bug-severity-options")]
+    [DataSourceMode(RouteIntent.LiveAllowed)]
     [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
     public ActionResult<IEnumerable<string>> GetBugSeverityOptions()
     {

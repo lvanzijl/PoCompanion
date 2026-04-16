@@ -35,11 +35,11 @@ public sealed class DataSourceModeMiddleware
             return;
         }
 
-        DataSourceModeConfiguration.RouteIntent routeIntent;
+        RouteIntent routeIntent;
 
         try
         {
-            routeIntent = DataSourceModeConfiguration.ResolveRouteIntentOrThrow(path);
+            routeIntent = DataSourceModeEndpointMetadataResolver.ResolveRouteIntentOrThrow(context);
         }
         catch (RouteNotClassifiedException)
         {
@@ -51,7 +51,7 @@ public sealed class DataSourceModeMiddleware
 
         context.Items[DataSourceModeConfiguration.RouteIntentContextItemKey] = routeIntent;
 
-        if (routeIntent == DataSourceModeConfiguration.RouteIntent.BlockedAmbiguous)
+        if (routeIntent == RouteIntent.BlockedAmbiguous)
         {
             var reason = DataSourceModeConfiguration.GetBlockedRouteReason(path) ?? "Requires endpoint split; see docs/analysis/datasource-enforcement.md#deferred-work.";
             _logger.LogError(
@@ -62,7 +62,7 @@ public sealed class DataSourceModeMiddleware
                 $"Route {path} is blocked because it mixes cached and live behavior. {reason}");
         }
 
-        if (routeIntent == DataSourceModeConfiguration.RouteIntent.CacheOnlyAnalyticalRead)
+        if (routeIntent == RouteIntent.CacheOnlyAnalyticalRead)
         {
             context.Items[DataSourceModeConfiguration.ResolvedModeContextItemKey] = DataSourceMode.Cache;
             modeProvider.SetCurrentMode(DataSourceMode.Cache);

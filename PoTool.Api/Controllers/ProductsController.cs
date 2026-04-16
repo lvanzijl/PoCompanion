@@ -13,6 +13,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public class ProductsController : ControllerBase
 {
     private readonly IMediator _mediator;

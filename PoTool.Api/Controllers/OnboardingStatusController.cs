@@ -6,6 +6,7 @@ namespace PoTool.Api.Controllers;
 
 [ApiController]
 [Route("api/onboarding/status")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public sealed class OnboardingStatusController : ControllerBase
 {
     private readonly IOnboardingStatusHandler _handler;

@@ -14,7 +14,7 @@ public sealed class CacheBackedDataStateOpenApiOperationProcessor : IOperationPr
         ArgumentNullException.ThrowIfNull(context);
 
         var path = context.OperationDescription.Path;
-        if (!DataSourceModeConfiguration.RequiresCache(path))
+        if (!DataSourceModeEndpointMetadataResolver.RequiresCache(context.MethodInfo, path))
         {
             return true;
         }

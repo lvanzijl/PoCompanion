@@ -59,6 +59,7 @@ public static class ApiServiceCollectionExtensions
         {
             options.Filters.Add<CacheBackedDataStateContractFilter>();
             options.Filters.Add(new EnforceSharedDtoActionResultContractFilter());
+            options.Conventions.Add(new DataSourceModeEndpointMetadataConvention());
         });
         services.AddOpenApi();
 

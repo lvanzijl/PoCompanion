@@ -1,9 +1,13 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.Logging;
 using Moq;
+using PoTool.Api.Configuration;
 using PoTool.Api.Exceptions;
 using PoTool.Api.Middleware;
 using PoTool.Core.Configuration;
+using RouteIntent = PoTool.Api.Configuration.DataSourceModeConfiguration.RouteIntent;
 
 namespace PoTool.Tests.Unit.Middleware;
 
@@ -66,6 +70,18 @@ public class DataSourceModeMiddlewareTests
     public async Task InvokeAsync_SettingsRoute_SetsLiveMode()
     {
         var context = CreateHttpContext("/api/settings");
+        var middleware = CreateMiddleware();
+
+        await middleware.InvokeAsync(context, _mockModeProvider.Object);
+
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_StartupStateRoute_SetsLiveMode()
+    {
+        var context = CreateHttpContext("/api/startup-state");
         var middleware = CreateMiddleware();
 
         await middleware.InvokeAsync(context, _mockModeProvider.Object);
@@ -196,6 +212,34 @@ public class DataSourceModeMiddlewareTests
     }
 
     [TestMethod]
+    public async Task InvokeAsync_MetadataOnlyManagedRoute_SetsConfiguredMode()
+    {
+        var context = CreateHttpContext(
+            "/api/metadata-only",
+            new DataSourceModeMetadata(RouteIntent.CacheOnlyAnalyticalRead));
+        var middleware = CreateMiddleware();
+
+        await middleware.InvokeAsync(context, _mockModeProvider.Object);
+
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Cache), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
+    public async Task InvokeAsync_MetadataOverridesStringFallback()
+    {
+        var context = CreateHttpContext(
+            "/api/workitems",
+            new DataSourceModeMetadata(RouteIntent.LiveAllowed));
+        var middleware = CreateMiddleware();
+
+        await middleware.InvokeAsync(context, _mockModeProvider.Object);
+
+        _mockModeProvider.Verify(p => p.SetCurrentMode(DataSourceMode.Live), Times.Once);
+        Assert.IsTrue(_nextCalled);
+    }
+
+    [TestMethod]
     public async Task InvokeAsync_UnknownRoute_ThrowsRouteNotClassifiedException()
     {
         var context = CreateHttpContext("/api/unclassified-route");
@@ -219,13 +263,33 @@ public class DataSourceModeMiddlewareTests
             logger: _mockLogger.Object);
     }
 
-    private DefaultHttpContext CreateHttpContext(string path)
+    private DefaultHttpContext CreateHttpContext(string path, params object[] metadata)
     {
         var context = new DefaultHttpContext();
         context.Request.Path = path;
+        if (metadata.Length > 0)
+        {
+            context.SetEndpoint(CreateEndpoint(path, metadata));
+        }
+
         var responseBody = new MemoryStream();
         _responseBodies.Add(responseBody);
         context.Response.Body = responseBody;
         return context;
+    }
+
+    private static Endpoint CreateEndpoint(string path, params object[] metadata)
+    {
+        var builder = new RouteEndpointBuilder(
+            context => Task.CompletedTask,
+            RoutePatternFactory.Parse(path),
+            order: 0);
+
+        foreach (var item in metadata)
+        {
+            builder.Metadata.Add(item);
+        }
+
+        return builder.Build();
     }
 }

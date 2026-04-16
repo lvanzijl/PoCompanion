@@ -1,9 +1,9 @@
 namespace PoTool.Api.Configuration;
 
 /// <summary>
-/// Centralized configuration for DataSourceMode route intent rules.
-/// Separates cache-only analytical/workspace reads from live-allowed onboarding,
-/// configuration, discovery, and sync/write routes.
+/// Deprecated string-based fallback and validation rules for DataSourceMode route intent enforcement.
+/// Endpoint metadata is the authoritative source; these path rules remain only for migration fallback,
+/// startup validation, and route-shape helpers that have not yet moved to endpoint metadata.
 /// </summary>
 public static class DataSourceModeConfiguration
 {
@@ -72,6 +72,9 @@ public static class DataSourceModeConfiguration
     /// </summary>
     public static readonly HashSet<string> LiveModeAllowedExactRoutes = new(StringComparer.OrdinalIgnoreCase)
     {
+        // Startup authority
+        "/api/startup-state",
+
         // Pipeline configuration/discovery
         "/api/pipelines/definitions",
 

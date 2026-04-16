@@ -73,7 +73,7 @@ public sealed class CacheBackedDataStateContractFilter : IAsyncActionFilter, IOr
 
     private static bool ShouldApply(string? path, ActionDescriptor actionDescriptor)
     {
-        if (string.IsNullOrWhiteSpace(path) || !DataSourceModeConfiguration.RequiresCache(path))
+        if (string.IsNullOrWhiteSpace(path) || !DataSourceModeEndpointMetadataResolver.RequiresCache(actionDescriptor, path))
         {
             return false;
         }

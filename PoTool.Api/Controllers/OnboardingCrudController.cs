@@ -6,6 +6,7 @@ namespace PoTool.Api.Controllers;
 
 [ApiController]
 [Route("api/onboarding")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public sealed class OnboardingCrudController : ControllerBase
 {
     private readonly IOnboardingCrudHandler _handler;

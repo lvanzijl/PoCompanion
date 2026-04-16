@@ -11,6 +11,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public class ProjectsController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -63,6 +64,7 @@ public class ProjectsController : ControllerBase
     /// Gets a read-only planning summary for a project resolved by alias or internal identifier.
     /// </summary>
     [HttpGet("{alias}/planning-summary")]
+    [DataSourceMode(RouteIntent.CacheOnlyAnalyticalRead)]
     [ProducesResponseType(typeof(ProjectPlanningSummaryDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ProjectPlanningSummaryDto>> GetPlanningSummary(string alias, CancellationToken cancellationToken)

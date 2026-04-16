@@ -33,7 +33,7 @@ public sealed class CacheBackedDataStateContractAuditTests
     {
         var violations = GetControllerMethods()
             .Select(method => (method, route: BuildRoute(method)))
-            .Where(entry => entry.route is not null && DataSourceModeConfiguration.RequiresCache(entry.route))
+            .Where(entry => entry.route is not null && DataSourceModeEndpointMetadataResolver.RequiresCache(entry.method, entry.route))
             .Where(entry => SharedDtoActionResultContractResolver.TryGetDeclaredPayloadType(entry.method, out _))
             .Where(entry =>
             {
@@ -56,7 +56,7 @@ public sealed class CacheBackedDataStateContractAuditTests
 
         var violations = GetControllerMethods()
             .Select(method => (method, route: BuildRoute(method)))
-            .Where(entry => entry.route is not null && DataSourceModeConfiguration.RequiresCache(entry.route))
+            .Where(entry => entry.route is not null && DataSourceModeEndpointMetadataResolver.RequiresCache(entry.method, entry.route))
             .Where(entry => SharedDtoActionResultContractResolver.TryGetDeclaredPayloadType(entry.method, out _))
             .Select(entry => ValidateSnapshotContract(paths, entry.method, entry.route!))
             .Where(result => result is not null)

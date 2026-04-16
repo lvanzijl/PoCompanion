@@ -9,6 +9,7 @@ namespace PoTool.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public class TriageTagsController : ControllerBase
 {
     private readonly TriageTagService _triageTagService;

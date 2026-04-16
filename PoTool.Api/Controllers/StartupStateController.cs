@@ -7,6 +7,7 @@ namespace PoTool.Api.Controllers;
 
 [ApiController]
 [Route("api/startup-state")]
+[DataSourceMode(RouteIntent.LiveAllowed)]
 public sealed class StartupStateController : ControllerBase
 {
     private readonly IMediator _mediator;
