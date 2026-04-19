@@ -9,35 +9,29 @@ namespace PoTool.Core.Domain.Tests;
 public sealed class ProductPlanningBoardServiceTests
 {
     [TestMethod]
-    public async Task BuildPlanningBoardAsync_BootstrapsDeterministicallyOnMainLaneWithDefaultDuration()
+    public async Task BuildPlanningBoardAsync_FirstAccessBootstrapsAndStoresState()
     {
+        var sessionStore = new InMemoryProductPlanningSessionStore();
         var service = CreateService(
+            sessionStore,
             CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
             CreateWorkItem(502, "Epic", "Roadmap Epic B", 100, 10d, "roadmap"),
             CreateWorkItem(501, "Epic", "Roadmap Epic A", 100, 20d, "roadmap"),
             CreateWorkItem(503, "Epic", "Non-roadmap Epic", 100, 5d, "not-roadmap"));
 
-        var firstBoard = await service.BuildPlanningBoardAsync(7);
-        var secondBoard = await service.BuildPlanningBoardAsync(7);
+        var board = await service.BuildPlanningBoardAsync(7);
 
-        Assert.IsNotNull(firstBoard);
-        Assert.IsNotNull(secondBoard);
-        Assert.AreEqual(7, firstBoard.ProductId);
-        Assert.AreEqual("Roadmap Product", firstBoard.ProductName);
-        Assert.AreEqual(firstBoard.ProductId, secondBoard.ProductId);
-        Assert.AreEqual(firstBoard.ProductName, secondBoard.ProductName);
-        Assert.HasCount(1, firstBoard.Tracks);
-        Assert.IsTrue(firstBoard.Tracks[0].IsMainLane);
-        CollectionAssert.AreEqual(new[] { 502, 501 }, firstBoard.EpicItems.Select(static epic => epic.EpicId).ToArray());
-        CollectionAssert.AreEqual(new[] { 0, 0 }, firstBoard.EpicItems.Select(static epic => epic.TrackIndex).ToArray());
-        CollectionAssert.AreEqual(new[] { 1, 1 }, firstBoard.EpicItems.Select(static epic => epic.DurationInSprints).ToArray());
-        CollectionAssert.AreEqual(new[] { 0, 1 }, firstBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
-        CollectionAssert.AreEqual(
-            firstBoard.EpicItems.Select(static epic => epic.EpicId).ToArray(),
-            secondBoard.EpicItems.Select(static epic => epic.EpicId).ToArray());
-        CollectionAssert.AreEqual(
-            firstBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray(),
-            secondBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        Assert.IsNotNull(board);
+        Assert.IsTrue(sessionStore.TryGetState(7, out var storedState));
+        Assert.AreEqual(7, board.ProductId);
+        Assert.AreEqual("Roadmap Product", board.ProductName);
+        Assert.HasCount(1, board.Tracks);
+        Assert.IsTrue(board.Tracks[0].IsMainLane);
+        CollectionAssert.AreEqual(new[] { 502, 501 }, board.EpicItems.Select(static epic => epic.EpicId).ToArray());
+        CollectionAssert.AreEqual(new[] { 0, 0 }, board.EpicItems.Select(static epic => epic.TrackIndex).ToArray());
+        CollectionAssert.AreEqual(new[] { 1, 1 }, board.EpicItems.Select(static epic => epic.DurationInSprints).ToArray());
+        CollectionAssert.AreEqual(new[] { 0, 1 }, board.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        CollectionAssert.AreEqual(new[] { 502, 501 }, storedState.Epics.Select(static epic => epic.EpicId).ToArray());
     }
 
     [TestMethod]
@@ -59,7 +53,7 @@ public sealed class ProductPlanningBoardServiceTests
     }
 
     [TestMethod]
-    public async Task ExecuteMoveAndAdjustSpacingBeforeAsync_PropagateChangedAffectedAndValidation()
+    public async Task ExecuteMoveAndAdjustSpacingBeforeAsync_PropagateChangedAffectedAndValidationWithinSession()
     {
         var service = CreateService(
             CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
@@ -79,7 +73,7 @@ public sealed class ProductPlanningBoardServiceTests
         Assert.IsTrue(moveResult.EpicItems.Single(static epic => epic.EpicId == 703).IsAffected);
 
         Assert.IsNotNull(spacingResult);
-        Assert.AreEqual(3, spacingResult.EpicItems.Single(static epic => epic.EpicId == 703).ComputedStartSprintIndex);
+        Assert.AreEqual(4, spacingResult.EpicItems.Single(static epic => epic.EpicId == 703).ComputedStartSprintIndex);
 
         Assert.IsNotNull(invalidShiftResult);
         Assert.HasCount(1, invalidShiftResult.Issues);
@@ -89,7 +83,7 @@ public sealed class ProductPlanningBoardServiceTests
     }
 
     [TestMethod]
-    public async Task ExecuteRunInParallelAndReturnToMainAsync_SurfaceTrackChangesInReadModel()
+    public async Task ExecuteOperations_MaintainSessionContinuityAcrossMultipleOperations()
     {
         var service = CreateService(
             CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
@@ -97,23 +91,26 @@ public sealed class ProductPlanningBoardServiceTests
             CreateWorkItem(802, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
             CreateWorkItem(803, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"));
 
-        var parallelResult = await service.ExecuteRunInParallelAsync(7, 803);
-        var returnToMainResult = await service.ExecuteReturnToMainAsync(7, 803);
+        var movedBoard = await service.ExecuteMoveEpicBySprintsAsync(7, 802, 2);
+        var parallelBoard = await service.ExecuteRunInParallelAsync(7, 803);
+        var persistedBoard = await service.GetPlanningBoardAsync(7);
 
-        Assert.IsNotNull(parallelResult);
-        Assert.AreEqual(1, parallelResult.EpicItems.Single(static epic => epic.EpicId == 803).TrackIndex);
-        Assert.AreEqual(2, parallelResult.EpicItems.Single(static epic => epic.EpicId == 803).ComputedStartSprintIndex);
-        Assert.HasCount(2, parallelResult.Tracks);
-        CollectionAssert.AreEqual(new[] { 803 }, parallelResult.Tracks.Single(static track => track.TrackIndex == 1).EpicIds.ToArray());
+        Assert.IsNotNull(movedBoard);
+        Assert.AreEqual(3, movedBoard.EpicItems.Single(static epic => epic.EpicId == 802).ComputedStartSprintIndex);
 
-        Assert.IsNotNull(returnToMainResult);
-        Assert.AreEqual(0, returnToMainResult.EpicItems.Single(static epic => epic.EpicId == 803).TrackIndex);
-        Assert.IsEmpty(returnToMainResult.ChangedEpicIds);
-        CollectionAssert.AreEqual(new[] { 803 }, returnToMainResult.AffectedEpicIds.ToArray());
+        Assert.IsNotNull(parallelBoard);
+        Assert.AreEqual(1, parallelBoard.EpicItems.Single(static epic => epic.EpicId == 803).TrackIndex);
+        Assert.AreEqual(3, parallelBoard.EpicItems.Single(static epic => epic.EpicId == 803).ComputedStartSprintIndex);
+        Assert.AreEqual(3, parallelBoard.EpicItems.Single(static epic => epic.EpicId == 802).ComputedStartSprintIndex);
+
+        Assert.IsNotNull(persistedBoard);
+        Assert.AreEqual(1, persistedBoard.EpicItems.Single(static epic => epic.EpicId == 803).TrackIndex);
+        Assert.AreEqual(3, persistedBoard.EpicItems.Single(static epic => epic.EpicId == 802).ComputedStartSprintIndex);
+        CollectionAssert.AreEqual(new[] { 803 }, persistedBoard.Tracks.Single(static track => track.TrackIndex == 1).EpicIds.ToArray());
     }
 
     [TestMethod]
-    public async Task ExecuteReorderAndShiftPlanAsync_ReturnUpdatedRoadmapOrderAndSuffixShape()
+    public async Task ExecuteRunInParallelAndReturnToMainAsync_SurfaceTrackChangesInReadModel()
     {
         var service = CreateService(
             CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
@@ -121,22 +118,21 @@ public sealed class ProductPlanningBoardServiceTests
             CreateWorkItem(902, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
             CreateWorkItem(903, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"));
 
-        var reorderResult = await service.ExecuteReorderEpicAsync(7, 903, 2);
-        var shiftResult = await service.ExecuteShiftPlanAsync(7, 902, 3);
+        var parallelResult = await service.ExecuteRunInParallelAsync(7, 903);
+        var returnToMainResult = await service.ExecuteReturnToMainAsync(7, 903);
 
-        Assert.IsNotNull(reorderResult);
-        CollectionAssert.AreEqual(new[] { 901, 903, 902 }, reorderResult.EpicItems.Select(static epic => epic.EpicId).ToArray());
-        CollectionAssert.AreEqual(new[] { 1, 2, 3 }, reorderResult.EpicItems.Select(static epic => epic.RoadmapOrder).ToArray());
-        CollectionAssert.AreEqual(new[] { 903, 902 }, reorderResult.AffectedEpicIds.ToArray());
+        Assert.IsNotNull(parallelResult);
+        Assert.AreEqual(1, parallelResult.EpicItems.Single(static epic => epic.EpicId == 903).TrackIndex);
+        Assert.HasCount(2, parallelResult.Tracks);
 
-        Assert.IsNotNull(shiftResult);
-        CollectionAssert.AreEqual(new[] { 0, 4, 5 }, shiftResult.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
-        CollectionAssert.AreEqual(new[] { 4, 5 }, shiftResult.EpicItems.Skip(1).Select(static epic => epic.PlannedStartSprintIndex).ToArray());
-        CollectionAssert.AreEqual(new[] { 902, 903 }, shiftResult.AffectedEpicIds.ToArray());
+        Assert.IsNotNull(returnToMainResult);
+        Assert.AreEqual(0, returnToMainResult.EpicItems.Single(static epic => epic.EpicId == 903).TrackIndex);
+        CollectionAssert.AreEqual(new[] { 903 }, returnToMainResult.ChangedEpicIds.ToArray());
+        CollectionAssert.AreEqual(new[] { 903 }, returnToMainResult.AffectedEpicIds.ToArray());
     }
 
     [TestMethod]
-    public async Task ExecuteOperations_WithSameInputs_RemainDeterministic()
+    public async Task ExecuteReorderAndShiftPlanAsync_ReturnUpdatedRoadmapOrderAndSuffixShape()
     {
         var service = CreateService(
             CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
@@ -144,25 +140,138 @@ public sealed class ProductPlanningBoardServiceTests
             CreateWorkItem(1002, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
             CreateWorkItem(1003, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"));
 
-        var firstResult = await service.ExecuteReorderEpicAsync(7, 1003, 2);
-        var secondResult = await service.ExecuteReorderEpicAsync(7, 1003, 2);
+        var reorderResult = await service.ExecuteReorderEpicAsync(7, 1003, 2);
+        var shiftResult = await service.ExecuteShiftPlanAsync(7, 1002, 3);
 
-        Assert.IsNotNull(firstResult);
-        Assert.IsNotNull(secondResult);
+        Assert.IsNotNull(reorderResult);
         CollectionAssert.AreEqual(
-            firstResult.EpicItems.Select(static epic => epic.EpicId).ToArray(),
-            secondResult.EpicItems.Select(static epic => epic.EpicId).ToArray());
+            new[] { 1001, 1003, 1002 },
+            reorderResult.EpicItems.Select(static epic => epic.EpicId).ToArray());
         CollectionAssert.AreEqual(
-            firstResult.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray(),
-            secondResult.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
-        CollectionAssert.AreEqual(firstResult.ChangedEpicIds.ToArray(), secondResult.ChangedEpicIds.ToArray());
-        CollectionAssert.AreEqual(firstResult.AffectedEpicIds.ToArray(), secondResult.AffectedEpicIds.ToArray());
+            new[] { 1, 2, 3 },
+            reorderResult.EpicItems.Select(static epic => epic.RoadmapOrder).ToArray());
+
+        Assert.IsNotNull(shiftResult);
+        CollectionAssert.AreEqual(new[] { 0, 2, 4 }, shiftResult.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        Assert.AreEqual(4, shiftResult.EpicItems.Single(static epic => epic.EpicId == 1002).PlannedStartSprintIndex);
+        CollectionAssert.Contains(shiftResult.AffectedEpicIds.ToArray(), 1002);
+    }
+
+    [TestMethod]
+    public async Task ResetPlanningBoardAsync_DiscardsPriorSessionStateAndRebootstraps()
+    {
+        var service = CreateService(
+            CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+            CreateWorkItem(1101, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"),
+            CreateWorkItem(1102, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
+            CreateWorkItem(1103, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"));
+
+        await service.ExecuteMoveEpicBySprintsAsync(7, 1102, 2);
+        var resetBoard = await service.ResetPlanningBoardAsync(7);
+        var nextRead = await service.GetPlanningBoardAsync(7);
+
+        Assert.IsNotNull(resetBoard);
+        CollectionAssert.AreEqual(new[] { 0, 1, 2 }, resetBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        Assert.IsEmpty(resetBoard.ChangedEpicIds);
+        Assert.IsEmpty(resetBoard.AffectedEpicIds);
+
+        Assert.IsNotNull(nextRead);
+        CollectionAssert.AreEqual(
+            resetBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray(),
+            nextRead.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+    }
+
+    [TestMethod]
+    public async Task Sessions_AreIsolatedPerProduct()
+    {
+        var store = new InMemoryProductPlanningSessionStore();
+        var service = CreateService(
+            store,
+            [
+                CreateProduct(7, "Roadmap Product A", 100),
+                CreateProduct(8, "Roadmap Product B", 200)
+            ],
+            [
+                CreateWorkItem(100, "Objective", "Root Objective A", null, null, null),
+                CreateWorkItem(1201, "Epic", "Roadmap Epic A1", 100, 1d, "roadmap"),
+                CreateWorkItem(1202, "Epic", "Roadmap Epic A2", 100, 2d, "roadmap")
+            ],
+            [
+                CreateWorkItem(200, "Objective", "Root Objective B", null, null, null),
+                CreateWorkItem(2201, "Epic", "Roadmap Epic B1", 200, 1d, "roadmap"),
+                CreateWorkItem(2202, "Epic", "Roadmap Epic B2", 200, 2d, "roadmap")
+            ]);
+
+        await service.ExecuteMoveEpicBySprintsAsync(7, 1202, 2);
+        var productABoard = await service.GetPlanningBoardAsync(7);
+        var productBBoard = await service.GetPlanningBoardAsync(8);
+
+        Assert.IsNotNull(productABoard);
+        Assert.IsNotNull(productBBoard);
+        Assert.IsTrue(store.TryGetState(7, out _));
+        Assert.IsTrue(store.TryGetState(8, out _));
+        Assert.AreEqual(3, productABoard.EpicItems.Single(static epic => epic.EpicId == 1202).ComputedStartSprintIndex);
+        Assert.AreEqual(1, productBBoard.EpicItems.Single(static epic => epic.EpicId == 2202).ComputedStartSprintIndex);
+    }
+
+    [TestMethod]
+    public async Task GetPlanningBoardAsync_WithoutNewOperations_RemainsDeterministicWithinSession()
+    {
+        var service = CreateService(
+            CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+            CreateWorkItem(1301, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"),
+            CreateWorkItem(1302, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
+            CreateWorkItem(1303, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"));
+
+        await service.ExecuteMoveEpicBySprintsAsync(7, 1302, 2);
+        var firstRead = await service.GetPlanningBoardAsync(7);
+        var secondRead = await service.GetPlanningBoardAsync(7);
+
+        Assert.IsNotNull(firstRead);
+        Assert.IsNotNull(secondRead);
+        CollectionAssert.AreEqual(
+            firstRead.EpicItems.Select(static epic => epic.EpicId).ToArray(),
+            secondRead.EpicItems.Select(static epic => epic.EpicId).ToArray());
+        CollectionAssert.AreEqual(
+            firstRead.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray(),
+            secondRead.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+    }
+
+    [TestMethod]
+    public async Task SameOperationSequenceOnSameBootstrap_YieldsSameResultAfterReset()
+    {
+        var service = CreateService(
+            CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+            CreateWorkItem(1401, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"),
+            CreateWorkItem(1402, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
+            CreateWorkItem(1403, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"));
+
+        await service.ExecuteMoveEpicBySprintsAsync(7, 1402, 2);
+        await service.ExecuteRunInParallelAsync(7, 1403);
+        var firstSequenceResult = await service.GetPlanningBoardAsync(7);
+
+        await service.ResetPlanningBoardAsync(7);
+        await service.ExecuteMoveEpicBySprintsAsync(7, 1402, 2);
+        await service.ExecuteRunInParallelAsync(7, 1403);
+        var secondSequenceResult = await service.GetPlanningBoardAsync(7);
+
+        Assert.IsNotNull(firstSequenceResult);
+        Assert.IsNotNull(secondSequenceResult);
+        CollectionAssert.AreEqual(
+            firstSequenceResult.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray(),
+            secondSequenceResult.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        CollectionAssert.AreEqual(
+            firstSequenceResult.EpicItems.Select(static epic => epic.TrackIndex).ToArray(),
+            secondSequenceResult.EpicItems.Select(static epic => epic.TrackIndex).ToArray());
     }
 
     [TestMethod]
     public async Task BuildPlanningBoardAsync_WhenProductMissing_ReturnsNull()
     {
-        var service = new ProductPlanningBoardService(new FakeProductRepository(), new FakeWorkItemReadProvider());
+        var service = new ProductPlanningBoardService(
+            new FakeProductRepository(),
+            new FakeWorkItemReadProvider(),
+            new InMemoryProductPlanningSessionStore());
 
         var board = await service.BuildPlanningBoardAsync(999);
 
@@ -171,9 +280,33 @@ public sealed class ProductPlanningBoardServiceTests
 
     private static ProductPlanningBoardService CreateService(params WorkItemDto[] workItems)
     {
+        return CreateService(new InMemoryProductPlanningSessionStore(), workItems);
+    }
+
+    private static ProductPlanningBoardService CreateService(
+        InMemoryProductPlanningSessionStore sessionStore,
+        params WorkItemDto[] workItems)
+    {
         return new ProductPlanningBoardService(
             new FakeProductRepository(CreateProduct(7, "Roadmap Product", 100)),
-            new FakeWorkItemReadProvider(workItems));
+            new FakeWorkItemReadProvider(workItems),
+            sessionStore);
+    }
+
+    private static ProductPlanningBoardService CreateService(
+        InMemoryProductPlanningSessionStore sessionStore,
+        IReadOnlyList<ProductDto> products,
+        IReadOnlyList<WorkItemDto> product7WorkItems,
+        IReadOnlyList<WorkItemDto> product8WorkItems)
+    {
+        return new ProductPlanningBoardService(
+            new FakeProductRepository(products.ToArray()),
+            new FakeWorkItemReadProvider(new Dictionary<int, IReadOnlyList<WorkItemDto>>
+            {
+                [100] = product7WorkItems,
+                [200] = product8WorkItems
+            }),
+            sessionStore);
     }
 
     private static ProductDto CreateProduct(int productId, string name, params int[] rootIds)
@@ -246,16 +379,33 @@ public sealed class ProductPlanningBoardServiceTests
 
     private sealed class FakeWorkItemReadProvider : IWorkItemReadProvider
     {
-        private readonly IReadOnlyList<WorkItemDto> _workItems;
+        private readonly IReadOnlyList<WorkItemDto>? _workItems;
+        private readonly IReadOnlyDictionary<int, IReadOnlyList<WorkItemDto>>? _workItemsByRootId;
 
         public FakeWorkItemReadProvider(params WorkItemDto[] workItems)
         {
             _workItems = workItems;
         }
 
+        public FakeWorkItemReadProvider(IReadOnlyDictionary<int, IReadOnlyList<WorkItemDto>> workItemsByRootId)
+        {
+            _workItemsByRootId = workItemsByRootId;
+        }
+
         public Task<IEnumerable<WorkItemDto>> GetByRootIdsAsync(int[] rootWorkItemIds, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<IEnumerable<WorkItemDto>>(_workItems);
+            if (_workItemsByRootId is not null)
+            {
+                var workItems = rootWorkItemIds
+                    .Distinct()
+                    .OrderBy(static rootId => rootId)
+                    .SelectMany(rootId => _workItemsByRootId.GetValueOrDefault(rootId, Array.Empty<WorkItemDto>()))
+                    .ToArray();
+
+                return Task.FromResult<IEnumerable<WorkItemDto>>(workItems);
+            }
+
+            return Task.FromResult<IEnumerable<WorkItemDto>>(_workItems ?? Array.Empty<WorkItemDto>());
         }
 
         public Task<IEnumerable<WorkItemDto>> GetAllAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();

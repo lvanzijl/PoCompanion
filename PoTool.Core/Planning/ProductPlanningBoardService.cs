@@ -14,6 +14,8 @@ public interface IProductPlanningBoardService
 
     ValueTask<ProductPlanningBoardDto?> GetPlanningBoardAsync(int productId, CancellationToken cancellationToken = default);
 
+    ValueTask<ProductPlanningBoardDto?> ResetPlanningBoardAsync(int productId, CancellationToken cancellationToken = default);
+
     ValueTask<ProductPlanningBoardDto?> ExecuteMoveEpicBySprintsAsync(int productId, int epicId, int deltaSprints, CancellationToken cancellationToken = default);
 
     ValueTask<ProductPlanningBoardDto?> ExecuteAdjustSpacingBeforeAsync(int productId, int epicId, int deltaSprints, CancellationToken cancellationToken = default);
@@ -34,15 +36,18 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
 {
     private readonly IProductRepository _productRepository;
     private readonly IWorkItemReadProvider _workItemReadProvider;
+    private readonly IProductPlanningSessionStore _sessionStore;
     private readonly PlanningRecomputeService _recomputeService;
     private readonly PlanningOperationService _operationService;
 
     public ProductPlanningBoardService(
         IProductRepository productRepository,
-        IWorkItemReadProvider workItemReadProvider)
+        IWorkItemReadProvider workItemReadProvider,
+        IProductPlanningSessionStore sessionStore)
         : this(
             productRepository,
             workItemReadProvider,
+            sessionStore,
             new PlanningRecomputeService(),
             new PlanningOperationService())
     {
@@ -51,18 +56,20 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
     internal ProductPlanningBoardService(
         IProductRepository productRepository,
         IWorkItemReadProvider workItemReadProvider,
+        IProductPlanningSessionStore sessionStore,
         PlanningRecomputeService recomputeService,
         PlanningOperationService operationService)
     {
         _productRepository = productRepository ?? throw new ArgumentNullException(nameof(productRepository));
         _workItemReadProvider = workItemReadProvider ?? throw new ArgumentNullException(nameof(workItemReadProvider));
+        _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
         _recomputeService = recomputeService ?? throw new ArgumentNullException(nameof(recomputeService));
         _operationService = operationService ?? throw new ArgumentNullException(nameof(operationService));
     }
 
     public ValueTask<ProductPlanningBoardDto?> BuildPlanningBoardAsync(int productId, CancellationToken cancellationToken = default)
     {
-        return BuildAsync(productId, static (service, bootstrap) => service.CreateReadModel(bootstrap, null), cancellationToken);
+        return BuildAsync(productId, reset: false, cancellationToken);
     }
 
     public ValueTask<ProductPlanningBoardDto?> GetPlanningBoardAsync(int productId, CancellationToken cancellationToken = default)
@@ -70,60 +77,85 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
         return BuildPlanningBoardAsync(productId, cancellationToken);
     }
 
+    public ValueTask<ProductPlanningBoardDto?> ResetPlanningBoardAsync(int productId, CancellationToken cancellationToken = default)
+    {
+        return BuildAsync(productId, reset: true, cancellationToken);
+    }
+
     public ValueTask<ProductPlanningBoardDto?> ExecuteMoveEpicBySprintsAsync(int productId, int epicId, int deltaSprints, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(productId, bootstrap => _operationService.MoveEpicBySprints(bootstrap.State, epicId, deltaSprints), cancellationToken);
+        return ExecuteAsync(productId, state => _operationService.MoveEpicBySprints(state, epicId, deltaSprints), cancellationToken);
     }
 
     public ValueTask<ProductPlanningBoardDto?> ExecuteAdjustSpacingBeforeAsync(int productId, int epicId, int deltaSprints, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(productId, bootstrap => _operationService.AdjustSpacingBefore(bootstrap.State, epicId, deltaSprints), cancellationToken);
+        return ExecuteAsync(productId, state => _operationService.AdjustSpacingBefore(state, epicId, deltaSprints), cancellationToken);
     }
 
     public ValueTask<ProductPlanningBoardDto?> ExecuteRunInParallelAsync(int productId, int epicId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(productId, bootstrap => _operationService.RunInParallel(bootstrap.State, epicId), cancellationToken);
+        return ExecuteAsync(productId, state => _operationService.RunInParallel(state, epicId), cancellationToken);
     }
 
     public ValueTask<ProductPlanningBoardDto?> ExecuteReturnToMainAsync(int productId, int epicId, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(productId, bootstrap => _operationService.ReturnToMain(bootstrap.State, epicId), cancellationToken);
+        return ExecuteAsync(productId, state => _operationService.ReturnToMain(state, epicId), cancellationToken);
     }
 
     public ValueTask<ProductPlanningBoardDto?> ExecuteReorderEpicAsync(int productId, int epicId, int targetRoadmapOrder, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(productId, bootstrap => _operationService.ReorderEpic(bootstrap.State, epicId, targetRoadmapOrder), cancellationToken);
+        return ExecuteAsync(productId, state => _operationService.ReorderEpic(state, epicId, targetRoadmapOrder), cancellationToken);
     }
 
     public ValueTask<ProductPlanningBoardDto?> ExecuteShiftPlanAsync(int productId, int epicId, int deltaSprints, CancellationToken cancellationToken = default)
     {
-        return ExecuteAsync(productId, bootstrap => _operationService.ShiftPlan(bootstrap.State, epicId, deltaSprints), cancellationToken);
+        return ExecuteAsync(productId, state => _operationService.ShiftPlan(state, epicId, deltaSprints), cancellationToken);
     }
 
     private async ValueTask<ProductPlanningBoardDto?> BuildAsync(
         int productId,
-        Func<ProductPlanningBoardService, BootstrapContext, ProductPlanningBoardDto> map,
+        bool reset,
         CancellationToken cancellationToken)
     {
-        var bootstrap = await BuildBootstrapContextAsync(productId, cancellationToken);
-        return bootstrap is null ? null : map(this, bootstrap);
-    }
-
-    private async ValueTask<ProductPlanningBoardDto?> ExecuteAsync(
-        int productId,
-        Func<BootstrapContext, PlanningOperationResult> execute,
-        CancellationToken cancellationToken)
-    {
-        var bootstrap = await BuildBootstrapContextAsync(productId, cancellationToken);
-        if (bootstrap is null)
+        var planningContext = await BuildPlanningContextAsync(productId, cancellationToken);
+        if (planningContext is null)
         {
             return null;
         }
 
-        return CreateReadModel(bootstrap, execute(bootstrap));
+        if (reset)
+        {
+            _sessionStore.Reset(productId);
+        }
+
+        var state = GetOrBootstrapSessionState(planningContext);
+        return CreateReadModel(planningContext, state, Array.Empty<PlanningValidationIssue>(), Array.Empty<int>(), Array.Empty<int>());
     }
 
-    private async ValueTask<BootstrapContext?> BuildBootstrapContextAsync(int productId, CancellationToken cancellationToken)
+    private async ValueTask<ProductPlanningBoardDto?> ExecuteAsync(
+        int productId,
+        Func<PlanningState, PlanningOperationResult> execute,
+        CancellationToken cancellationToken)
+    {
+        var planningContext = await BuildPlanningContextAsync(productId, cancellationToken);
+        if (planningContext is null)
+        {
+            return null;
+        }
+
+        var currentState = GetOrBootstrapSessionState(planningContext);
+        var result = execute(currentState);
+        _sessionStore.SetState(productId, result.State);
+
+        return CreateReadModel(
+            planningContext,
+            result.State,
+            result.ValidationIssues,
+            result.ChangedEpicIds,
+            result.AffectedEpicIds);
+    }
+
+    private async ValueTask<PlanningContext?> BuildPlanningContextAsync(int productId, CancellationToken cancellationToken)
     {
         var product = await _productRepository.GetProductByIdAsync(productId, cancellationToken);
         if (product is null)
@@ -165,20 +197,33 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                         .ToArray()),
                 0);
 
-        return new BootstrapContext(product.Id, product.Name, roadmapEpics, bootstrapState);
+        return new PlanningContext(product.Id, product.Name, roadmapEpics, bootstrapState);
     }
 
-    private ProductPlanningBoardDto CreateReadModel(BootstrapContext bootstrap, PlanningOperationResult? operationResult)
+    private PlanningState GetOrBootstrapSessionState(PlanningContext planningContext)
     {
-        var state = operationResult?.State ?? bootstrap.State;
-        var issues = MapIssues(operationResult?.ValidationIssues ?? Array.Empty<PlanningValidationIssue>());
-        var changedEpicIds = operationResult?.ChangedEpicIds ?? Array.Empty<int>();
-        var affectedEpicIds = operationResult?.AffectedEpicIds ?? Array.Empty<int>();
+        if (_sessionStore.TryGetState(planningContext.ProductId, out var sessionState))
+        {
+            return sessionState;
+        }
+
+        _sessionStore.SetState(planningContext.ProductId, planningContext.BootstrapState);
+        return planningContext.BootstrapState;
+    }
+
+    private ProductPlanningBoardDto CreateReadModel(
+        PlanningContext planningContext,
+        PlanningState state,
+        IReadOnlyList<PlanningValidationIssue> validationIssues,
+        IReadOnlyList<int> changedEpicIds,
+        IReadOnlyList<int> affectedEpicIds)
+    {
+        var issues = MapIssues(validationIssues);
         var issueLookup = issues
             .Where(static issue => issue.EpicId.HasValue)
             .GroupBy(issue => issue.EpicId!.Value)
             .ToDictionary(static group => group.Key, static group => (IReadOnlyList<PlanningBoardIssueDto>)group.ToArray());
-        var titleLookup = bootstrap.Epics.ToDictionary(static epic => epic.EpicId, static epic => epic.EpicTitle);
+        var titleLookup = planningContext.Epics.ToDictionary(static epic => epic.EpicId, static epic => epic.EpicTitle);
         var changedEpicIdSet = changedEpicIds.ToHashSet();
         var affectedEpicIdSet = affectedEpicIds.ToHashSet();
 
@@ -213,8 +258,8 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             .ToArray();
 
         return new ProductPlanningBoardDto(
-            bootstrap.ProductId,
-            bootstrap.ProductName,
+            planningContext.ProductId,
+            planningContext.ProductName,
             tracks,
             epicItems,
             issues,
@@ -251,11 +296,11 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             .Any(static tag => string.Equals(tag, "roadmap", StringComparison.OrdinalIgnoreCase));
     }
 
-    private sealed record BootstrapContext(
+    private sealed record PlanningContext(
         int ProductId,
         string ProductName,
         IReadOnlyList<BootstrapEpic> Epics,
-        PlanningState State);
+        PlanningState BootstrapState);
 
     private sealed record BootstrapEpic(
         int EpicId,

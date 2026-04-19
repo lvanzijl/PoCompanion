@@ -179,6 +179,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ExportConfigurationService>();
         services.AddScoped<ImportConfigurationService>();
         services.AddScoped<ProjectPlanningSummaryService>();
+        services.AddSingleton<IProductPlanningSessionStore, InMemoryProductPlanningSessionStore>();
         services.AddScoped<IProductPlanningBoardService, ProductPlanningBoardService>();
         services.AddScoped<IBuildQualityReadStore, EfBuildQualityReadStore>();
         services.AddScoped<IBuildQualityProvider, BuildQualityProvider>();
