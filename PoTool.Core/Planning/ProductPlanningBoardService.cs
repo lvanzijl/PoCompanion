@@ -212,8 +212,19 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
         var recoveryTimestampUtc = DateTime.UtcNow;
         var recoveredIntents = new List<ProductPlanningIntentRecord>();
         var normalizedRecoveries = new List<PlanningDateWriteRequest>();
+        var boardDiagnostics = new List<PlanningBoardDiagnosticDto>();
         var stateEpics = new List<PlanningEpicState>(roadmapEpics.Length);
         var persistedIntentByEpicId = persistedIntents.ToDictionary(static intent => intent.EpicId);
+        var operationalStateByEpicId = new Dictionary<int, PlanningEpicOperationalState>(roadmapEpics.Length);
+
+        if (calendarResolution.Calendar is null && !string.IsNullOrWhiteSpace(calendarResolution.FailureReason))
+        {
+            boardDiagnostics.Add(CreateBoardDiagnostic(
+                "Error",
+                "CalendarResolutionFailure",
+                calendarResolution.FailureReason,
+                isBlocking: true));
+        }
 
         foreach (var (epic, index) in roadmapEpics.Select((epic, index) => (epic, index)))
         {
@@ -227,6 +238,7 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                     0,
                     persistedIntent.DurationInSprints,
                     0));
+                operationalStateByEpicId[epic.EpicId] = CreatePersistedOperationalState(epic, persistedIntent, calendarResolution);
                 continue;
             }
 
@@ -252,6 +264,7 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                     0,
                     recoveredIntent!.DurationInSprints,
                     0));
+                operationalStateByEpicId[epic.EpicId] = CreateRecoveredOperationalState(epic, recoveredIntent, planningDateWriteRequest is not null);
                 continue;
             }
 
@@ -262,6 +275,7 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                 0,
                 1,
                 0));
+            operationalStateByEpicId[epic.EpicId] = CreateBootstrapOperationalState(epic, calendarResolution);
         }
 
         if (recoveredIntents.Count > 0)
@@ -282,7 +296,14 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             ? PlanningState.Empty
             : _recomputeService.RecomputeFrom(new PlanningState(stateEpics), 0);
 
-        return new PlanningContext(product.Id, product.Name, roadmapEpics, baseState, calendarResolution);
+        return new PlanningContext(
+            product.Id,
+            product.Name,
+            roadmapEpics,
+            baseState,
+            calendarResolution,
+            operationalStateByEpicId,
+            boardDiagnostics);
     }
 
     private PlanningState GetOrLoadSessionState(PlanningContext planningContext)
@@ -316,9 +337,11 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
 
         foreach (var intent in intents)
         {
-            if (!TryCreatePlanningDateWriteRequest(intent.EpicId, intent, calendar, out var writeRequest))
+            var projectionStatus = TryCreatePlanningDateWriteRequest(intent.EpicId, intent, calendar, out var writeRequest);
+            if (projectionStatus != PlanningProjectionStatus.Success)
             {
-                throw new InvalidOperationException($"Unable to project planning dates for epic {intent.EpicId} in product {planningContext.ProductId}.");
+                throw new InvalidOperationException(
+                    $"Unable to project planning dates for epic {intent.EpicId} in product {planningContext.ProductId}. {DescribeProjectionFailure(projectionStatus, intent.StartSprintStartDateUtc)}");
             }
 
             await _tfsClient.UpdateWorkItemPlanningDatesAsync(
@@ -394,7 +417,7 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             UpdatedAtUtc: updatedAtUtc);
     }
 
-    private static bool TryCreatePlanningDateWriteRequest(
+    private static PlanningProjectionStatus TryCreatePlanningDateWriteRequest(
         int epicId,
         ProductPlanningIntentRecord intent,
         ProductSprintCalendar calendar,
@@ -404,13 +427,13 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
 
         if (!calendar.StartIndexByDate.TryGetValue(intent.StartSprintStartDateUtc.Date, out var startIndex))
         {
-            return false;
+            return PlanningProjectionStatus.MissingStartBoundary;
         }
 
         var finalSprintIndex = startIndex + intent.DurationInSprints - 1;
         if (finalSprintIndex < startIndex || finalSprintIndex >= calendar.Sprints.Count)
         {
-            return false;
+            return PlanningProjectionStatus.InsufficientFutureSprintCoverage;
         }
 
         var startSprint = calendar.Sprints[startIndex];
@@ -419,7 +442,7 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             epicId,
             DateOnly.FromDateTime(startSprint.StartDateUtc),
             DateOnly.FromDateTime(finalSprint.EndExclusiveDateUtc.AddDays(-1)));
-        return true;
+        return PlanningProjectionStatus.Success;
     }
 
     private bool TryRecoverIntent(
@@ -578,6 +601,250 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                 .ToDictionary()));
     }
 
+    private PlanningEpicOperationalState CreatePersistedOperationalState(
+        ActiveRoadmapEpic epic,
+        ProductPlanningIntentRecord intent,
+        ProductSprintCalendarResolution calendarResolution)
+    {
+        var diagnostics = new List<PlanningBoardDiagnosticDto>();
+        var intentSource = intent.RecoveryStatus.HasValue
+            ? PlanningBoardIntentSource.Recovered
+            : PlanningBoardIntentSource.Authored;
+
+        if (intent.RecoveryStatus is ProductPlanningRecoveryStatus.RecoveredExact)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Info",
+                "RecoveredExact",
+                epic.EpicId,
+                "This epic's internal planning intent was recovered exactly from the current TFS projected dates."));
+        }
+        else if (intent.RecoveryStatus is ProductPlanningRecoveryStatus.RecoveredWithNormalization)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Warning",
+                "RecoveredWithNormalization",
+                epic.EpicId,
+                "This epic's internal planning intent was recovered from TFS projected dates and normalized to canonical sprint boundaries."));
+        }
+
+        var (driftStatus, driftDiagnostics) = DetermineDrift(epic, intent, calendarResolution);
+        diagnostics.AddRange(driftDiagnostics);
+
+        return new PlanningEpicOperationalState(
+            intentSource,
+            intent.RecoveryStatus,
+            driftStatus,
+            CanReconcileProjection: false,
+            diagnostics);
+    }
+
+    private PlanningEpicOperationalState CreateRecoveredOperationalState(
+        ActiveRoadmapEpic epic,
+        ProductPlanningIntentRecord recoveredIntent,
+        bool normalizedDuringRecovery)
+    {
+        var code = normalizedDuringRecovery
+            ? "RecoveredWithNormalization"
+            : "RecoveredExact";
+        var message = normalizedDuringRecovery
+            ? "Recovered from current TFS projected dates and normalized to canonical sprint boundaries."
+            : "Recovered exactly from current TFS projected dates.";
+
+        return new PlanningEpicOperationalState(
+            PlanningBoardIntentSource.Recovered,
+            recoveredIntent.RecoveryStatus,
+            PlanningBoardDriftStatus.NoDrift,
+            CanReconcileProjection: false,
+            [
+                CreateEpicDiagnostic(
+                    normalizedDuringRecovery ? "Warning" : "Info",
+                    code,
+                    epic.EpicId,
+                    message)
+            ]);
+    }
+
+    private PlanningEpicOperationalState CreateBootstrapOperationalState(
+        ActiveRoadmapEpic epic,
+        ProductSprintCalendarResolution calendarResolution)
+    {
+        if (!epic.WorkItem.StartDate.HasValue && !epic.WorkItem.TargetDate.HasValue)
+        {
+            return PlanningEpicOperationalState.Bootstrap;
+        }
+
+        var diagnostics = new List<PlanningBoardDiagnosticDto>();
+        if (calendarResolution.Calendar is null)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Error",
+                "RecoveryFailed",
+                epic.EpicId,
+                $"Recovery from TFS projected dates is blocked because {calendarResolution.FailureReason}",
+                isBlocking: true));
+            return new PlanningEpicOperationalState(
+                PlanningBoardIntentSource.Bootstrap,
+                ProductPlanningRecoveryStatus.RecoveryFailed,
+                PlanningBoardDriftStatus.CalendarResolutionFailure,
+                CanReconcileProjection: false,
+                diagnostics);
+        }
+
+        if (!epic.WorkItem.StartDate.HasValue || !epic.WorkItem.TargetDate.HasValue)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Warning",
+                "RecoveryFailed",
+                epic.EpicId,
+                "Recovery from TFS projected dates was skipped because one or both projected dates are missing."));
+            return new PlanningEpicOperationalState(
+                PlanningBoardIntentSource.Bootstrap,
+                ProductPlanningRecoveryStatus.RecoveryFailed,
+                null,
+                CanReconcileProjection: false,
+                diagnostics);
+        }
+
+        var startDateOnly = DateOnly.FromDateTime(epic.WorkItem.StartDate.Value.UtcDateTime.Date);
+        var targetDateOnly = DateOnly.FromDateTime(epic.WorkItem.TargetDate.Value.UtcDateTime.Date);
+        if (startDateOnly < LegacyInvalidStartDateCutoff || targetDateOnly < startDateOnly)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Warning",
+                "LegacyInvalidTfsDatesIgnored",
+                epic.EpicId,
+                "Legacy or invalid TFS projected dates were ignored during recovery."));
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Warning",
+                "RecoveryFailed",
+                epic.EpicId,
+                "Recovery from TFS projected dates failed because the projected dates are invalid."));
+            return new PlanningEpicOperationalState(
+                PlanningBoardIntentSource.Bootstrap,
+                ProductPlanningRecoveryStatus.RecoveryFailed,
+                PlanningBoardDriftStatus.LegacyInvalidTfsDates,
+                CanReconcileProjection: false,
+                diagnostics);
+        }
+
+        if (!TryFindSprintContainingDate(calendarResolution.Calendar, startDateOnly, out _) ||
+            !TryFindSprintContainingDate(calendarResolution.Calendar, targetDateOnly, out _))
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Warning",
+                "RecoveryFailed",
+                epic.EpicId,
+                "Recovery from TFS projected dates failed because the projected dates do not resolve cleanly onto the canonical sprint calendar."));
+        }
+
+        return new PlanningEpicOperationalState(
+            PlanningBoardIntentSource.Bootstrap,
+            ProductPlanningRecoveryStatus.RecoveryFailed,
+            null,
+            CanReconcileProjection: false,
+            diagnostics);
+    }
+
+    private (PlanningBoardDriftStatus? DriftStatus, IReadOnlyList<PlanningBoardDiagnosticDto> Diagnostics) DetermineDrift(
+        ActiveRoadmapEpic epic,
+        ProductPlanningIntentRecord intent,
+        ProductSprintCalendarResolution calendarResolution)
+    {
+        var diagnostics = new List<PlanningBoardDiagnosticDto>();
+        if (calendarResolution.Calendar is null)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Error",
+                "CalendarResolutionFailure",
+                epic.EpicId,
+                $"Drift could not be evaluated because {calendarResolution.FailureReason}",
+                isBlocking: true));
+            return (PlanningBoardDriftStatus.CalendarResolutionFailure, diagnostics);
+        }
+
+        var projectionStatus = TryCreatePlanningDateWriteRequest(epic.EpicId, intent, calendarResolution.Calendar, out var writeRequest);
+        if (projectionStatus == PlanningProjectionStatus.MissingStartBoundary)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Error",
+                "CalendarResolutionFailure",
+                epic.EpicId,
+                $"Internal planning intent references a sprint boundary that is no longer present ({intent.StartSprintStartDateUtc:yyyy-MM-dd}).",
+                isBlocking: true));
+            return (PlanningBoardDriftStatus.CalendarResolutionFailure, diagnostics);
+        }
+
+        if (projectionStatus == PlanningProjectionStatus.InsufficientFutureSprintCoverage)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Warning",
+                "InsufficientFutureSprintCoverage",
+                epic.EpicId,
+                "Current sprint coverage is insufficient to project the full duration of this internal planning intent."));
+            return (PlanningBoardDriftStatus.InsufficientFutureSprintCoverage, diagnostics);
+        }
+
+        if (!epic.WorkItem.StartDate.HasValue || !epic.WorkItem.TargetDate.HasValue)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Warning",
+                "MissingTfsDates",
+                epic.EpicId,
+                "Internal planning intent exists, but one or both TFS projected dates are missing."));
+            return (PlanningBoardDriftStatus.MissingTfsDates, diagnostics);
+        }
+
+        var currentStartDate = DateOnly.FromDateTime(epic.WorkItem.StartDate.Value.UtcDateTime.Date);
+        var currentTargetDate = DateOnly.FromDateTime(epic.WorkItem.TargetDate.Value.UtcDateTime.Date);
+        if (currentStartDate < LegacyInvalidStartDateCutoff || currentTargetDate < currentStartDate)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Warning",
+                "LegacyInvalidTfsDatesIgnored",
+                epic.EpicId,
+                "Current TFS projected dates are legacy-invalid and do not match the internal planning intent projection."));
+            return (PlanningBoardDriftStatus.LegacyInvalidTfsDates, diagnostics);
+        }
+
+        if (currentStartDate != writeRequest.StartDate || currentTargetDate != writeRequest.TargetDate)
+        {
+            diagnostics.Add(CreateEpicDiagnostic(
+                "Warning",
+                "StaleTfsProjection",
+                epic.EpicId,
+                $"Current TFS projected dates ({currentStartDate:yyyy-MM-dd} → {currentTargetDate:yyyy-MM-dd}) differ from the internal planning intent projection ({writeRequest.StartDate:yyyy-MM-dd} → {writeRequest.TargetDate:yyyy-MM-dd})."));
+            return (PlanningBoardDriftStatus.TfsProjectionMismatch, diagnostics);
+        }
+
+        return (PlanningBoardDriftStatus.NoDrift, diagnostics);
+    }
+
+    private static PlanningBoardDiagnosticDto CreateBoardDiagnostic(
+        string severity,
+        string code,
+        string message,
+        bool isBlocking = false,
+        bool canReconcileProjection = false)
+        => new(severity, code, message, null, isBlocking, canReconcileProjection);
+
+    private static PlanningBoardDiagnosticDto CreateEpicDiagnostic(
+        string severity,
+        string code,
+        int epicId,
+        string message,
+        bool isBlocking = false,
+        bool canReconcileProjection = false)
+        => new(severity, code, message, epicId, isBlocking, canReconcileProjection);
+
+    private static string DescribeProjectionFailure(PlanningProjectionStatus projectionStatus, DateTime startSprintStartDateUtc)
+        => projectionStatus switch
+        {
+            PlanningProjectionStatus.MissingStartBoundary => $"The persisted start boundary {startSprintStartDateUtc:yyyy-MM-dd} is not present in the canonical sprint calendar.",
+            PlanningProjectionStatus.InsufficientFutureSprintCoverage => "The canonical sprint calendar does not contain enough future coverage for the requested duration.",
+            _ => "The planning projection could not be computed."
+        };
+
     private ProductPlanningBoardDto CreateReadModel(
         PlanningContext planningContext,
         PlanningState state,
@@ -590,6 +857,10 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             .Where(static issue => issue.EpicId.HasValue)
             .GroupBy(issue => issue.EpicId!.Value)
             .ToDictionary(static group => group.Key, static group => (IReadOnlyList<PlanningBoardIssueDto>)group.ToArray());
+        var diagnosticLookup = planningContext.Diagnostics
+            .Where(static diagnostic => diagnostic.EpicId.HasValue)
+            .GroupBy(diagnostic => diagnostic.EpicId!.Value)
+            .ToDictionary(static group => group.Key, static group => (IReadOnlyList<PlanningBoardDiagnosticDto>)group.ToArray());
         var titleLookup = planningContext.Epics.ToDictionary(static epic => epic.EpicId, static epic => epic.EpicTitle);
         var changedEpicIdSet = changedEpicIds.ToHashSet();
         var affectedEpicIdSet = affectedEpicIds.ToHashSet();
@@ -606,7 +877,14 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                 epic.EndSprintIndexExclusive,
                 issueLookup.GetValueOrDefault(epic.EpicId, Array.Empty<PlanningBoardIssueDto>()),
                 changedEpicIdSet.Contains(epic.EpicId),
-                affectedEpicIdSet.Contains(epic.EpicId)))
+                affectedEpicIdSet.Contains(epic.EpicId),
+                planningContext.OperationalStateByEpicId.GetValueOrDefault(epic.EpicId)?.IntentSource ?? PlanningBoardIntentSource.Bootstrap,
+                planningContext.OperationalStateByEpicId.GetValueOrDefault(epic.EpicId)?.RecoveryStatus,
+                planningContext.OperationalStateByEpicId.GetValueOrDefault(epic.EpicId)?.DriftStatus,
+                planningContext.OperationalStateByEpicId.GetValueOrDefault(epic.EpicId)?.CanReconcileProjection ?? false,
+                MergeDiagnostics(
+                    planningContext.OperationalStateByEpicId.GetValueOrDefault(epic.EpicId)?.Diagnostics,
+                    diagnosticLookup.GetValueOrDefault(epic.EpicId, Array.Empty<PlanningBoardDiagnosticDto>()))))
             .OrderBy(static epic => epic.RoadmapOrder)
             .ToArray();
 
@@ -631,7 +909,22 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             epicItems,
             issues,
             changedEpicIds,
-            affectedEpicIds);
+            affectedEpicIds,
+            planningContext.Diagnostics);
+    }
+
+    private static IReadOnlyList<PlanningBoardDiagnosticDto> MergeDiagnostics(
+        IReadOnlyList<PlanningBoardDiagnosticDto>? left,
+        IReadOnlyList<PlanningBoardDiagnosticDto>? right)
+    {
+        if ((left is null || left.Count == 0) && (right is null || right.Count == 0))
+        {
+            return Array.Empty<PlanningBoardDiagnosticDto>();
+        }
+
+        return (left ?? Array.Empty<PlanningBoardDiagnosticDto>())
+            .Concat(right ?? Array.Empty<PlanningBoardDiagnosticDto>())
+            .ToArray();
     }
 
     private static IReadOnlyList<PlanningBoardIssueDto> MapIssues(IReadOnlyList<PlanningValidationIssue> issues)
@@ -668,7 +961,9 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
         string ProductName,
         IReadOnlyList<ActiveRoadmapEpic> Epics,
         PlanningState BaseState,
-        ProductSprintCalendarResolution CalendarResolution);
+        ProductSprintCalendarResolution CalendarResolution,
+        IReadOnlyDictionary<int, PlanningEpicOperationalState> OperationalStateByEpicId,
+        IReadOnlyList<PlanningBoardDiagnosticDto> Diagnostics);
 
     private sealed record ActiveRoadmapEpic(
         int EpicId,
@@ -688,6 +983,28 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
         IReadOnlyDictionary<DateTime, int> StartIndexByDate);
 
     private sealed record ProductSprintWindow(DateTime StartDateUtc, DateTime EndExclusiveDateUtc);
+
+    private sealed record PlanningEpicOperationalState(
+        PlanningBoardIntentSource IntentSource,
+        ProductPlanningRecoveryStatus? RecoveryStatus,
+        PlanningBoardDriftStatus? DriftStatus,
+        bool CanReconcileProjection,
+        IReadOnlyList<PlanningBoardDiagnosticDto> Diagnostics)
+    {
+        public static readonly PlanningEpicOperationalState Bootstrap = new(
+            PlanningBoardIntentSource.Bootstrap,
+            null,
+            null,
+            false,
+            Array.Empty<PlanningBoardDiagnosticDto>());
+    }
+
+    private enum PlanningProjectionStatus
+    {
+        Success,
+        MissingStartBoundary,
+        InsufficientFutureSprintCoverage
+    }
 
     private readonly record struct PlanningDateWriteRequest(int EpicId, DateOnly StartDate, DateOnly TargetDate);
 }

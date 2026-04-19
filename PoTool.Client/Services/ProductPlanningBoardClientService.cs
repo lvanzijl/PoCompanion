@@ -99,6 +99,31 @@ public sealed class ProductPlanningBoardClientService
             var body = await response.Content.ReadAsStringAsync(cancellationToken);
             if (!string.IsNullOrWhiteSpace(body))
             {
+                try
+                {
+                    using var json = JsonDocument.Parse(body);
+                    if (json.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        if (json.RootElement.TryGetProperty("message", out var message) && message.ValueKind == JsonValueKind.String)
+                        {
+                            return message.GetString() ?? body;
+                        }
+
+                        if (json.RootElement.TryGetProperty("detail", out var detail) && detail.ValueKind == JsonValueKind.String)
+                        {
+                            return detail.GetString() ?? body;
+                        }
+
+                        if (json.RootElement.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String)
+                        {
+                            return title.GetString() ?? body;
+                        }
+                    }
+                }
+                catch (JsonException)
+                {
+                }
+
                 return $"The planning board endpoint returned HTTP {(int)response.StatusCode}: {body}";
             }
         }

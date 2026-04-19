@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using PoTool.Core.Planning;
+using PoTool.Shared.Planning;
 
 namespace PoTool.Api.Persistence.Entities;
 

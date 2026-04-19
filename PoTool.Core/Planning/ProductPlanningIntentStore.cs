@@ -1,11 +1,6 @@
-namespace PoTool.Core.Planning;
+using PoTool.Shared.Planning;
 
-public enum ProductPlanningRecoveryStatus
-{
-    RecoveredExact,
-    RecoveredWithNormalization,
-    RecoveryFailed
-}
+namespace PoTool.Core.Planning;
 
 public sealed record ProductPlanningIntentRecord(
     int ProductId,

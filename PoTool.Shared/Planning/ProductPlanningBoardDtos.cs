@@ -1,5 +1,37 @@
 namespace PoTool.Shared.Planning;
 
+public enum ProductPlanningRecoveryStatus
+{
+    RecoveredExact,
+    RecoveredWithNormalization,
+    RecoveryFailed
+}
+
+public enum PlanningBoardIntentSource
+{
+    Bootstrap,
+    Authored,
+    Recovered
+}
+
+public enum PlanningBoardDriftStatus
+{
+    NoDrift,
+    MissingTfsDates,
+    TfsProjectionMismatch,
+    LegacyInvalidTfsDates,
+    CalendarResolutionFailure,
+    InsufficientFutureSprintCoverage
+}
+
+public sealed record PlanningBoardDiagnosticDto(
+    string Severity,
+    string Code,
+    string Message,
+    int? EpicId,
+    bool IsBlocking,
+    bool CanReconcileProjection);
+
 /// <summary>
 /// Read model for a single product planning board built from the planning engine.
 /// </summary>
@@ -10,7 +42,8 @@ public sealed record ProductPlanningBoardDto(
     IReadOnlyList<PlanningBoardEpicItemDto> EpicItems,
     IReadOnlyList<PlanningBoardIssueDto> Issues,
     IReadOnlyList<int> ChangedEpicIds,
-    IReadOnlyList<int> AffectedEpicIds);
+    IReadOnlyList<int> AffectedEpicIds,
+    IReadOnlyList<PlanningBoardDiagnosticDto>? Diagnostics = null);
 
 /// <summary>
 /// A track on the planning board.
@@ -34,7 +67,12 @@ public sealed record PlanningBoardEpicItemDto(
     int EndSprintIndexExclusive,
     IReadOnlyList<PlanningBoardIssueDto> Issues,
     bool IsChanged,
-    bool IsAffected);
+    bool IsAffected,
+    PlanningBoardIntentSource IntentSource = PlanningBoardIntentSource.Bootstrap,
+    ProductPlanningRecoveryStatus? RecoveryStatus = null,
+    PlanningBoardDriftStatus? DriftStatus = null,
+    bool CanReconcileProjection = false,
+    IReadOnlyList<PlanningBoardDiagnosticDto>? Diagnostics = null);
 
 /// <summary>
 /// A surfaced planning issue for read-model consumers.

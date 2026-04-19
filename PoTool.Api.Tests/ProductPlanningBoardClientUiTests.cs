@@ -130,6 +130,20 @@ public sealed class ProductPlanningBoardClientUiTests
     }
 
     [TestMethod]
+    public async Task ProductPlanningBoardClientService_GetBoardAsync_ParsesOperationalBlockerMessage()
+    {
+        var service = CreateService((_, _) => new HttpResponseMessage(HttpStatusCode.Conflict)
+        {
+            Content = new StringContent("{\"message\":\"Planning is blocked by an ambiguous sprint calendar.\"}", Encoding.UTF8, "application/json")
+        });
+
+        var result = await service.GetBoardAsync(7);
+
+        Assert.IsFalse(result.IsSuccess);
+        Assert.AreEqual("Planning is blocked by an ambiguous sprint calendar.", result.ErrorMessage);
+    }
+
+    [TestMethod]
     public void ProductPlanningBoardRenderModelFactory_Create_GroupsMainAndParallelTracks()
     {
         var board = CreateBoard();
@@ -158,6 +172,50 @@ public sealed class ProductPlanningBoardClientUiTests
         Assert.IsTrue(renderModel.HasValidationIssues);
         Assert.AreEqual(ProductPlanningBoardStatusKind.Warning, renderModel.StatusKind);
         StringAssert.Contains(renderModel.StatusDetail, "issue");
+    }
+
+    [TestMethod]
+    public void ProductPlanningBoardRenderModelFactory_Create_SurfacesOperationalDiagnosticsSummary()
+    {
+        var board = CreateBoard() with
+        {
+            Diagnostics =
+            [
+                new PlanningBoardDiagnosticDto("Error", "CalendarResolutionFailure", "Sprint calendar is ambiguous.", null, true, false)
+            ],
+            EpicItems =
+            [
+                new PlanningBoardEpicItemDto(
+                    101,
+                    "Epic A",
+                    1,
+                    0,
+                    0,
+                    0,
+                    2,
+                    2,
+                    [],
+                    false,
+                    false,
+                    PlanningBoardIntentSource.Recovered,
+                    ProductPlanningRecoveryStatus.RecoveredWithNormalization,
+                    PlanningBoardDriftStatus.TfsProjectionMismatch,
+                    false,
+                    [
+                        new PlanningBoardDiagnosticDto("Warning", "StaleTfsProjection", "TFS dates differ from internal intent.", 101, false, false)
+                    ]),
+                new PlanningBoardEpicItemDto(102, "Epic B", 2, 1, 1, 1, 2, 3, [], false, false)
+            ]
+        };
+
+        var renderModel = ProductPlanningBoardRenderModelFactory.Create(board);
+
+        Assert.IsTrue(renderModel.HasOperationalDiagnostics);
+        Assert.IsTrue(renderModel.HasBlockingDiagnostics);
+        Assert.AreEqual(1, renderModel.RecoveredEpicCount);
+        Assert.AreEqual(1, renderModel.DriftedEpicCount);
+        Assert.AreEqual(ProductPlanningBoardStatusKind.Warning, renderModel.StatusKind);
+        StringAssert.Contains(renderModel.StatusLabel, "blocked");
     }
 
     private static async Task AssertDeltaMutationAsync(

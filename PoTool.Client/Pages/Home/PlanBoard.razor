@@ -167,6 +167,18 @@
                                 <MudChip T="string" Variant="Variant.Outlined" Color="@(renderModel.HasValidationIssues ? Color.Warning : Color.Success)">
                                     @(renderModel.HasValidationIssues ? $"{renderModel.Board.Issues.Count} validation issue(s)" : "No validation issues")
                                 </MudChip>
+                                @if (renderModel.RecoveredEpicCount > 0)
+                                {
+                                    <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
+                                        @renderModel.RecoveredEpicCount recovered epic@(renderModel.RecoveredEpicCount == 1 ? string.Empty : "s")
+                                    </MudChip>
+                                }
+                                @if (renderModel.DriftedEpicCount > 0)
+                                {
+                                    <MudChip T="string" Variant="Variant.Outlined" Color="Color.Warning">
+                                        @renderModel.DriftedEpicCount drifted epic@(renderModel.DriftedEpicCount == 1 ? string.Empty : "s")
+                                    </MudChip>
+                                }
                             </MudStack>
                         </MudStack>
 
@@ -193,6 +205,23 @@
                                         {
                                             <MudListItem T="string">
                                                 <MudText Typo="Typo.body2">@FormatIssueText(issue)</MudText>
+                                            </MudListItem>
+                                        }
+                                    </MudList>
+                                </MudStack>
+                            </MudAlert>
+                        }
+
+                        @if ((renderModel.Board.Diagnostics?.Count ?? 0) > 0)
+                        {
+                            <MudAlert Severity="@(renderModel.HasBlockingDiagnostics ? Severity.Error : Severity.Warning)" Variant="Variant.Outlined">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.subtitle2">Operational planning diagnostics</MudText>
+                                    <MudList T="string" Dense="true" Class="planning-board-issue-list">
+                                        @foreach (var diagnostic in renderModel.Board.Diagnostics!)
+                                        {
+                                            <MudListItem T="string">
+                                                <MudText Typo="Typo.body2">@FormatDiagnosticText(diagnostic)</MudText>
                                             </MudListItem>
                                         }
                                     </MudList>
@@ -264,10 +293,22 @@
                                                                         @epic.Issues.Count warning@(epic.Issues.Count == 1 ? string.Empty : "s")
                                                                     </MudChip>
                                                                 }
+                                                                @if (epic.IntentSource == PlanningBoardIntentSource.Recovered)
+                                                                {
+                                                                    <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
+                                                                        @(epic.RecoveryStatus == ProductPlanningRecoveryStatus.RecoveredWithNormalization ? "Recovered + normalized" : "Recovered")
+                                                                    </MudChip>
+                                                                }
+                                                                @if (epic.DriftStatus.HasValue && epic.DriftStatus.Value != PlanningBoardDriftStatus.NoDrift)
+                                                                {
+                                                                    <MudChip T="string" Variant="Variant.Outlined" Color="Color.Warning">
+                                                                        @FormatDriftStatus(epic.DriftStatus.Value)
+                                                                    </MudChip>
+                                                                }
                                                             </MudStack>
                                                         </MudStack>
                                                         <MudStack Spacing="0" AlignItems="AlignItems.End">
-                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Track @epic.TrackIndex</MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@GetIntentSourceLabel(epic)</MudText>
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">Duration @epic.DurationInSprints sprint@(epic.DurationInSprints == 1 ? string.Empty : "s")</MudText>
                                                         </MudStack>
                                                     </MudStack>
@@ -307,6 +348,20 @@
                                                                 {
                                                                     <MudListItem T="string">
                                                                         <MudText Typo="Typo.body2">@issue.Message</MudText>
+                                                                    </MudListItem>
+                                                                }
+                                                            </MudList>
+                                                        </MudAlert>
+                                                    }
+
+                                                    @if ((epic.Diagnostics?.Count ?? 0) > 0)
+                                                    {
+                                                        <MudAlert Severity="@GetDiagnosticSeverity(epic.Diagnostics!)" Variant="Variant.Outlined" Dense="true">
+                                                            <MudList T="string" Dense="true" Class="planning-board-issue-list">
+                                                                @foreach (var diagnostic in epic.Diagnostics!)
+                                                                {
+                                                                    <MudListItem T="string">
+                                                                        <MudText Typo="Typo.body2">@diagnostic.Message</MudText>
                                                                     </MudListItem>
                                                                 }
                                                             </MudList>
@@ -799,6 +854,15 @@
                 ? "planning-board-epic planning-board-epic--affected"
                 : "planning-board-epic";
 
+    private static string GetIntentSourceLabel(PlanningBoardEpicItemDto epic)
+        => epic.IntentSource switch
+        {
+            PlanningBoardIntentSource.Authored => "Authored intent",
+            PlanningBoardIntentSource.Recovered when epic.RecoveryStatus == ProductPlanningRecoveryStatus.RecoveredWithNormalization => "Recovered + normalized",
+            PlanningBoardIntentSource.Recovered => "Recovered intent",
+            _ => $"Track {epic.TrackIndex}"
+        };
+
     private static Color GetBoardStatusColor(ProductPlanningBoardStatusKind statusKind)
         => statusKind switch
         {
@@ -811,6 +875,34 @@
         => issue.EpicId.HasValue
             ? $"Epic {issue.EpicId.Value}: {issue.Message}"
             : issue.Message;
+
+    private static string FormatDiagnosticText(PlanningBoardDiagnosticDto diagnostic)
+        => diagnostic.EpicId.HasValue
+            ? $"Epic {diagnostic.EpicId.Value}: {diagnostic.Message}"
+            : diagnostic.Message;
+
+    private static string FormatDriftStatus(PlanningBoardDriftStatus driftStatus)
+        => driftStatus switch
+        {
+            PlanningBoardDriftStatus.MissingTfsDates => "Missing TFS dates",
+            PlanningBoardDriftStatus.TfsProjectionMismatch => "TFS drift",
+            PlanningBoardDriftStatus.LegacyInvalidTfsDates => "Legacy TFS dates",
+            PlanningBoardDriftStatus.CalendarResolutionFailure => "Calendar blocked",
+            PlanningBoardDriftStatus.InsufficientFutureSprintCoverage => "Limited sprint coverage",
+            _ => "No drift"
+        };
+
+    private static Severity GetDiagnosticSeverity(IReadOnlyList<PlanningBoardDiagnosticDto> diagnostics)
+    {
+        if (diagnostics.Any(static diagnostic => diagnostic.IsBlocking || string.Equals(diagnostic.Severity, "Error", StringComparison.OrdinalIgnoreCase)))
+        {
+            return Severity.Error;
+        }
+
+        return diagnostics.Any(static diagnostic => string.Equals(diagnostic.Severity, "Warning", StringComparison.OrdinalIgnoreCase))
+            ? Severity.Warning
+            : Severity.Info;
+    }
 
     private async Task NavigateToPlanning()
         => NavigationManager.NavigateTo(

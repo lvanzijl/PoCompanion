@@ -3,6 +3,7 @@ using PoTool.Api.Controllers;
 using PoTool.Core.Domain.Tests;
 using PoTool.Core.Planning;
 using PoTool.Shared.Planning;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 using static PoTool.Core.Domain.Tests.ProductPlanningBoardTestFactory;
 
@@ -152,6 +153,52 @@ public sealed class ProductPlanningBoardControllerTests
             var result = await endpoint();
             Assert.IsInstanceOfType<NotFoundResult>(result.Result);
         }
+    }
+
+    [TestMethod]
+    public async Task GetPlanningBoard_AmbiguousCalendarWithPersistedIntent_ReturnsConflictWithMessage()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        intentStore.Seed(new ProductPlanningIntentRecord(7, 1951, new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), 1, null, DateTime.UtcNow));
+
+        var controller = new ProductPlanningBoardController(
+            CreateService(
+                new InMemoryProductPlanningSessionStore(),
+                intentStore,
+                new RecordingTfsClient(),
+                [CreateProduct(7, "Roadmap Product", [100], [10, 11])],
+                new Dictionary<int, IReadOnlyList<WorkItemDto>>
+                {
+                    [100] =
+                    [
+                        CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                        CreateWorkItem(1951, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap")
+                    ]
+                },
+                new Dictionary<int, IReadOnlyList<SprintDto>>
+                {
+                    [10] = CreateSequentialSprints(10, new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), 2),
+                    [11] =
+                    [
+                        new SprintDto(
+                            1,
+                            11,
+                            "team-11-sprint-1",
+                            "Team 11\\Sprint 1",
+                            "Sprint 1",
+                            new DateTimeOffset(new DateTime(2026, 1, 12, 0, 0, 0, DateTimeKind.Utc), TimeSpan.Zero),
+                            new DateTimeOffset(new DateTime(2026, 1, 26, 0, 0, 0, DateTimeKind.Utc), TimeSpan.Zero),
+                            null,
+                            DateTimeOffset.UtcNow)
+                    ]
+                }));
+
+        var result = await controller.GetPlanningBoard(7, CancellationToken.None);
+
+        Assert.IsInstanceOfType<ConflictObjectResult>(result.Result);
+        var payload = ((ConflictObjectResult)result.Result).Value!;
+        var message = payload.GetType().GetProperty("message")!.GetValue(payload) as string;
+        StringAssert.Contains(message, "unambiguous sprint calendar");
     }
 
     private static ProductPlanningBoardController CreateController(params WorkItemDto[] workItems)

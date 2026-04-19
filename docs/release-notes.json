@@ -2,6 +2,14 @@
   {
     "date": "2026-04-19",
     "type": "Changed",
+    "title": "Plan Board now surfaces planning recovery, drift, and calendar blocker diagnostics",
+    "impact": "The /planning/plan-board workspace now shows when epic planning intent was recovered or normalized from TFS projected dates, highlights stale or missing TFS date projections against internal intent, surfaces legacy invalid projected dates and limited sprint-calendar coverage, and exposes clear blocker messaging when the canonical sprint calendar cannot be resolved safely instead of failing silently.",
+    "area": "Planning / Plan Board / TFS Projection Diagnostics",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-19",
+    "type": "Changed",
     "title": "Plan Board now uses the real product planning board with explicit epic-planning actions",
     "impact": "The /planning/plan-board workspace now loads the persisted product planning board for the selected product, renders the main lane plus derived parallel tracks, highlights changed and affected epics, surfaces planning validation issues directly on the board, and exposes explicit controls for move, spacing, parallelization, return-to-main, reorder, shift-plan, reload, and reset without using drag-and-drop or the old ReleasePlanning model.",
     "area": "Planning / Product Roadmaps / Plan Board",

@@ -141,12 +141,22 @@ public sealed class ProductPlanningBoardController : ControllerBase
     private async Task<ActionResult<ProductPlanningBoardDto>> MapBoardResultAsync(
         Func<ValueTask<ProductPlanningBoardDto?>> action)
     {
-        var board = await action();
-        if (board is null)
+        try
         {
-            return NotFound();
-        }
+            var board = await action();
+            if (board is null)
+            {
+                return NotFound();
+            }
 
-        return Ok(board);
+            return Ok(board);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
+            });
+        }
     }
 }
