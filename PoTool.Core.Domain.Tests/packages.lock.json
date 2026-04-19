@@ -28,6 +28,11 @@
           "AngleSharp": "[0.17.0, 0.18.0)"
         }
       },
+      "FluentValidation": {
+        "type": "Transitive",
+        "resolved": "11.11.0",
+        "contentHash": "cyIVdQBwSipxWG8MA3Rqox7iNbUNUTK5bfJi9tIdm4CAfH71Oo5ABLP4/QyrUwuakqpUEPGtE43BDddvEehuYw=="
+      },
       "HtmlSanitizer": {
         "type": "Transitive",
         "resolved": "9.0.892",
@@ -35,6 +40,14 @@
         "dependencies": {
           "AngleSharp": "[0.17.1]",
           "AngleSharp.Css": "[0.17.0]"
+        }
+      },
+      "Mediator.Abstractions": {
+        "type": "Transitive",
+        "resolved": "2.1.7",
+        "contentHash": "93GWsxuikSVSGvWeNwkMecMXjUYURNyNj978FTnH7PhC3hrGh8mERNkxRNWIvLj7k0nnrnsQxixEQ0NxRXNkow==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0"
         }
       },
       "Microsoft.ApplicationInsights": {
@@ -51,6 +64,11 @@
         "type": "Transitive",
         "resolved": "2.0.0",
         "contentHash": "QcZrCETsBJqy/vQpFtJc+jSXQ0K5sucQ6NUFbTNVHD4vfZZOwjZ/3sBzczkC4DityhD3AVO/+K/+9ioLs1AgRA=="
+      },
+      "Microsoft.Extensions.DependencyInjection.Abstractions": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "xlzi2IYREJH3/m6+lUrQlujzX8wDitm4QGnUu6kUXTQAWPuZY8i+ticFJbzfqaetLA6KR/rO6Ew/HuYD+bxifg=="
       },
       "Microsoft.Extensions.DependencyModel": {
         "type": "Transitive",
@@ -173,6 +191,15 @@
         "type": "Transitive",
         "resolved": "13.0.3",
         "contentHash": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ=="
+      },
+      "potool.core": {
+        "type": "Project",
+        "dependencies": {
+          "FluentValidation": "[11.11.0, )",
+          "Mediator.Abstractions": "[2.1.7, )",
+          "PoTool.Core.Domain": "[1.0.0, )",
+          "PoTool.Shared": "[1.0.0, )"
+        }
       },
       "potool.core.domain": {
         "type": "Project",
