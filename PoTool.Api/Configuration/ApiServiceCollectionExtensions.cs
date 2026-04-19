@@ -22,6 +22,7 @@ using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
+using PoTool.Core.Planning;
 using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.BacklogQuality.Services;
 using PoTool.Core.Domain.DeliveryTrends.Services;
@@ -178,6 +179,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ExportConfigurationService>();
         services.AddScoped<ImportConfigurationService>();
         services.AddScoped<ProjectPlanningSummaryService>();
+        services.AddScoped<IProductPlanningBoardService, ProductPlanningBoardService>();
         services.AddScoped<IBuildQualityReadStore, EfBuildQualityReadStore>();
         services.AddScoped<IBuildQualityProvider, BuildQualityProvider>();
         services.AddScoped<ContextResolver>();
