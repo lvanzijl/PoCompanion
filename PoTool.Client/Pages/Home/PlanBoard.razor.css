@@ -1,0 +1,50 @@
+.planning-board-track {
+    border-left: 4px solid var(--mud-palette-primary);
+}
+
+.planning-board-track--main {
+    background: color-mix(in srgb, var(--mud-palette-primary) 6%, var(--mud-palette-surface) 94%);
+}
+
+.planning-board-track--parallel {
+    border-left-color: color-mix(in srgb, var(--mud-palette-primary) 55%, var(--mud-palette-info) 45%);
+    background: color-mix(in srgb, var(--mud-palette-primary) 3%, var(--mud-palette-surface) 97%);
+}
+
+.planning-board-track-grid {
+    display: grid;
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.planning-board-epic {
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 10px;
+    min-width: 0;
+}
+
+.planning-board-epic--changed {
+    border: 2px solid var(--mud-palette-primary);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--mud-palette-primary) 25%, transparent 75%);
+}
+
+.planning-board-epic--affected {
+    border: 1px solid color-mix(in srgb, var(--mud-palette-info) 45%, var(--mud-palette-lines-default) 55%);
+    background: color-mix(in srgb, var(--mud-palette-info) 6%, var(--mud-palette-surface) 94%);
+}
+
+.planning-board-metric {
+    height: 100%;
+}
+
+.planning-board-number-field {
+    min-width: 8rem;
+}
+
+.planning-board-action-group {
+    min-height: 100%;
+}
+
+.planning-board-issue-list {
+    padding-left: 0.25rem;
+}

@@ -1,568 +1,511 @@
 @page "/planning/plan-board"
 @page "/planning/{RouteProjectAlias}/plan-board"
 @using PoTool.Client.Components.Common
-@using PoTool.Client.ApiClient
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Shared.DataState
-@using PoTool.Shared.Planning
 @using PoTool.Shared.Metrics
+@using PoTool.Shared.Planning
 @implements IDisposable
 @inject IProfileService ProfileService
 @inject ProductService ProductService
 @inject ProjectService ProjectService
 @inject GlobalFilterStore GlobalFilterStore
 @inject GlobalFilterRouteService GlobalFilterRouteService
-@inject WorkItemService WorkItemService
-@inject SprintService SprintService
-@inject MetricsStateService MetricsStateService
-@inject StateClassificationService StateClassificationService
+@inject ProductPlanningBoardClientService ProductPlanningBoardClientService
 @inject NavigationManager NavigationManager
-@inject ISnackbar Snackbar
 @inject ILogger<PlanBoard> Logger
 
 <PageTitle>Plan Board - PO Companion</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    @* Header *@
-    <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-            <MudStack Spacing="1">
-                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                    <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Color="Color.Primary" Size="Size.Large" />
-                    <MudText Typo="Typo.h4">Plan Board</MudText>
-                </MudStack>
-                <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
-            </MudStack>
-
-            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                @if (_isBusy)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
-                }
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           Disabled="@(!_selectedProductId.HasValue || _selectedProductRootIds.Length == 0 || _isBusy || _boardState.UiState == UiDataState.Loading)"
-                           OnClick="RefreshBoardFromTfsAsync">
-                    @(_isRefreshingFromTfs ? "Refreshing…" : "Refresh from TFS")
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           StartIcon="@Icons.Material.Filled.CalendarMonth"
-                           OnClick="NavigateToPlanning">
-                    Planning
-                </MudButton>
-                @if (!string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
-                {
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Info"
-                               StartIcon="@Icons.Material.Filled.FolderSpecial"
-                               OnClick="NavigateToOverview">
-                        Overview
-                    </MudButton>
-                }
-            </MudStack>
-        </MudStack>
-    </MudPaper>
-
-    <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
-                            State="@ProjectPlanningSummaryState"
-                            ProductOwnerId="@_activeProfileId"
-                            Subject="Project planning summary"
-                            EmptyTitle="No project planning summary available"
-                            EmptyMessage="No project planning summary is available for the selected scope."
-                            FailedMessage="Project planning summary could not be loaded right now."
-                            OnRecovery="@LoadProjectPlanningSummaryAsync">
-        <NotRequestedContent>
-        </NotRequestedContent>
-        <ChildContent Context="projectPlanningSummary">
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudStack Spacing="2">
-                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                    <MudStack Spacing="0">
-                        <MudText Typo="Typo.overline" Color="Color.Secondary">Project planning summary</MudText>
-                        <MudText Typo="Typo.h6">@projectPlanningSummary.ProjectAlias</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-4">
+    <MudStack Spacing="3">
+        <MudPaper Elevation="2" Class="pa-4">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack Spacing="1">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h4">Plan Board</MudText>
                     </MudStack>
-                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                        <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
-                            @projectPlanningSummary.PlannedPBIs planned · @projectPlanningSummary.UnplannedPBIs unplanned
-                        </MudChip>
-                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(HasPlanningGap(projectPlanningSummary))">
-                            @GetPlanningGapLabel(projectPlanningSummary)
-                        </MudChip>
-                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(projectPlanningSummary.OvercommitIndicator)">
-                            @(projectPlanningSummary.OvercommitIndicator ? "Overcommitted across products" : "Capacity window within range")
-                        </MudChip>
-                    </MudStack>
-                </MudStack>
-
-                <MudGrid Spacing="2">
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudPaper Outlined="true" Class="pa-3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Planned effort</MudText>
-                            <MudText Typo="Typo.h6">@projectPlanningSummary.PlannedEffort / @projectPlanningSummary.TotalEffort</MudText>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudPaper Outlined="true" Class="pa-3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Capacity / sprint</MudText>
-                            <MudText Typo="Typo.h6">@FormatCapacity(projectPlanningSummary.CapacityPerSprint)</MudText>
-                        </MudPaper>
-                    </MudItem>
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudPaper Outlined="true" Class="pa-3">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">Product imbalance</MudText>
-                            <MudText Typo="Typo.h6">@GetProductImbalanceLabel(projectPlanningSummary)</MudText>
-                        </MudPaper>
-                    </MudItem>
-                </MudGrid>
-            </MudStack>
-        </MudPaper>
-        </ChildContent>
-    </CanonicalDataStateView>
-
-    @* Board Content *@
-    <CanonicalDataStateView TData="PlanBoardRenderModel"
-                            State="@BoardRenderState"
-                            ProductOwnerId="@_activeProfileId"
-                            Subject="Plan Board"
-                            EmptyTitle="No plan board data available"
-                            EmptyMessage="No work items are available for the selected product."
-                            InvalidMessage="Adjust the current product selection to load the plan board."
-                            FailedMessage="Plan Board could not be loaded right now."
-                            OnRecovery="@RetryBoardLoadAsync">
-        <NotRequestedContent>
-            <MudPaper Elevation="1" Class="pa-8">
-                <MudStack AlignItems="AlignItems.Center" Spacing="3">
-                    <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Large" Color="Color.Secondary" />
-                    <MudText Typo="Typo.h6" Color="Color.Secondary">Select a product to start planning</MudText>
+                    <MudBreadcrumbs Items="@_breadcrumbs" Class="pa-0" />
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Choose a product from the selector above to load its PBIs and bugs into the planning board.
+                        Product-scoped epic planning with explicit actions, derived minimal tracks, and durable session-backed state.
                     </MudText>
                 </MudStack>
-            </MudPaper>
-        </NotRequestedContent>
-        <ChildContent Context="board">
-        @if (_isBusy)
-        {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
-        }
 
-        @if (!string.IsNullOrWhiteSpace(board.SprintResolutionMessage))
-        {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mb-3">
-                @board.SprintResolutionMessage
-            </MudAlert>
-        }
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                    @if (_isBusy)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    }
+                    <CompactButton ButtonRole="ButtonRole.Action"
+                                   Icon="@Icons.Material.Filled.Refresh"
+                                   Disabled="@(!_selectedProductId.HasValue || _isBusy)"
+                                   OnClick="ReloadBoardAsync">
+                        Reload board
+                    </CompactButton>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.Restore"
+                                   Disabled="@(!_selectedProductId.HasValue || _isBusy)"
+                                   OnClick="ResetBoardAsync">
+                        Reset session
+                    </CompactButton>
+                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                   Icon="@Icons.Material.Filled.CalendarMonth"
+                                   OnClick="NavigateToPlanning">
+                        Planning
+                    </CompactButton>
+                    @if (!string.IsNullOrWhiteSpace(_selectedProjectRouteKey))
+                    {
+                        <CompactButton ButtonRole="ButtonRole.Action"
+                                       Icon="@Icons.Material.Filled.FolderSpecial"
+                                       OnClick="NavigateToOverview">
+                            Overview
+                        </CompactButton>
+                    }
+                </MudStack>
+            </MudStack>
+        </MudPaper>
 
-        <div class="plan-board-columns">
-            @* Left: Hierarchical Candidate Tree *@
-            <div class="plan-board-column plan-board-candidate-column">
-                <MudPaper Elevation="2" Class="pa-3 plan-column-paper">
-                    <div class="plan-column-header">
-                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
-                            <MudText Typo="Typo.subtitle1">
-                                <MudIcon Icon="@Icons.Material.Filled.Inbox" Class="mr-1" Size="Size.Small" />
-                                Backlog
-                            </MudText>
-                            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
-                                @CountCandidateLeaves(_candidateTree)
-                            </MudChip>
-                        </MudStack>
-                    </div>
-                    <div class="plan-candidate-tree" style="overflow-y: auto; max-height: 70vh;">
-                        @if (board.CandidateTree.Count == 0)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
-                                No unplanned PBIs or bugs
-                            </MudText>
-                        }
-                        else
-                        {
-                            @foreach (var node in board.CandidateTree)
-                            {
-                                @RenderCandidateNode(node, 0)
-                            }
-                        }
-                    </div>
-                </MudPaper>
-            </div>
-
-            @* Sprint Columns *@
-            @foreach (var sprint in board.SprintColumns)
-            {
-                var cap = GetSprintCapacityState(sprint.ZoneId);
-                var sprintItems = board.SprintItems.GetValueOrDefault(sprint.ZoneId) ?? [];
-                var isDropTarget = _draggedNode != null;
-
-                <div class="plan-board-column">
-                    <MudPaper Elevation="2" Class="@($"pa-3 plan-column-paper{(cap.IsOvercommitted ? " plan-overcommitted" : "")}")">
-                        <div class="plan-column-header">
-                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
-                                <MudText Typo="Typo.subtitle1">
-                                    <MudIcon Icon="@Icons.Material.Filled.DateRange" Class="mr-1" Size="Size.Small" />
-                                    @sprint.Name
-                                </MudText>
-                                <MudChip T="string" Size="Size.Small" Color="@(cap.IsOvercommitted ? Color.Error : Color.Primary)" Variant="Variant.Outlined">
-                                    @sprintItems.Count
+        <CanonicalDataStateView TData="ProjectPlanningSummaryDto"
+                                State="@ProjectPlanningSummaryState"
+                                ProductOwnerId="@_activeProfileId"
+                                Subject="Project planning summary"
+                                EmptyTitle="No project planning summary available"
+                                EmptyMessage="No project planning summary is available for the selected scope."
+                                FailedMessage="Project planning summary could not be loaded right now."
+                                OnRecovery="@LoadProjectPlanningSummaryAsync">
+            <NotRequestedContent>
+            </NotRequestedContent>
+            <ChildContent Context="projectPlanningSummary">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.overline" Color="Color.Secondary">Project planning summary</MudText>
+                                <MudText Typo="Typo.h6">@projectPlanningSummary.ProjectAlias</MudText>
+                            </MudStack>
+                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
+                                    @projectPlanningSummary.PlannedPBIs planned · @projectPlanningSummary.UnplannedPBIs unplanned
+                                </MudChip>
+                                <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(HasPlanningGap(projectPlanningSummary))">
+                                    @GetPlanningGapLabel(projectPlanningSummary)
+                                </MudChip>
+                                <MudChip T="string" Variant="Variant.Outlined" Color="@GetProjectRiskColor(projectPlanningSummary.OvercommitIndicator)">
+                                    @(projectPlanningSummary.OvercommitIndicator ? "Overcommitted across products" : "Capacity window within range")
                                 </MudChip>
                             </MudStack>
-                            @if (sprint.StartUtc.HasValue && sprint.EndUtc.HasValue)
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    @sprint.StartUtc.Value.ToString("dd MMM") – @sprint.EndUtc.Value.ToString("dd MMM yyyy")
-                                </MudText>
-                            }
+                        </MudStack>
 
-                            @* Sprint Capacity Indicator *@
-                            @if (cap.HasCapacity)
-                            {
-                                <div class="plan-capacity-indicator mt-2">
-                                    <MudStack Spacing="0">
-                                        <MudStack Row="true" Justify="Justify.SpaceBetween">
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                Capacity: @cap.Capacity pts
-                                            </MudText>
-                                            <MudText Typo="Typo.caption" Color="@(cap.IsOvercommitted ? Color.Error : Color.Default)">
-                                                Assigned: @cap.Assigned pts
-                                            </MudText>
-                                        </MudStack>
-                                        <MudProgressLinear Value="@cap.Utilization"
-                                                           Color="@GetCapacityColor(cap.Utilization)"
-                                                           Rounded="true"
-                                                           Style="height: 6px;"
-                                                           Class="my-1" />
-                                        <MudText Typo="Typo.caption" Color="@(cap.IsOvercommitted ? Color.Error : Color.Success)">
-                                            @if (cap.IsOvercommitted)
-                                            {
-                                                @($"Over by {cap.OverAmount} pts")
-                                            }
-                                            else
-                                            {
-                                                @($"Remaining: {cap.Remaining} pts")
-                                            }
-                                        </MudText>
-                                        @if (cap.IsOvercommitted)
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudPaper Outlined="true" Class="pa-3">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Planned effort</MudText>
+                                    <MudText Typo="Typo.h6">@projectPlanningSummary.PlannedEffort / @projectPlanningSummary.TotalEffort</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudPaper Outlined="true" Class="pa-3">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Capacity / sprint</MudText>
+                                    <MudText Typo="Typo.h6">@FormatCapacity(projectPlanningSummary.CapacityPerSprint)</MudText>
+                                </MudPaper>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudPaper Outlined="true" Class="pa-3">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Product imbalance</MudText>
+                                    <MudText Typo="Typo.h6">@GetProductImbalanceLabel(projectPlanningSummary)</MudText>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+                    </MudStack>
+                </MudPaper>
+            </ChildContent>
+        </CanonicalDataStateView>
+
+        <CanonicalDataStateView TData="ProductPlanningBoardRenderModel"
+                                State="@BoardRenderState"
+                                ProductOwnerId="@_activeProfileId"
+                                Subject="Product planning board"
+                                EmptyTitle="No roadmap epics are available"
+                                EmptyMessage="The selected product has no active roadmap epics for the planning board."
+                                InvalidMessage="Adjust the current product scope to load the planning board."
+                                FailedMessage="The planning board could not be loaded right now."
+                                OnRecovery="@RetryBoardLoadAsync">
+            <NotRequestedContent>
+                <MudPaper Elevation="1" Class="pa-8">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        <MudIcon Icon="@Icons.Material.Filled.ViewColumn" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h6" Color="Color.Secondary">Select a product to start planning</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Use the shared planning scope above this page to select one product, then the planning board will load its roadmap epics.
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            </NotRequestedContent>
+            <ChildContent Context="renderModel">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <MudStack Spacing="2">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.overline" Color="Color.Secondary">Product planning board</MudText>
+                                <MudText Typo="Typo.h5">@renderModel.Board.ProductName</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    Mutations persist through the existing planning API immediately; reset restores the durable or recovered base session.
+                                </MudText>
+                            </MudStack>
+                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                <MudChip T="string" Variant="Variant.Filled" Color="@GetBoardStatusColor(renderModel.StatusKind)">
+                                    @renderModel.StatusLabel
+                                </MudChip>
+                                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary">
+                                    @renderModel.Tracks.Count track@(renderModel.Tracks.Count == 1 ? string.Empty : "s") derived automatically
+                                </MudChip>
+                                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">
+                                    @renderModel.Board.EpicItems.Count epic@(renderModel.Board.EpicItems.Count == 1 ? string.Empty : "s")
+                                </MudChip>
+                                <MudChip T="string" Variant="Variant.Outlined" Color="@(renderModel.HasValidationIssues ? Color.Warning : Color.Success)">
+                                    @(renderModel.HasValidationIssues ? $"{renderModel.Board.Issues.Count} validation issue(s)" : "No validation issues")
+                                </MudChip>
+                            </MudStack>
+                        </MudStack>
+
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@renderModel.StatusDetail</MudText>
+
+                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                            Drag &amp; drop is intentionally unavailable here. Every planning change uses explicit buttons and deterministic API operations.
+                        </MudAlert>
+
+                        @if (!string.IsNullOrWhiteSpace(_boardFeedbackMessage))
+                        {
+                            <MudAlert Severity="@_boardFeedbackSeverity" Variant="Variant.Outlined" Dense="true">
+                                @_boardFeedbackMessage
+                            </MudAlert>
+                        }
+
+                        @if (renderModel.Board.Issues.Count > 0)
+                        {
+                            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
+                                <MudStack Spacing="1">
+                                    <MudText Typo="Typo.subtitle2">Planning issues</MudText>
+                                    <MudList T="string" Dense="true" Class="planning-board-issue-list">
+                                        @foreach (var issue in renderModel.Board.Issues)
                                         {
-                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
-                                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                                                <MudText Typo="Typo.caption" Color="Color.Warning">
-                                                    Exceeds historical capacity
-                                                </MudText>
-                                            </MudStack>
+                                            <MudListItem T="string">
+                                                <MudText Typo="Typo.body2">@FormatIssueText(issue)</MudText>
+                                            </MudListItem>
                                         }
-                                    </MudStack>
-                                </div>
-                            }
-                        </div>
+                                    </MudList>
+                                </MudStack>
+                            </MudAlert>
+                        }
+                    </MudStack>
+                </MudPaper>
 
-                        @* Sprint drop zone *@
-                        <div class="plan-sprint-zone @(isDropTarget ? "plan-drop-ready" : "")"
-                             style="min-height: 120px; overflow-y: auto; max-height: 70vh;"
-                             @ondragover:preventDefault="true"
-                             @ondrop="@(() => HandleDropOnSprint(sprint))">
-                            @if (sprintItems.Count == 0)
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="pa-4" Align="Align.Center">
-                                    Drop PBIs or bugs here
+                <MudPaper Elevation="1" Class="pa-3">
+                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                        @foreach (var sprint in renderModel.SprintColumns)
+                        {
+                            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Default">
+                                @sprint.Label
+                            </MudChip>
+                        }
+                    </MudStack>
+                </MudPaper>
+
+                @foreach (var track in renderModel.Tracks)
+                {
+                    <MudPaper Elevation="1" Class="@GetTrackPaperClass(track)">
+                        <MudStack Spacing="2">
+                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                <MudStack Spacing="0">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudText Typo="Typo.h6">@track.Title</MudText>
+                                        <MudChip T="string" Variant="Variant.Outlined" Color="@(track.IsMainLane ? Color.Primary : Color.Info)">
+                                            @(track.IsMainLane ? "Dominant lane" : "Secondary lane")
+                                        </MudChip>
+                                    </MudStack>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@track.Subtitle</MudText>
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @track.Epics.Count epic@(track.Epics.Count == 1 ? string.Empty : "s") · minimal derived track packing
                                 </MudText>
+                            </MudStack>
+
+                            @if (track.Epics.Count == 0)
+                            {
+                                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                                    This track is currently empty.
+                                </MudAlert>
                             }
                             else
                             {
-                                @foreach (var item in sprintItems)
-                                {
-                                    <MudCard Elevation="1"
-                                             Class="@($"plan-feature-card mb-2{(!item.Effort.HasValue ? " plan-missing-estimate" : "")}")"
-                                             draggable="true"
-                                             @ondragstart="@(() => OnSprintItemDragStart(item, sprint))"
-                                             @ondragend="OnDragEnd">
-                                        <MudCardContent Class="pa-3">
-                                            <MudStack Spacing="1">
-                                                <MudText Typo="Typo.body2" Style="font-weight: 600; line-height: 1.3;">
-                                                    @item.Title
-                                                </MudText>
-                                                @if (!string.IsNullOrEmpty(item.FeatureTitle))
-                                                {
-                                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                        <MudIcon Icon="@Icons.Material.Filled.AccountTree" Size="Size.Small" Color="Color.Secondary" />
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@item.FeatureTitle</MudText>
-                                                    </MudStack>
-                                                }
-                                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mt-1">
-                                                    <MudChip T="string"
-                                                             Size="Size.Small"
-                                                             Color="@GetWorkItemTypeColor(item.WorkItemType)"
-                                                             Variant="Variant.Outlined">
-                                                        @GetWorkItemTypeLabel(item.WorkItemType)
-                                                    </MudChip>
-                                                    @if (item.Effort.HasValue)
-                                                    {
-                                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                                                            @item.Effort SP
-                                                        </MudChip>
-                                                    }
-                                                    else
-                                                    {
-                                                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                                                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-                                                            <MudText Typo="Typo.caption" Color="Color.Warning">No estimate</MudText>
+                                <div class="planning-board-track-grid" style="@GetTrackGridStyle(renderModel.MaxSprintCount)">
+                                    @foreach (var epic in track.Epics)
+                                    {
+                                        <MudCard Class="@GetEpicCardClass(epic)" Style="@GetEpicGridStyle(epic)">
+                                            <MudCardContent Class="pa-3">
+                                                <MudStack Spacing="2">
+                                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start" Wrap="Wrap.Wrap">
+                                                        <MudStack Spacing="1">
+                                                            <MudText Typo="Typo.subtitle2">#@epic.RoadmapOrder · @epic.EpicTitle</MudText>
+                                                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                                                @if (epic.IsChanged)
+                                                                {
+                                                                    <MudChip T="string" Variant="Variant.Filled" Color="Color.Primary">Changed</MudChip>
+                                                                }
+                                                                @if (epic.IsAffected)
+                                                                {
+                                                                    <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info">Affected</MudChip>
+                                                                }
+                                                                @if (epic.Issues.Count > 0)
+                                                                {
+                                                                    <MudChip T="string" Variant="Variant.Outlined" Color="Color.Warning">
+                                                                        @epic.Issues.Count warning@(epic.Issues.Count == 1 ? string.Empty : "s")
+                                                                    </MudChip>
+                                                                }
+                                                            </MudStack>
                                                         </MudStack>
+                                                        <MudStack Spacing="0" AlignItems="AlignItems.End">
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Track @epic.TrackIndex</MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Duration @epic.DurationInSprints sprint@(epic.DurationInSprints == 1 ? string.Empty : "s")</MudText>
+                                                        </MudStack>
+                                                    </MudStack>
+
+                                                    <MudGrid Spacing="1">
+                                                        <MudItem xs="6" md="3">
+                                                            <MudPaper Outlined="true" Class="pa-2 planning-board-metric">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Planned start</MudText>
+                                                                <MudText Typo="Typo.body2">Sprint @(epic.PlannedStartSprintIndex + 1)</MudText>
+                                                            </MudPaper>
+                                                        </MudItem>
+                                                        <MudItem xs="6" md="3">
+                                                            <MudPaper Outlined="true" Class="pa-2 planning-board-metric">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Computed start</MudText>
+                                                                <MudText Typo="Typo.body2">Sprint @(epic.ComputedStartSprintIndex + 1)</MudText>
+                                                            </MudPaper>
+                                                        </MudItem>
+                                                        <MudItem xs="6" md="3">
+                                                            <MudPaper Outlined="true" Class="pa-2 planning-board-metric">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Derived end</MudText>
+                                                                <MudText Typo="Typo.body2">Sprint @epic.EndSprintIndexExclusive</MudText>
+                                                            </MudPaper>
+                                                        </MudItem>
+                                                        <MudItem xs="6" md="3">
+                                                            <MudPaper Outlined="true" Class="pa-2 planning-board-metric">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Track position</MudText>
+                                                                <MudText Typo="Typo.body2">@(epic.TrackIndex == 0 ? "Main lane" : $"Parallel {epic.TrackIndex}")</MudText>
+                                                            </MudPaper>
+                                                        </MudItem>
+                                                    </MudGrid>
+
+                                                    @if (epic.Issues.Count > 0)
+                                                    {
+                                                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
+                                                            <MudList T="string" Dense="true" Class="planning-board-issue-list">
+                                                                @foreach (var issue in epic.Issues)
+                                                                {
+                                                                    <MudListItem T="string">
+                                                                        <MudText Typo="Typo.body2">@issue.Message</MudText>
+                                                                    </MudListItem>
+                                                                }
+                                                            </MudList>
+                                                        </MudAlert>
                                                     }
+
+                                                    @if (_epicActionMessages.TryGetValue(epic.EpicId, out var actionMessage) && !string.IsNullOrWhiteSpace(actionMessage))
+                                                    {
+                                                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+                                                            @actionMessage
+                                                        </MudAlert>
+                                                    }
+
+                                                    <MudDivider />
+
+                                                    <MudText Typo="Typo.subtitle2">Explicit planning actions</MudText>
+                                                    <MudGrid Spacing="1">
+                                                        <MudItem xs="12" md="6">
+                                                            <MudStack Spacing="1" Class="planning-board-action-group">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Move by sprint</MudText>
+                                                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End">
+                                                                    <MudNumericField T="int"
+                                                                                     Label="Sprint delta"
+                                                                                     Variant="Variant.Outlined"
+                                                                                     Margin="Margin.Dense"
+                                                                                     Value="@GetActionState(epic.EpicId).MoveDelta"
+                                                                                     ValueChanged="@(value => SetMoveDelta(epic.EpicId, value))"
+                                                                                     Class="planning-board-number-field" />
+                                                                    <CompactButton ButtonRole="ButtonRole.Action"
+                                                                                   Icon="@Icons.Material.Filled.SwapHoriz"
+                                                                                   Disabled="@_isBusy"
+                                                                                   OnClick="@(_ => ExecuteMoveAsync(epic.EpicId))">
+                                                                        Apply
+                                                                    </CompactButton>
+                                                                </MudStack>
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Use a positive or negative sprint delta; zero is rejected locally.</MudText>
+                                                            </MudStack>
+                                                        </MudItem>
+                                                        <MudItem xs="12" md="6">
+                                                            <MudStack Spacing="1" Class="planning-board-action-group">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Adjust spacing before</MudText>
+                                                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End">
+                                                                    <MudNumericField T="int"
+                                                                                     Label="Spacing delta"
+                                                                                     Variant="Variant.Outlined"
+                                                                                     Margin="Margin.Dense"
+                                                                                     Value="@GetActionState(epic.EpicId).SpacingDelta"
+                                                                                     ValueChanged="@(value => SetSpacingDelta(epic.EpicId, value))"
+                                                                                     Class="planning-board-number-field" />
+                                                                    <CompactButton ButtonRole="ButtonRole.Action"
+                                                                                   Icon="@Icons.Material.Filled.SpaceBar"
+                                                                                   Disabled="@_isBusy"
+                                                                                   OnClick="@(_ => ExecuteAdjustSpacingAsync(epic.EpicId))">
+                                                                        Apply
+                                                                    </CompactButton>
+                                                                </MudStack>
+                                                            </MudStack>
+                                                        </MudItem>
+                                                        <MudItem xs="12" md="6">
+                                                            <MudStack Spacing="1" Class="planning-board-action-group">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Shift plan suffix</MudText>
+                                                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End">
+                                                                    <MudNumericField T="int"
+                                                                                     Label="Shift delta"
+                                                                                     Variant="Variant.Outlined"
+                                                                                     Margin="Margin.Dense"
+                                                                                     Value="@GetActionState(epic.EpicId).ShiftDelta"
+                                                                                     ValueChanged="@(value => SetShiftDelta(epic.EpicId, value))"
+                                                                                     Class="planning-board-number-field" />
+                                                                    <CompactButton ButtonRole="ButtonRole.Action"
+                                                                                   Icon="@Icons.Material.Filled.TrendingFlat"
+                                                                                   Disabled="@_isBusy"
+                                                                                   OnClick="@(_ => ExecuteShiftPlanAsync(epic.EpicId))">
+                                                                        Apply
+                                                                    </CompactButton>
+                                                                </MudStack>
+                                                            </MudStack>
+                                                        </MudItem>
+                                                        <MudItem xs="12" md="6">
+                                                            <MudStack Spacing="1" Class="planning-board-action-group">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Reorder roadmap sequence</MudText>
+                                                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End">
+                                                                    <MudNumericField T="int"
+                                                                                     Label="Target order"
+                                                                                     Variant="Variant.Outlined"
+                                                                                     Margin="Margin.Dense"
+                                                                                     Min="1"
+                                                                                     Value="@GetActionState(epic.EpicId).ReorderTarget"
+                                                                                     ValueChanged="@(value => SetReorderTarget(epic.EpicId, value))"
+                                                                                     Class="planning-board-number-field" />
+                                                                    <CompactButton ButtonRole="ButtonRole.Action"
+                                                                                   Icon="@Icons.Material.Filled.FormatListNumbered"
+                                                                                   Disabled="@_isBusy"
+                                                                                   OnClick="@(_ => ExecuteReorderAsync(epic.EpicId))">
+                                                                        Apply
+                                                                    </CompactButton>
+                                                                </MudStack>
+                                                            </MudStack>
+                                                        </MudItem>
+                                                        <MudItem xs="12" md="6">
+                                                            <MudStack Spacing="1" Class="planning-board-action-group">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Parallel execution</MudText>
+                                                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                                                    <CompactButton ButtonRole="ButtonRole.Action"
+                                                                                   Icon="@Icons.Material.Filled.CallSplit"
+                                                                                   Disabled="@(_isBusy || epic.TrackIndex > 0)"
+                                                                                   OnClick="@(_ => ExecuteRunInParallelAsync(epic.EpicId))">
+                                                                        Run in parallel
+                                                                    </CompactButton>
+                                                                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                                                                   Icon="@Icons.Material.Filled.CallMerge"
+                                                                                   Disabled="@(_isBusy || epic.TrackIndex == 0)"
+                                                                                   OnClick="@(_ => ExecuteReturnToMainAsync(epic.EpicId))">
+                                                                        Return to main
+                                                                    </CompactButton>
+                                                                </MudStack>
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Track numbers are derived automatically; the UI never asks the user to pick an arbitrary track.</MudText>
+                                                            </MudStack>
+                                                        </MudItem>
+                                                    </MudGrid>
                                                 </MudStack>
-                                            </MudStack>
-                                        </MudCardContent>
-                                    </MudCard>
-                                }
+                                            </MudCardContent>
+                                        </MudCard>
+                                    }
+                                </div>
                             }
-                        </div>
+                        </MudStack>
                     </MudPaper>
-                </div>
-            }
-        </div>
-        </ChildContent>
-    </CanonicalDataStateView>
+                }
+            </ChildContent>
+        </CanonicalDataStateView>
+    </MudStack>
 </MudContainer>
-
-<style>
-    .plan-board-columns {
-        display: flex;
-        gap: 16px;
-        overflow-x: auto;
-        padding-bottom: 8px;
-        align-items: flex-start;
-    }
-
-    .plan-board-column {
-        min-width: 280px;
-        flex: 1 1 0;
-    }
-
-    .plan-board-candidate-column {
-        min-width: 320px;
-        flex: 1.2 1 0;
-    }
-
-    .plan-column-paper {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .plan-column-header {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-        padding-bottom: 8px;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        margin-bottom: 8px;
-    }
-
-    .plan-sprint-zone {
-        border: 2px dashed transparent;
-        border-radius: 4px;
-        padding: 4px;
-        transition: border-color 0.2s ease, background-color 0.2s ease;
-    }
-
-    .plan-drop-ready {
-        border-color: var(--mud-palette-primary) !important;
-        background-color: rgba(var(--mud-palette-primary-rgb), 0.05) !important;
-    }
-
-    .plan-feature-card {
-        border-left: 3px solid var(--mud-palette-primary);
-        transition: box-shadow 0.2s ease;
-        cursor: grab;
-    }
-
-    .plan-feature-card:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-    }
-
-    .plan-feature-card.plan-missing-estimate {
-        border-left-color: var(--mud-palette-warning);
-    }
-
-    .plan-overcommitted {
-        border-top: 2px solid var(--mud-palette-warning);
-    }
-
-    .plan-capacity-indicator {
-        padding-top: 4px;
-        border-top: 1px solid rgba(255,255,255,0.06);
-    }
-
-    /* Candidate tree styles */
-    .plan-candidate-tree {
-        padding: 2px;
-    }
-
-    .plan-tree-node {
-        border-radius: 4px;
-        margin-bottom: 4px;
-    }
-
-    .plan-tree-node-row {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 5px 6px;
-        border-radius: 4px;
-        cursor: grab;
-        transition: background-color 0.15s ease, box-shadow 0.15s ease;
-        user-select: none;
-    }
-
-    .plan-tree-node-row:hover {
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    }
-
-    .plan-tree-node-row.dragging {
-        opacity: 0.5;
-    }
-
-    .plan-tree-epic {
-        background-color: rgba(255, 152, 0, 0.10);
-        border-left: 3px solid #FF9800;
-    }
-
-    .plan-tree-feature {
-        background-color: rgba(156, 39, 176, 0.08);
-        border-left: 3px solid #9C27B0;
-        margin-left: 12px;
-    }
-
-    .plan-tree-pbi {
-        background-color: rgba(33, 150, 243, 0.06);
-        border-left: 3px solid #2196F3;
-        margin-left: 24px;
-    }
-
-    .plan-tree-bug {
-        background-color: rgba(244, 67, 54, 0.06);
-        border-left: 3px solid #F44336;
-        margin-left: 24px;
-    }
-
-    .plan-tree-children {
-        margin-top: 2px;
-    }
-
-    .plan-tree-expand-btn {
-        min-width: 20px;
-        flex-shrink: 0;
-    }
-
-    .plan-tree-title {
-        flex: 1;
-        font-size: 0.8rem;
-        font-weight: 500;
-        line-height: 1.3;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .plan-tree-effort-chip {
-        flex-shrink: 0;
-        font-size: 0.7rem;
-        height: 18px;
-        padding: 0 5px;
-    }
-</style>
 
 @code {
     [Parameter]
     public string? RouteProjectAlias { get; set; }
 
-    private const string BacklogZone = "backlog";
-    private const int HistoricalSprintsForCalibration = 6;
+    private readonly record struct BoardFeedback(string Message, Severity Severity);
+
+    private sealed class EpicActionState
+    {
+        public int MoveDelta { get; set; } = 1;
+        public int SpacingDelta { get; set; } = 1;
+        public int ShiftDelta { get; set; } = 1;
+        public int ReorderTarget { get; set; } = 1;
+    }
 
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<ProjectDto> _projects = new();
     private List<ProductDto> _allProducts = new();
     private List<ProductDto> _products = new();
     private CacheBackedClientResult<ProjectPlanningSummaryDto>? _projectPlanningSummaryState;
+    private DataStateViewModel<ProductPlanningBoardDto> _boardState = DataStateViewModel<ProductPlanningBoardDto>.NotRequested();
+    private ProductPlanningBoardRenderModel? _renderModel;
     private string? _selectedProjectRouteKey;
-    private bool _isBusy;
-
-    private List<SprintColumn> _sprintColumns = new();
-    // Left side: hierarchical candidate tree
-    private List<PlanBoardCandidateNode> _candidateTree = new();
-    // Right side: items already assigned to sprints, keyed by zone id
-    private Dictionary<string, List<SprintDragItem>> _sprintItems = new();
-
-    // Cached full hierarchy
-    private List<WorkItemDto> _allWorkItems = new();
-    private HashSet<(string type, string state)> _doneOrRemovedStates = new();
-    private DataStateViewModel<IReadOnlyList<WorkItemDto>> _boardState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.NotRequested();
-    private DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>> _capacityCalibrationState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.NotRequested();
-
-    // Drag state
-    private PlanBoardCandidateNode? _draggedNode;
-    private SprintDragItem? _draggedSprintItem;
-    private SprintColumn? _draggedSprintItemSource;
-
-    // Capacity planning data
     private int? _activeProfileId;
-    private double? _sprintCapacity;
-    private CanonicalFilterMetadata? _capacityCalibrationFilterMetadata;
-    private int[] _selectedProductRootIds = [];
-    private bool _isRefreshingFromTfs;
-    private string? _sprintResolutionMessage;
+    private bool _isBusy;
     private string? _contextError;
     private IDisposable? _filterSubscription;
+    private BoardFeedback? _boardFeedback;
+    private readonly Dictionary<int, EpicActionState> _epicActionState = new();
+    private readonly Dictionary<int, string> _epicActionMessages = new();
+
     private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
+    private string? _boardFeedbackMessage => _boardFeedback?.Message;
+    private Severity _boardFeedbackSeverity => _boardFeedback?.Severity ?? Severity.Info;
 
     private DataStateViewModel<ProjectPlanningSummaryDto> ProjectPlanningSummaryState
         => string.IsNullOrWhiteSpace(_selectedProjectRouteKey) || _projectPlanningSummaryState is null
             ? DataStateViewModel<ProjectPlanningSummaryDto>.NotRequested()
             : _projectPlanningSummaryState.ToViewModel("Project planning summary could not be loaded right now.");
 
-    private DataStateViewModel<PlanBoardRenderModel> BoardRenderState
+    private DataStateViewModel<ProductPlanningBoardRenderModel> BoardRenderState
     {
         get
         {
             if (!string.IsNullOrWhiteSpace(_contextError))
             {
-                return DataStateViewModel<PlanBoardRenderModel>.Invalid(_contextError);
+                return DataStateViewModel<ProductPlanningBoardRenderModel>.Invalid(_contextError);
             }
 
             if (!_selectedProductId.HasValue)
             {
-                return DataStateViewModel<PlanBoardRenderModel>.NotRequested();
+                return DataStateViewModel<ProductPlanningBoardRenderModel>.NotRequested();
             }
 
-            if (_boardState.Data is not null && _boardState.UiState == UiDataState.Ready)
+            if (_boardState.Data is not null && _renderModel is not null && _boardState.UiState == UiDataState.Ready)
             {
-                return DataStateViewModel<PlanBoardRenderModel>.Ready(
-                    new PlanBoardRenderModel(_sprintColumns, _candidateTree, _sprintItems, _sprintResolutionMessage));
-            }
-
-            if (_boardState.Data is not null && _boardState.UiState == UiDataState.Invalid)
-            {
-                return DataStateViewModel<PlanBoardRenderModel>.Invalid(
-                    reason: _boardState.Reason ?? "Adjust the current product selection to load the plan board.",
-                    data: new PlanBoardRenderModel(_sprintColumns, _candidateTree, _sprintItems, _sprintResolutionMessage),
-                    invalidFields: _boardState.InvalidFields,
-                    validationMessages: _boardState.ValidationMessages,
-                    filterMetadata: _boardState.FilterMetadata);
+                return DataStateViewModel<ProductPlanningBoardRenderModel>.Ready(_renderModel);
             }
 
             return _boardState.UiState switch
             {
-                UiDataState.Loading => DataStateViewModel<PlanBoardRenderModel>.Loading(
-                    _boardState.Reason,
-                    _boardState.RetryAfterSeconds,
-                    _boardState.ShowCacheStatus),
-                UiDataState.EmptyButValid => DataStateViewModel<PlanBoardRenderModel>.Empty(
-                    _boardState.Reason ?? "No work items are available for the selected product."),
-                UiDataState.Invalid => DataStateViewModel<PlanBoardRenderModel>.Invalid(
-                    _boardState.Reason ?? "Adjust the current product selection to load the plan board."),
-                UiDataState.Failed => DataStateViewModel<PlanBoardRenderModel>.Failed(
-                    _boardState.Reason ?? "Plan Board could not be loaded right now."),
-                _ => DataStateViewModel<PlanBoardRenderModel>.NotRequested()
+                UiDataState.Loading => DataStateViewModel<ProductPlanningBoardRenderModel>.Loading(_boardState.Reason),
+                UiDataState.EmptyButValid => DataStateViewModel<ProductPlanningBoardRenderModel>.Empty(_boardState.Reason ?? "The selected product has no active roadmap epics for the planning board."),
+                UiDataState.Invalid => DataStateViewModel<ProductPlanningBoardRenderModel>.Invalid(_boardState.Reason),
+                UiDataState.Failed => DataStateViewModel<ProductPlanningBoardRenderModel>.Failed(_boardState.Reason ?? "The planning board could not be loaded right now."),
+                _ => DataStateViewModel<ProductPlanningBoardRenderModel>.NotRequested()
             };
         }
     }
@@ -605,7 +548,7 @@
             }
             else if (_selectedProductId.HasValue)
             {
-                await LoadBoardAsync(_selectedProductId.Value);
+                await LoadBoardAsync(_selectedProductId.Value, successFeedback: null);
             }
             else
             {
@@ -614,536 +557,260 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error loading products for Plan Board");
-            Snackbar.Add("Error loading products.", Severity.Error);
-        }
-        finally
-        {
+            Logger.LogError(ex, "Error initializing the planning board page.");
+            _boardState = DataStateViewModel<ProductPlanningBoardDto>.Failed("The planning page could not be initialized right now.");
+            _boardFeedback = new BoardFeedback("The planning page could not be initialized right now.", Severity.Error);
         }
     }
 
-    private async Task OnProjectChanged(string? projectRouteKey)
+    private async Task ReloadBoardAsync()
     {
-        _selectedProjectRouteKey = string.IsNullOrWhiteSpace(projectRouteKey) ? null : projectRouteKey;
-        ApplyProjectFilter();
-        await LoadProjectPlanningSummaryAsync();
-        await NavigateToCurrentScopeAsync(_selectedProductId, loadBoard: _selectedProductId.HasValue);
-    }
-
-    private async Task OnProductChanged(int? productId)
-    {
-        await GlobalFilterStore.SetStateAsync(
-            NavigationManager.Uri,
-            _activeProfileId,
-            FilterLocalBridgeState.FromState(GlobalFilterStore.GetState()) with { ProductId = productId },
-            FilterUpdateSource.Ui);
-
-        var targetUri = await GlobalFilterRouteService.BuildCurrentPageUriAsync(NavigationManager.Uri, GlobalFilterStore.GetState());
-        if (GlobalFilterStore.TryPrepareNavigation(NavigationManager.Uri, targetUri))
+        if (!_selectedProductId.HasValue || _isBusy)
         {
-            NavigationManager.NavigateTo(targetUri, forceLoad: false);
             return;
         }
 
-        await NavigateToCurrentScopeAsync(productId, loadBoard: productId.HasValue);
+        await LoadBoardAsync(_selectedProductId.Value, new BoardFeedback("Board reloaded from the current persisted and session-backed state.", Severity.Info));
     }
 
-    private async Task LoadBoardAsync(int productId)
+    private async Task ResetBoardAsync()
     {
-        _boardState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.Loading();
-        StateHasChanged();
-
-        try
+        if (!_selectedProductId.HasValue || _isBusy)
         {
-            var product = await ProductService.GetProductByIdAsync(productId);
-            if (product == null)
-            {
-                _selectedProductRootIds = [];
-                Snackbar.Add("Product not found.", Severity.Error);
-                return;
-            }
-
-            // Load state classifications for Done/Removed filtering
-            var classificationsResponse = await StateClassificationService.GetClassificationsAsync();
-            _doneOrRemovedStates = classificationsResponse.Classifications
-                .Where(c => c.Classification == PoTool.Shared.Settings.StateClassification.Done ||
-                            c.Classification == PoTool.Shared.Settings.StateClassification.Removed)
-                .Select(c => (c.WorkItemType.ToLowerInvariant(), c.StateName.ToLowerInvariant()))
-                .ToHashSet();
-
-            // Load work items hierarchy for this product
-            if (product.BacklogRootWorkItemIds.Count == 0)
-            {
-                _selectedProductRootIds = [];
-                _allWorkItems = new List<WorkItemDto>();
-                _sprintColumns = new List<SprintColumn>();
-                _candidateTree = new List<PlanBoardCandidateNode>();
-                _sprintItems = new Dictionary<string, List<SprintDragItem>>();
-                _boardState = new DataStateViewModel<IReadOnlyList<WorkItemDto>>(
-                    DataStateDto.Empty,
-                    Data: Array.Empty<WorkItemDto>(),
-                    Reason: "This product has no configured backlog root work items.");
-                return;
-            }
-
-            _selectedProductRootIds = product.BacklogRootWorkItemIds.ToArray();
-            var boardResponse = await WorkItemService.GetByRootIdsStateAsync(product.BacklogRootWorkItemIds.ToArray());
-            _boardState = DataStateViewModel<IReadOnlyList<WorkItemDto>>.FromResponse(
-                boardResponse,
-                "Plan Board data could not be loaded right now.");
-            if (_boardState.State != DataStateDto.Available || _boardState.Data is null)
-            {
-                _allWorkItems = [];
-                _sprintColumns = [];
-                _candidateTree = [];
-                _sprintItems = [];
-                return;
-            }
-
-            var workItems = _boardState.Data.ToList();
-            _allWorkItems = workItems;
-
-            var allTeamSprints = new List<SprintDto>();
-            if (product.TeamIds.Count > 0)
-            {
-                var sprintBatches = await Task.WhenAll(
-                    product.TeamIds
-                        .Distinct()
-                        .Select(teamId => SprintService.GetSprintsForTeamAsync(teamId)));
-
-                allTeamSprints = sprintBatches
-                    .SelectMany(static sprints => sprints)
-                    .Where(sprint => sprint.StartUtc.HasValue && sprint.EndUtc.HasValue)
-                    .GroupBy(sprint => NormalizeIterationPath(sprint.Path))
-                    .Select(static group => group
-                        .OrderByDescending(sprint => sprint.StartUtc)
-                        .ThenBy(sprint => sprint.Id)
-                        .First())
-                    .OrderBy(sprint => sprint.StartUtc)
-                    .ThenBy(sprint => sprint.Id)
-                    .ToList();
-            }
-
-            var sprints = allTeamSprints
-                .Where(sprint => string.Equals(sprint.TimeFrame, "current", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(sprint.TimeFrame, "future", StringComparison.OrdinalIgnoreCase))
-                .Take(4)
-                .ToList();
-
-            if (sprints.Count == 0)
-            {
-                sprints = allTeamSprints
-                    .TakeLast(4)
-                    .ToList();
-            }
-
-            _sprintResolutionMessage = sprints.Count == 0
-                ? "No sprint columns are available for the selected product teams."
-                : null;
-
-            // Build sprint columns
-            _sprintColumns = sprints.Select(s => new SprintColumn
-            {
-                SprintId = s.Id,
-                Name = s.Name,
-                Path = s.Path,
-                ZoneId = $"sprint-{s.Id}",
-                StartUtc = s.StartUtc,
-                EndUtc = s.EndUtc
-            }).ToList();
-
-            // Build the board: candidate tree + sprint items
-            BuildBoard();
-
-            // Load capacity calibration data (non-blocking for board display)
-            await LoadCapacityCalibrationAsync(allTeamSprints, product.Id);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading plan board for product {ProductId}", productId);
-            _boardState = new DataStateViewModel<IReadOnlyList<WorkItemDto>>(
-                DataStateDto.Failed,
-                Reason: "Plan Board data could not be loaded right now.");
-            _allWorkItems = [];
-            _sprintColumns = [];
-            _candidateTree = [];
-            _sprintItems = [];
-        }
-        finally
-        {
-            StateHasChanged();
-        }
-    }
-
-    private async Task RefreshBoardFromTfsAsync()
-    {
-        if (!_selectedProductId.HasValue || _selectedProductRootIds.Length == 0 || _isBusy || _boardState.UiState == UiDataState.Loading)
             return;
+        }
 
         _isBusy = true;
-        _isRefreshingFromTfs = true;
-        StateHasChanged();
-
         try
         {
-            var refreshedCount = await WorkItemService.RefreshWorkItemsByRootIdsFromTfsAsync(_selectedProductRootIds);
-            await LoadBoardAsync(_selectedProductId.Value);
-            await LoadProjectPlanningSummaryAsync();
-
-            var label = refreshedCount == 1 ? "1 work item" : $"{refreshedCount} work items";
-            Snackbar.Add($"Refreshed {label} from TFS.", Severity.Success);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error refreshing plan board from TFS for product {ProductId}", _selectedProductId.Value);
-            Snackbar.Add("Error refreshing board from TFS.", Severity.Error);
-        }
-        finally
-        {
-            _isRefreshingFromTfs = false;
-            _isBusy = false;
-            StateHasChanged();
-        }
-    }
-
-    private void BuildBoard()
-    {
-        var workItemLookup = _allWorkItems.ToDictionary(w => w.TfsId);
-
-        // Build the set of normalized sprint paths for quick lookup
-        var sprintPathSet = _sprintColumns
-            .Select(s => NormalizeIterationPath(s.Path))
-            .ToHashSet();
-
-        // Build the hierarchical candidate tree (left side — unplanned, not Done/Removed)
-        _candidateTree = PlanBoardWorkItemRules.BuildCandidateTree(
-            _allWorkItems,
-            _doneOrRemovedStates,
-            sprintPathSet);
-
-        // Build sprint items (right side — PBIs/Bugs already assigned to a sprint)
-        _sprintItems = new Dictionary<string, List<SprintDragItem>>();
-        foreach (var sprint in _sprintColumns)
-            _sprintItems[sprint.ZoneId] = new List<SprintDragItem>();
-
-        foreach (var workItem in _allWorkItems.Where(w => PlanBoardWorkItemRules.IsPlanBoardItem(w.Type)))
-        {
-            var normalizedPath = NormalizeIterationPath(workItem.IterationPath);
-            var matchedSprint = _sprintColumns.FirstOrDefault(
-                s => NormalizeIterationPath(s.Path) == normalizedPath);
-
-            if (matchedSprint != null)
-            {
-                _sprintItems[matchedSprint.ZoneId].Add(new SprintDragItem
-                {
-                    TfsId = workItem.TfsId,
-                    Title = workItem.Title,
-                    WorkItemType = workItem.Type,
-                    FeatureTitle = PlanBoardWorkItemRules.ResolveFeatureTitle(workItem, workItemLookup),
-                    Effort = workItem.Effort,
-                    IterationPath = workItem.IterationPath
-                });
-            }
-        }
-    }
-
-    // ── Candidate tree drag start ──────────────────────────────────────────────
-
-    private void OnCandidateNodeDragStart(PlanBoardCandidateNode node)
-    {
-        _draggedNode = node;
-        _draggedSprintItem = null;
-        _draggedSprintItemSource = null;
-    }
-
-    // ── Sprint item drag start (for moving between sprints) ────────────────────
-
-    private void OnSprintItemDragStart(SprintDragItem item, SprintColumn source)
-    {
-        _draggedSprintItem = item;
-        _draggedSprintItemSource = source;
-        _draggedNode = null;
-    }
-
-    // ── Common drag end ────────────────────────────────────────────────────────
-
-    private void OnDragEnd()
-    {
-        _draggedNode = null;
-        _draggedSprintItem = null;
-        _draggedSprintItemSource = null;
-    }
-
-    // ── Drop on sprint column ──────────────────────────────────────────────────
-
-    private async Task HandleDropOnSprint(SprintColumn targetSprint)
-    {
-        if (_isBusy) return;
-
-        if (_draggedNode != null)
-        {
-            await DropCandidateNodeOnSprint(_draggedNode, targetSprint);
-        }
-        else if (_draggedSprintItem != null && _draggedSprintItemSource != null
-                 && _draggedSprintItemSource.ZoneId != targetSprint.ZoneId)
-        {
-            await MoveSprintItemToSprint(_draggedSprintItem, _draggedSprintItemSource, targetSprint);
-        }
-
-        _draggedNode = null;
-        _draggedSprintItem = null;
-        _draggedSprintItemSource = null;
-    }
-
-    /// <summary>
-    /// Plans all eligible PBIs/Bugs from the dropped candidate node into the target sprint.
-    /// Duplicates (already in another sprint) are skipped.
-    /// </summary>
-    private async Task DropCandidateNodeOnSprint(PlanBoardCandidateNode node, SprintColumn targetSprint)
-    {
-        var pbiIds = node.EligiblePbiIds;
-        if (pbiIds.Count == 0) return;
-
-        var newIterationPath = targetSprint.Path;
-        _isBusy = true;
-        StateHasChanged();
-
-        var successCount = 0;
-        var failCount = 0;
-
-        try
-        {
-            foreach (var tfsId in pbiIds)
-            {
-                // Skip if already assigned to any sprint (could have been moved before this batch)
-                var workItem = _allWorkItems.FirstOrDefault(w => w.TfsId == tfsId);
-                if (workItem == null) continue;
-
-                // Allow re-assigning even if in another sprint (explicit drag intent)
-                var success = await WorkItemService.UpdateIterationPathAsync(tfsId, newIterationPath);
-                if (success) successCount++;
-                else failCount++;
-            }
-
-            if (failCount == 0)
-            {
-                var label = pbiIds.Count == 1 ? "1 item" : $"{pbiIds.Count} items";
-                Snackbar.Add($"Planned {label} in {targetSprint.Name}.", Severity.Success);
-            }
-            else
-            {
-                Snackbar.Add($"Planned {successCount} item(s); {failCount} update(s) failed.", Severity.Warning);
-            }
-
-            if (_selectedProductId.HasValue)
-                await LoadBoardAsync(_selectedProductId.Value);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error planning items from node {TfsId} into sprint {Sprint}", node.TfsId, targetSprint.Name);
-            Snackbar.Add("Could not plan the selected items into that sprint.", Severity.Error);
-            if (_selectedProductId.HasValue)
-                await LoadBoardAsync(_selectedProductId.Value);
+            var result = await ProductPlanningBoardClientService.ResetAsync(_selectedProductId.Value);
+            HandleBoardResult(result, "Reset the in-memory session to the durable base.", epicId: null, successFeedback: new BoardFeedback("Planning session reset to the current durable or recovered base.", Severity.Success));
         }
         finally
         {
             _isBusy = false;
-            StateHasChanged();
         }
     }
 
-    /// <summary>
-    /// Moves a PBI/Bug already in a sprint to a different sprint.
-    /// </summary>
-    private async Task MoveSprintItemToSprint(SprintDragItem item, SprintColumn source, SprintColumn target)
+    private async Task ExecuteMoveAsync(int epicId)
     {
-        _isBusy = true;
-        StateHasChanged();
+        var state = GetActionState(epicId);
+        if (!ValidateDelta(epicId, state.MoveDelta, "Move by sprint requires a non-zero delta."))
+        {
+            return;
+        }
 
+        await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.MoveEpicBySprintsAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, state.MoveDelta)), "Move by sprint");
+    }
+
+    private async Task ExecuteAdjustSpacingAsync(int epicId)
+    {
+        var state = GetActionState(epicId);
+        if (!ValidateDelta(epicId, state.SpacingDelta, "Adjust spacing requires a non-zero delta."))
+        {
+            return;
+        }
+
+        await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.AdjustSpacingBeforeAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, state.SpacingDelta)), "Adjust spacing before");
+    }
+
+    private async Task ExecuteShiftPlanAsync(int epicId)
+    {
+        var state = GetActionState(epicId);
+        if (!ValidateDelta(epicId, state.ShiftDelta, "Shift plan requires a non-zero delta."))
+        {
+            return;
+        }
+
+        await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.ShiftPlanAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, state.ShiftDelta)), "Shift plan");
+    }
+
+    private async Task ExecuteReorderAsync(int epicId)
+    {
+        var state = GetActionState(epicId);
+        if (state.ReorderTarget < 1)
+        {
+            _epicActionMessages[epicId] = "Roadmap reorder requires a target order of 1 or higher.";
+            return;
+        }
+
+        await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.ReorderEpicAsync(_selectedProductId!.Value, new ReorderProductPlanningEpicRequest(epicId, state.ReorderTarget)), "Reorder roadmap epic");
+    }
+
+    private async Task ExecuteRunInParallelAsync(int epicId)
+        => await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.RunInParallelAsync(_selectedProductId!.Value, new ProductPlanningEpicRequest(epicId)), "Run in parallel");
+
+    private async Task ExecuteReturnToMainAsync(int epicId)
+        => await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.ReturnToMainAsync(_selectedProductId!.Value, new ProductPlanningEpicRequest(epicId)), "Return to main");
+
+    private async Task ExecuteEpicOperationAsync(int epicId, Func<Task<ProductPlanningBoardClientResult>> operation, string actionName)
+    {
+        if (!_selectedProductId.HasValue || _isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
         try
         {
-            var success = await WorkItemService.UpdateIterationPathAsync(item.TfsId, target.Path);
-            if (success)
-            {
-                item.IterationPath = target.Path;
-                Snackbar.Add($"Moved \"{item.Title}\" to {target.Name}.", Severity.Success);
-                if (_selectedProductId.HasValue)
-                    await LoadBoardAsync(_selectedProductId.Value);
-            }
-            else
-            {
-                Snackbar.Add("Failed to update sprint assignment.", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error moving sprint item {TfsId}", item.TfsId);
-            Snackbar.Add("Could not move the item to the selected sprint.", Severity.Error);
+            var result = await operation();
+            HandleBoardResult(result, $"{actionName} failed.", epicId, new BoardFeedback($"{actionName} applied. Review changed and affected highlights below.", Severity.Success));
         }
         finally
         {
             _isBusy = false;
-            StateHasChanged();
         }
     }
 
-    // ── Tree rendering ─────────────────────────────────────────────────────────
-
-    private RenderFragment RenderCandidateNode(PlanBoardCandidateNode node, int depth) => builder =>
+    private void HandleBoardResult(ProductPlanningBoardClientResult result, string fallbackError, int? epicId, BoardFeedback? successFeedback)
     {
-        var isLeaf = node.Children.Count == 0;
-        var nodeClass = GetNodeRowClass(node.WorkItemType);
-        var isDragging = ReferenceEquals(_draggedNode, node);
-        var isDraggable = node.EligiblePbiIds.Count > 0;
-
-        builder.OpenElement(0, "div");
-        builder.AddAttribute(1, "class", "plan-tree-node");
-
-        // Row
-        builder.OpenElement(2, "div");
-        builder.AddAttribute(3, "class", $"plan-tree-node-row {nodeClass}{(isDragging ? " dragging" : "")}");
-        builder.AddAttribute(4, "draggable", isDraggable ? "true" : "false");
-        builder.AddAttribute(5, "style", isDraggable ? null : "cursor: default;");
-        if (isDraggable)
+        if (result.IsSuccess && result.Board is not null)
         {
-            builder.AddAttribute(6, "ondragstart", EventCallback.Factory.Create(this, () => OnCandidateNodeDragStart(node)));
-            builder.AddAttribute(7, "ondragend", EventCallback.Factory.Create(this, OnDragEnd));
-        }
-
-        // Expand / collapse button for parent nodes
-        if (!isLeaf)
-        {
-            builder.OpenElement(10, "button");
-            builder.AddAttribute(11, "class", "plan-tree-expand-btn");
-            builder.AddAttribute(12, "style", "cursor: pointer; font-size: 0.75rem; background: none; border: none; padding: 0; color: inherit;");
-            builder.AddAttribute(13, "aria-expanded", node.IsExpanded ? "true" : "false");
-            builder.AddAttribute(14, "aria-label", node.IsExpanded ? "Collapse" : "Expand");
-            builder.AddAttribute(15, "onclick",
-                EventCallback.Factory.Create(this, () => { node.IsExpanded = !node.IsExpanded; StateHasChanged(); }));
-            builder.AddContent(16, node.IsExpanded ? "▼" : "▶");
-            builder.CloseElement();
-        }
-        else
-        {
-            // Leaf spacer
-            builder.OpenElement(10, "span");
-            builder.AddAttribute(11, "aria-hidden", "true");
-            builder.AddAttribute(12, "style", "min-width: 20px; flex-shrink: 0;");
-            builder.CloseElement();
-        }
-
-        // Title
-        builder.OpenElement(20, "span");
-        builder.AddAttribute(21, "class", "plan-tree-title");
-        builder.AddAttribute(22, "title", node.Title);
-        builder.AddContent(23, node.Title);
-        builder.CloseElement();
-
-        // Type chip
-        builder.OpenElement(30, "span");
-        builder.AddAttribute(31, "style", "font-size: 0.65rem; flex-shrink: 0; opacity: 0.75;");
-        builder.AddContent(32, GetNodeTypeLabel(node.WorkItemType));
-        builder.CloseElement();
-
-        // Effort chip
-        if (isLeaf)
-        {
-            if (node.OwnEffort.HasValue)
+            ApplyBoard(result.Board);
+            _boardState = result.Board.EpicItems.Count == 0
+                ? DataStateViewModel<ProductPlanningBoardDto>.Empty("The selected product has no active roadmap epics for the planning board.")
+                : DataStateViewModel<ProductPlanningBoardDto>.Ready(result.Board);
+            _boardFeedback = successFeedback;
+            if (epicId.HasValue)
             {
-                builder.OpenElement(40, "span");
-                builder.AddAttribute(41, "class", "plan-tree-effort-chip mud-chip mud-chip-outlined mud-chip-color-info");
-                builder.AddContent(42, $"{node.OwnEffort} SP");
-                builder.CloseElement();
+                _epicActionMessages.Remove(epicId.Value);
             }
-            else
+
+            return;
+        }
+
+        var message = string.IsNullOrWhiteSpace(result.ErrorMessage) ? fallbackError : result.ErrorMessage;
+        _boardFeedback = new BoardFeedback(message!, result.IsNotFound ? Severity.Warning : Severity.Error);
+        if (epicId.HasValue)
+        {
+            _epicActionMessages[epicId.Value] = message!;
+        }
+
+        _boardState = result.IsNotFound
+            ? DataStateViewModel<ProductPlanningBoardDto>.Invalid(message)
+            : DataStateViewModel<ProductPlanningBoardDto>.Failed(message);
+    }
+
+    private async Task LoadBoardAsync(int productId, BoardFeedback? successFeedback)
+    {
+        _boardState = DataStateViewModel<ProductPlanningBoardDto>.Loading();
+        _isBusy = true;
+        _boardFeedback = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ProductPlanningBoardClientService.GetBoardAsync(productId);
+            HandleBoardResult(result, "The planning board could not be loaded right now.", epicId: null, successFeedback);
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void ApplyBoard(ProductPlanningBoardDto board)
+    {
+        _renderModel = ProductPlanningBoardRenderModelFactory.Create(board);
+        foreach (var epic in board.EpicItems)
+        {
+            if (!_epicActionState.TryGetValue(epic.EpicId, out var actionState))
             {
-                builder.OpenElement(40, "span");
-                builder.AddAttribute(41, "style", "font-size: 0.65rem; color: var(--mud-palette-warning); flex-shrink: 0;");
-                builder.AddContent(42, "⚠");
-                builder.CloseElement();
+                actionState = new EpicActionState();
+                _epicActionState[epic.EpicId] = actionState;
             }
+
+            actionState.ReorderTarget = epic.RoadmapOrder;
         }
-        else
+
+        var activeEpicIds = board.EpicItems.Select(static epic => epic.EpicId).ToHashSet();
+        foreach (var staleEpicId in _epicActionState.Keys.Where(epicId => !activeEpicIds.Contains(epicId)).ToArray())
         {
-            if (node.AggregatedEffort > 0)
-            {
-                builder.OpenElement(40, "span");
-                builder.AddAttribute(41, "class", "plan-tree-effort-chip mud-chip mud-chip-outlined mud-chip-color-info");
-                builder.AddContent(42, $"{node.AggregatedEffort} SP");
-                builder.CloseElement();
-            }
+            _epicActionState.Remove(staleEpicId);
         }
 
-        builder.CloseElement(); // row
-
-        // Children (if expanded)
-        if (!isLeaf && node.IsExpanded)
+        foreach (var staleEpicId in _epicActionMessages.Keys.Where(epicId => !activeEpicIds.Contains(epicId)).ToArray())
         {
-            builder.OpenElement(50, "div");
-            builder.AddAttribute(51, "class", "plan-tree-children");
-            foreach (var child in node.Children)
-            {
-                builder.AddContent(52, RenderCandidateNode(child, depth + 1));
-            }
-            builder.CloseElement();
+            _epicActionMessages.Remove(staleEpicId);
         }
-
-        builder.CloseElement(); // node
-    };
-
-    // ── Helper methods ─────────────────────────────────────────────────────────
-
-    private static string GetNodeRowClass(string workItemType)
-    {
-        if (PlanBoardWorkItemRules.IsEpic(workItemType)) return "plan-tree-epic";
-        if (PlanBoardWorkItemRules.IsFeature(workItemType)) return "plan-tree-feature";
-        return string.Equals(workItemType, WorkItemTypeHelper.Bug, StringComparison.OrdinalIgnoreCase)
-            ? "plan-tree-bug"
-            : "plan-tree-pbi";
     }
 
-    private static string GetNodeTypeLabel(string workItemType)
+    private EpicActionState GetActionState(int epicId)
     {
-        if (PlanBoardWorkItemRules.IsEpic(workItemType)) return "Epic";
-        if (PlanBoardWorkItemRules.IsFeature(workItemType)) return "Feature";
-        return PlanBoardWorkItemRules.GetTypeLabel(workItemType);
-    }
-
-    private static int CountCandidateLeaves(List<PlanBoardCandidateNode> nodes)
-    {
-        var count = 0;
-        foreach (var node in nodes)
+        if (_epicActionState.TryGetValue(epicId, out var actionState))
         {
-            if (node.Children.Count == 0)
-                count++;
-            else
-                count += CountCandidateLeaves(node.Children);
-        }
-        return count;
-    }
-
-    private string GetRootIterationPath()
-    {
-        var anyItem = _allWorkItems.FirstOrDefault(w => !string.IsNullOrEmpty(w.IterationPath));
-        if (anyItem != null)
-        {
-            var normalized = NormalizeIterationPath(anyItem.IterationPath);
-            var separatorIndex = normalized.IndexOf('\\');
-            return separatorIndex >= 0 ? normalized[..separatorIndex] : normalized;
+            return actionState;
         }
 
-        if (_sprintColumns.Count > 0)
-        {
-            var normalized = NormalizeIterationPath(_sprintColumns[0].Path);
-            var separatorIndex = normalized.IndexOf('\\');
-            return separatorIndex >= 0 ? normalized[..separatorIndex] : normalized;
-        }
-
-        return string.Empty;
+        actionState = new EpicActionState();
+        _epicActionState[epicId] = actionState;
+        return actionState;
     }
 
-    private static string NormalizeIterationPath(string path) =>
-        path.Replace('/', '\\').Trim();
+    private bool ValidateDelta(int epicId, int delta, string message)
+    {
+        if (delta != 0)
+        {
+            _epicActionMessages.Remove(epicId);
+            return true;
+        }
+
+        _epicActionMessages[epicId] = message;
+        return false;
+    }
+
+    private void SetMoveDelta(int epicId, int value)
+    {
+        GetActionState(epicId).MoveDelta = value;
+        _epicActionMessages.Remove(epicId);
+    }
+
+    private void SetSpacingDelta(int epicId, int value)
+    {
+        GetActionState(epicId).SpacingDelta = value;
+        _epicActionMessages.Remove(epicId);
+    }
+
+    private void SetShiftDelta(int epicId, int value)
+    {
+        GetActionState(epicId).ShiftDelta = value;
+        _epicActionMessages.Remove(epicId);
+    }
+
+    private void SetReorderTarget(int epicId, int value)
+    {
+        GetActionState(epicId).ReorderTarget = value;
+        _epicActionMessages.Remove(epicId);
+    }
+
+    private string GetTrackGridStyle(int maxSprintCount) => $"grid-template-columns: repeat({Math.Max(1, maxSprintCount)}, minmax(12rem, 1fr));";
+
+    private static string GetEpicGridStyle(PlanningBoardEpicItemDto epic) => $"grid-column: {epic.ComputedStartSprintIndex + 1} / span {Math.Max(1, epic.DurationInSprints)};";
+
+    private static string GetTrackPaperClass(ProductPlanningTrackRow track)
+        => track.IsMainLane
+            ? "pa-4 planning-board-track planning-board-track--main"
+            : "pa-4 planning-board-track planning-board-track--parallel";
+
+    private static string GetEpicCardClass(PlanningBoardEpicItemDto epic)
+        => epic.IsChanged
+            ? "planning-board-epic planning-board-epic--changed"
+            : epic.IsAffected
+                ? "planning-board-epic planning-board-epic--affected"
+                : "planning-board-epic";
+
+    private static Color GetBoardStatusColor(ProductPlanningBoardStatusKind statusKind)
+        => statusKind switch
+        {
+            ProductPlanningBoardStatusKind.Warning => Color.Warning,
+            ProductPlanningBoardStatusKind.Changed => Color.Primary,
+            _ => Color.Success
+        };
+
+    private static string FormatIssueText(PlanningBoardIssueDto issue)
+        => issue.EpicId.HasValue
+            ? $"Epic {issue.EpicId.Value}: {issue.Message}"
+            : issue.Message;
 
     private async Task NavigateToPlanning()
         => NavigationManager.NavigateTo(
@@ -1214,41 +881,10 @@
         _projectPlanningSummaryState = await ProjectService.GetPlanningSummaryAsync(_selectedProjectRouteKey);
     }
 
-    private async Task NavigateToCurrentScopeAsync(int? productId, bool loadBoard)
-    {
-        NavigationManager.NavigateTo(
-            await GlobalFilterRouteService.BuildPlanningPageUriAsync(
-                "PlanBoard",
-                _selectedProjectRouteKey,
-                productId,
-                WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri)),
-            forceLoad: false);
-
-        if (productId == null)
-        {
-            ClearBoard();
-            return;
-        }
-
-        if (loadBoard)
-        {
-            await LoadBoardAsync(productId.Value);
-        }
-    }
-
-    private void ClearBoard()
-    {
-        _selectedProductRootIds = [];
-        _allWorkItems = new List<WorkItemDto>();
-        _sprintColumns = new List<SprintColumn>();
-        _candidateTree = new List<PlanBoardCandidateNode>();
-        _sprintItems = new Dictionary<string, List<SprintDragItem>>();
-    }
-
-    private Task RetryBoardLoadAsync()
-        => _selectedProductId.HasValue
-            ? LoadBoardAsync(_selectedProductId.Value)
-            : Task.CompletedTask;
+    private async Task RetryBoardLoadAsync()
+        => await (_selectedProductId.HasValue
+            ? LoadBoardAsync(_selectedProductId.Value, successFeedback: null)
+            : Task.CompletedTask);
 
     private async Task SyncStoreFromCurrentRouteAsync()
         => await GlobalFilterStore.SetStateAsync(NavigationManager.Uri, _activeProfileId);
@@ -1278,7 +914,7 @@
 
         if (_selectedProductId.HasValue)
         {
-            await LoadBoardAsync(_selectedProductId.Value);
+            await LoadBoardAsync(_selectedProductId.Value, successFeedback: null);
         }
         else
         {
@@ -1314,17 +950,18 @@
             string.Equals(project.Id, projectRouteKey, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static string FormatProjectLabel(ProjectDto project)
-        => string.Equals(project.Name, project.Alias, StringComparison.OrdinalIgnoreCase)
-            ? project.Name
-            : $"{project.Name} ({project.Alias})";
+    private void ClearBoard()
+    {
+        _boardState = DataStateViewModel<ProductPlanningBoardDto>.NotRequested();
+        _renderModel = null;
+        _boardFeedback = null;
+        _epicActionState.Clear();
+        _epicActionMessages.Clear();
+    }
 
     private static bool HasPlanningGap(ProjectPlanningSummaryDto projectPlanningSummary)
         => projectPlanningSummary.TotalPBIs > 0 &&
            projectPlanningSummary.UnplannedPBIs / (double)projectPlanningSummary.TotalPBIs > 0.5d;
-
-    public void Dispose()
-        => _filterSubscription?.Dispose();
 
     private static string GetPlanningGapLabel(ProjectPlanningSummaryDto projectPlanningSummary)
     {
@@ -1362,116 +999,5 @@
 
     private static Color GetProjectRiskColor(bool isRisk) => isRisk ? Color.Warning : Color.Success;
 
-    private async Task LoadCapacityCalibrationAsync(List<SprintDto> allTeamSprints, int productId)
-    {
-        if (_activeProfileId == null) return;
-
-        var completedSprintIds = allTeamSprints
-            .Where(s => s.EndUtc.HasValue && s.EndUtc.Value <= DateTimeOffset.UtcNow)
-            .OrderByDescending(s => s.EndUtc)
-            .Take(HistoricalSprintsForCalibration)
-            .Select(s => s.Id)
-            .ToList();
-
-        if (completedSprintIds.Count == 0)
-        {
-            _sprintCapacity = null;
-            _capacityCalibrationFilterMetadata = null;
-            _capacityCalibrationState = new DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>(
-                DataStateDto.Empty,
-                Reason: "No completed sprints are available for calibration.");
-            return;
-        }
-
-        _capacityCalibrationState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.Loading();
-        var calibrationResponse = await MetricsStateService.GetCapacityCalibrationStateAsync(
-            _activeProfileId.Value,
-            completedSprintIds,
-            new[] { productId },
-            CancellationToken.None);
-        _capacityCalibrationState = DataStateViewModel<DeliveryQueryResponseDto<CapacityCalibrationDto>>.FromResponse(
-            calibrationResponse,
-            "Capacity calibration data could not be loaded right now.");
-        if (_capacityCalibrationState.State == DataStateDto.Available && _capacityCalibrationState.Data is not null)
-        {
-            _capacityCalibrationFilterMetadata = CanonicalClientResponseFactory.Create(_capacityCalibrationState.Data).FilterMetadata;
-            var calibration = _capacityCalibrationState.Data.Data;
-            _sprintCapacity = calibration.MedianVelocity > 0 ? calibration.MedianVelocity : null;
-            return;
-        }
-
-        _capacityCalibrationFilterMetadata = null;
-        _sprintCapacity = null;
-    }
-
-    private SprintCapacityState GetSprintCapacityState(string zoneId)
-    {
-        var items = _sprintItems.GetValueOrDefault(zoneId) ?? [];
-        var assigned = items.Sum(i => i.Effort ?? 0);
-
-        if (!_sprintCapacity.HasValue || _sprintCapacity.Value <= 0)
-            return new SprintCapacityState(0, assigned, 0, 0, 0, false);
-
-        var capacity = (int)Math.Round(_sprintCapacity.Value);
-        var remaining = capacity - assigned;
-        var utilization = Math.Min(100, assigned / _sprintCapacity.Value * 100);
-        var isOvercommitted = assigned > capacity;
-        var overAmount = isOvercommitted ? assigned - capacity : 0;
-
-        return new SprintCapacityState(capacity, assigned, remaining, utilization, overAmount, isOvercommitted);
-    }
-
-    private static Color GetCapacityColor(double utilization) => utilization switch
-    {
-        > 100 => Color.Error,
-        >= 85 => Color.Warning,
-        _ => Color.Success
-    };
-
-    private static string GetWorkItemTypeLabel(string workItemType) =>
-        PlanBoardWorkItemRules.GetTypeLabel(workItemType);
-
-    private static Color GetWorkItemTypeColor(string workItemType) =>
-        string.Equals(PlanBoardWorkItemRules.GetTypeLabel(workItemType), WorkItemTypeHelper.Bug, StringComparison.OrdinalIgnoreCase)
-            ? Color.Error
-            : Color.Info;
-
-    // ── Private types ──────────────────────────────────────────────────────────
-
-    private sealed class SprintColumn
-    {
-        public int SprintId { get; init; }
-        public required string Name { get; init; }
-        public required string Path { get; init; }
-        public required string ZoneId { get; init; }
-        public DateTimeOffset? StartUtc { get; init; }
-        public DateTimeOffset? EndUtc { get; init; }
-    }
-
-    private sealed class SprintDragItem
-    {
-        public int TfsId { get; init; }
-        public required string Title { get; init; }
-        public required string WorkItemType { get; init; }
-        public string? FeatureTitle { get; init; }
-        public int? Effort { get; init; }
-        public string IterationPath { get; set; } = string.Empty;
-    }
-
-    private sealed record PlanBoardRenderModel(
-        IReadOnlyList<SprintColumn> SprintColumns,
-        IReadOnlyList<PlanBoardCandidateNode> CandidateTree,
-        IReadOnlyDictionary<string, List<SprintDragItem>> SprintItems,
-        string? SprintResolutionMessage);
-
-    private sealed record SprintCapacityState(
-        int Capacity,
-        int Assigned,
-        int Remaining,
-        double Utilization,
-        int OverAmount,
-        bool IsOvercommitted)
-    {
-        public bool HasCapacity => Capacity > 0;
-    }
+    public void Dispose() => _filterSubscription?.Dispose();
 }
