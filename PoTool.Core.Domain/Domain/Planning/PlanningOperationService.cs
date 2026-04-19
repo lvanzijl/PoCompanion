@@ -99,6 +99,115 @@ public sealed class PlanningOperationService
             epic => epic with { TrackIndex = 0 });
     }
 
+    /// <summary>
+    /// Reorders an epic within the roadmap, renumbers orders contiguously, and recomputes the affected suffix.
+    /// </summary>
+    public PlanningOperationResult ReorderEpic(PlanningState state, int epicId, int targetRoadmapOrder)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        var baselineIssues = _validationService.Validate(state);
+        if (baselineIssues.Count > 0)
+        {
+            return CreateIssueResult(state, baselineIssues);
+        }
+
+        var orderedEpics = PlanningStateOrdering.OrderEpics(state).ToList();
+        var epicIndex = orderedEpics.FindIndex(epic => epic.EpicId == epicId);
+        if (epicIndex < 0)
+        {
+            return CreateIssueResult(
+                state,
+                new PlanningValidationIssue(
+                    PlanningValidationIssueCode.EpicNotFound,
+                    $"Epic '{epicId}' was not found in planning state.",
+                    epicId));
+        }
+
+        if (targetRoadmapOrder < 1 || targetRoadmapOrder > orderedEpics.Count)
+        {
+            return CreateIssueResult(
+                state,
+                new PlanningValidationIssue(
+                    PlanningValidationIssueCode.InvalidOperationInput,
+                    $"ReorderEpic requires a target roadmap order between 1 and {orderedEpics.Count}.",
+                    epicId));
+        }
+
+        var targetIndex = targetRoadmapOrder - 1;
+        if (targetIndex == epicIndex)
+        {
+            return new PlanningOperationResult(state, Array.Empty<int>(), Array.Empty<int>(), Array.Empty<PlanningValidationIssue>());
+        }
+
+        var movedEpic = orderedEpics[epicIndex];
+        orderedEpics.RemoveAt(epicIndex);
+        orderedEpics.Insert(targetIndex, movedEpic);
+
+        var reorderedEpics = orderedEpics
+            .Select((epic, index) => epic with { RoadmapOrder = index + 1 })
+            .ToArray();
+
+        var recomputeFromIndex = Math.Min(epicIndex, targetIndex);
+        var affectedEpicIds = reorderedEpics
+            .Skip(recomputeFromIndex)
+            .Select(epic => epic.EpicId)
+            .ToArray();
+
+        return FinalizeOperation(state, reorderedEpics, recomputeFromIndex, affectedEpicIds);
+    }
+
+    /// <summary>
+    /// Shifts the selected epic and every later roadmap epic right by the requested number of sprints.
+    /// </summary>
+    public PlanningOperationResult ShiftPlan(PlanningState state, int epicId, int deltaSprints)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+
+        var baselineIssues = _validationService.Validate(state);
+        if (baselineIssues.Count > 0)
+        {
+            return CreateIssueResult(state, baselineIssues);
+        }
+
+        var orderedEpics = PlanningStateOrdering.OrderEpics(state).ToArray();
+        var epicIndex = Array.FindIndex(orderedEpics, epic => epic.EpicId == epicId);
+        if (epicIndex < 0)
+        {
+            return CreateIssueResult(
+                state,
+                new PlanningValidationIssue(
+                    PlanningValidationIssueCode.EpicNotFound,
+                    $"Epic '{epicId}' was not found in planning state.",
+                    epicId));
+        }
+
+        if (deltaSprints <= 0)
+        {
+            return CreateIssueResult(
+                state,
+                new PlanningValidationIssue(
+                    PlanningValidationIssueCode.InvalidOperationInput,
+                    "ShiftPlan requires a positive delta.",
+                    epicId));
+        }
+
+        for (var index = epicIndex; index < orderedEpics.Length; index++)
+        {
+            orderedEpics[index] = orderedEpics[index] with
+            {
+                PlannedStartSprintIndex = orderedEpics[index].PlannedStartSprintIndex + deltaSprints,
+            };
+        }
+
+        var affectedEpicIds = orderedEpics
+            .Skip(epicIndex)
+            .Select(epic => epic.EpicId)
+            .ToArray();
+
+        return FinalizeOperation(state, orderedEpics, epicIndex, affectedEpicIds);
+    }
+
     private PlanningOperationResult ApplySingleEpicOperation(
         PlanningState state,
         int epicId,
@@ -124,43 +233,35 @@ public sealed class PlanningOperationService
         var baselineIssues = _validationService.Validate(state);
         if (baselineIssues.Count > 0)
         {
-            return new PlanningOperationResult(state, Array.Empty<int>(), Array.Empty<int>(), baselineIssues);
+            return CreateIssueResult(state, baselineIssues);
         }
 
         if (upfrontIssue is not null)
         {
-            return new PlanningOperationResult(state, Array.Empty<int>(), Array.Empty<int>(), new[] { upfrontIssue });
+            return CreateIssueResult(state, upfrontIssue);
         }
 
         var orderedEpics = PlanningStateOrdering.OrderEpics(state).ToArray();
         var epicIndex = Array.FindIndex(orderedEpics, epic => epic.EpicId == epicId);
         if (epicIndex < 0)
         {
-            return new PlanningOperationResult(
+            return CreateIssueResult(
                 state,
-                Array.Empty<int>(),
-                Array.Empty<int>(),
-                new[]
-                {
-                    new PlanningValidationIssue(
-                        PlanningValidationIssueCode.EpicNotFound,
-                        $"Epic '{epicId}' was not found in planning state.",
-                        epicId),
-                });
+                new PlanningValidationIssue(
+                    PlanningValidationIssueCode.EpicNotFound,
+                    $"Epic '{epicId}' was not found in planning state.",
+                    epicId));
         }
 
         orderedEpics[epicIndex] = mutateEpic(orderedEpics, epicIndex);
 
-        var updatedState = _recomputeService.RecomputeFrom(new PlanningState(orderedEpics), epicIndex);
-        var validationIssues = _validationService.Validate(updatedState);
-        var changedEpicIds = GetChangedEpicIds(state, updatedState);
         var affectedEpicIds = PlanningStateOrdering
-            .OrderEpics(updatedState)
+            .OrderEpics(new PlanningState(orderedEpics))
             .Skip(epicIndex)
             .Select(epic => epic.EpicId)
             .ToArray();
 
-        return new PlanningOperationResult(updatedState, changedEpicIds, affectedEpicIds, validationIssues);
+        return FinalizeOperation(state, orderedEpics, epicIndex, affectedEpicIds);
     }
 
     private static int GetLowestReusablePositiveTrack(
@@ -203,5 +304,32 @@ public sealed class PlanningOperationService
             .Where(epic => !previousById.TryGetValue(epic.EpicId, out var previousEpic) || previousEpic != epic)
             .Select(epic => epic.EpicId)
             .ToArray();
+    }
+
+    private PlanningOperationResult FinalizeOperation(
+        PlanningState previousState,
+        IReadOnlyList<PlanningEpicState> orderedEpics,
+        int recomputeFromIndex,
+        IReadOnlyList<int> affectedEpicIds)
+    {
+        var updatedState = _recomputeService.RecomputeFrom(new PlanningState(orderedEpics.ToArray()), recomputeFromIndex);
+        var validationIssues = _validationService.Validate(updatedState);
+        var changedEpicIds = GetChangedEpicIds(previousState, updatedState);
+
+        return new PlanningOperationResult(updatedState, changedEpicIds, affectedEpicIds, validationIssues);
+    }
+
+    private static PlanningOperationResult CreateIssueResult(
+        PlanningState state,
+        IReadOnlyList<PlanningValidationIssue> validationIssues)
+    {
+        return new PlanningOperationResult(state, Array.Empty<int>(), Array.Empty<int>(), validationIssues);
+    }
+
+    private static PlanningOperationResult CreateIssueResult(
+        PlanningState state,
+        params PlanningValidationIssue[] validationIssues)
+    {
+        return new PlanningOperationResult(state, Array.Empty<int>(), Array.Empty<int>(), validationIssues);
     }
 }
