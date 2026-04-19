@@ -31,10 +31,13 @@ public sealed class ProductPlanningBoardControllerTests
     public async Task GetPlanningBoard_MissingProduct_ReturnsNotFound()
     {
         var controller = new ProductPlanningBoardController(
-            new ProductPlanningBoardService(
-                new FakeProductRepository(),
-                new FakeWorkItemReadProvider(),
-                new InMemoryProductPlanningSessionStore()));
+            CreateService(
+                new InMemoryProductPlanningSessionStore(),
+                new InMemoryProductPlanningIntentStore(),
+                new RecordingTfsClient(),
+                [],
+                new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>(),
+                CreateDefaultSprintsByTeam([10])));
 
         var result = await controller.GetPlanningBoard(999, CancellationToken.None);
 
@@ -55,7 +58,7 @@ public sealed class ProductPlanningBoardControllerTests
 
         Assert.IsInstanceOfType<OkObjectResult>(resetResult.Result);
         var board = (ProductPlanningBoardDto)((OkObjectResult)resetResult.Result).Value!;
-        CollectionAssert.AreEqual(new[] { 0, 1, 2 }, board.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        CollectionAssert.AreEqual(new[] { 0, 3, 4 }, board.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
     }
 
     [TestMethod]
@@ -98,7 +101,8 @@ public sealed class ProductPlanningBoardControllerTests
 
         Assert.AreEqual(3, persistedBoard.EpicItems.Single(static epic => epic.EpicId == 1802).ComputedStartSprintIndex);
         Assert.AreEqual(1, persistedBoard.EpicItems.Single(static epic => epic.EpicId == 1803).TrackIndex);
-        CollectionAssert.AreEqual(new[] { 0, 1, 2 }, resetBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        CollectionAssert.AreEqual(new[] { 0, 3, 4 }, resetBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        Assert.AreEqual(0, resetBoard.EpicItems.Single(static epic => epic.EpicId == 1803).TrackIndex);
     }
 
     [TestMethod]
@@ -124,10 +128,13 @@ public sealed class ProductPlanningBoardControllerTests
     public async Task MissingProductMutationEndpoints_ReturnNotFound()
     {
         var controller = new ProductPlanningBoardController(
-            new ProductPlanningBoardService(
-                new FakeProductRepository(),
-                new FakeWorkItemReadProvider(),
-                new InMemoryProductPlanningSessionStore()));
+            CreateService(
+                new InMemoryProductPlanningSessionStore(),
+                new InMemoryProductPlanningIntentStore(),
+                new RecordingTfsClient(),
+                [],
+                new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>(),
+                CreateDefaultSprintsByTeam([10])));
 
         var endpoints = new Func<Task<ActionResult<ProductPlanningBoardDto>>>[]
         {

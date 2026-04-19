@@ -27,7 +27,9 @@ public sealed record WorkItemDto(
     int? StoryPoints = null,
     double? TimeCriticality = null,
     string? ProjectNumber = null,
-    string? ProjectElement = null
+    string? ProjectElement = null,
+    DateTimeOffset? StartDate = null,
+    DateTimeOffset? TargetDate = null
 )
 {
     public WorkItemDto()

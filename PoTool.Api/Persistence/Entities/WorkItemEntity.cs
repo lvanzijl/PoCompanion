@@ -146,6 +146,28 @@ public class WorkItemEntity
     public DateTimeOffset? ClosedDate { get; set; }
 
     /// <summary>
+    /// Epic planning start date from TFS (Microsoft.VSTS.Scheduling.StartDate).
+    /// Stored as a date-only semantic value at the DTO/API edges.
+    /// </summary>
+    public DateTimeOffset? StartDate { get; set; }
+
+    /// <summary>
+    /// UTC planning start date used for SQLite-safe query operations when needed.
+    /// </summary>
+    public DateTime? StartDateUtc { get; set; }
+
+    /// <summary>
+    /// Epic planning target date from TFS (Microsoft.VSTS.Scheduling.TargetDate).
+    /// Stored as a date-only semantic value at the DTO/API edges.
+    /// </summary>
+    public DateTimeOffset? TargetDate { get; set; }
+
+    /// <summary>
+    /// UTC planning target date used for SQLite-safe query operations when needed.
+    /// </summary>
+    public DateTime? TargetDateUtc { get; set; }
+
+    /// <summary>
     /// Work item severity from TFS (Microsoft.VSTS.Common.Severity).
     /// Used for bugs: "1 - Critical", "2 - High", "3 - Medium", "4 - Low".
     /// Nullable - only applicable to work items that support severity (e.g., Bugs).

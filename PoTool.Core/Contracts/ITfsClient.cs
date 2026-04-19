@@ -208,6 +208,16 @@ public interface ITfsClient
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Updates the planning dates of a work item in TFS.
+    /// The two planning-date fields always travel as one normalized date-only pair.
+    /// </summary>
+    Task<bool> UpdateWorkItemPlanningDatesAsync(
+        int workItemId,
+        DateOnly startDate,
+        DateOnly targetDate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Updates the severity of a work item in TFS (Microsoft.VSTS.Common.Severity).
     /// Severity is used for bugs and typically has values like "1 - Critical", "2 - High", "3 - Medium", "4 - Low".
     /// </summary>

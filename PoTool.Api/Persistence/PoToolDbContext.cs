@@ -147,6 +147,11 @@ public class PoToolDbContext : DbContext
     public DbSet<PlanningBoardSettingsEntity> PlanningBoardSettings => Set<PlanningBoardSettingsEntity>();
 
     /// <summary>
+    /// Durable product-scoped planning intent for roadmap epics.
+    /// </summary>
+    public DbSet<ProductPlanningIntentEntity> ProductPlanningIntents => Set<ProductPlanningIntentEntity>();
+
+    /// <summary>
     /// Products owned by Product Owners.
     /// </summary>
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
@@ -525,6 +530,23 @@ public class PoToolDbContext : DbContext
             entity.HasOne(e => e.ProductOwner)
                 .WithOne()
                 .HasForeignKey<PlanningBoardSettingsEntity>(e => e.ProductOwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductPlanningIntentEntity>(entity =>
+        {
+            entity.HasIndex(e => new { e.ProductId, e.EpicId })
+                .IsUnique();
+
+            entity.HasIndex(e => new { e.ProductId, e.StartSprintStartDateUtc });
+
+            entity.Property(e => e.RecoveryStatus)
+                .HasConversion<string>()
+                .HasMaxLength(64);
+
+            entity.HasOne(e => e.Product)
+                .WithMany()
+                .HasForeignKey(e => e.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

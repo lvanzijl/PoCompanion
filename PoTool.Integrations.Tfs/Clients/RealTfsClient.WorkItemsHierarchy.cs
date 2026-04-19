@@ -284,6 +284,8 @@ internal partial class RealTfsClient
             DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
             DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
             DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+            DateTimeOffset? startDate = ParseDateTimeField(fields, TfsFieldStartDate);
+            DateTimeOffset? targetDate = ParseDateTimeField(fields, TfsFieldTargetDate);
             string? severity = ParseSeverityField(fields);
             string? tags = ParseTagsField(fields);
             double? backlogPriority = ParseBacklogPriorityField(fields);
@@ -312,7 +314,9 @@ internal partial class RealTfsClient
                 StoryPoints: storyPoints,
                 TimeCriticality: timeCriticality,
                 ProjectNumber: projectNumber,
-                ProjectElement: projectElement
+                ProjectElement: projectElement,
+                StartDate: startDate,
+                TargetDate: targetDate
             ));
          }
 

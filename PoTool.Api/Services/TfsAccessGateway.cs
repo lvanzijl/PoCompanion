@@ -143,6 +143,9 @@ public sealed class TfsAccessGateway : ITfsAccessGateway
     public Task<bool> UpdateWorkItemEffortAsync(int workItemId, int effort, CancellationToken cancellationToken = default)
         => ExecuteAsync(client => client.UpdateWorkItemEffortAsync(workItemId, effort, cancellationToken), TfsAccessPurpose.Mutation, nameof(UpdateWorkItemEffortAsync));
 
+    public Task<bool> UpdateWorkItemPlanningDatesAsync(int workItemId, DateOnly startDate, DateOnly targetDate, CancellationToken cancellationToken = default)
+        => ExecuteAsync(client => client.UpdateWorkItemPlanningDatesAsync(workItemId, startDate, targetDate, cancellationToken), TfsAccessPurpose.Mutation, nameof(UpdateWorkItemPlanningDatesAsync));
+
     public Task<bool> UpdateWorkItemSeverityAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
         => ExecuteAsync(client => client.UpdateWorkItemSeverityAsync(workItemId, severity, cancellationToken), TfsAccessPurpose.Mutation, nameof(UpdateWorkItemSeverityAsync));
 

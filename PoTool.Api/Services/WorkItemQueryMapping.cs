@@ -44,7 +44,9 @@ internal static class WorkItemQueryMapping
             StoryPoints: entity.StoryPoints,
             TimeCriticality: entity.TimeCriticality,
             ProjectNumber: entity.ProjectNumber,
-            ProjectElement: entity.ProjectElement
+            ProjectElement: entity.ProjectElement,
+            StartDate: entity.StartDate,
+            TargetDate: entity.TargetDate
         );
     }
 }

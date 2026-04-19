@@ -149,6 +149,10 @@ public class WorkItemRepository : IWorkItemRepository
                     existing.CreatedDate = dto.CreatedDate;
                     existing.CreatedDateUtc = dto.CreatedDate?.UtcDateTime;
                     existing.ClosedDate = dto.ClosedDate;
+                    existing.StartDate = dto.StartDate;
+                    existing.StartDateUtc = dto.StartDate?.UtcDateTime;
+                    existing.TargetDate = dto.TargetDate;
+                    existing.TargetDateUtc = dto.TargetDate?.UtcDateTime;
                     existing.Severity = dto.Severity;
                     existing.Tags = dto.Tags;
                     existing.IsBlocked = dto.IsBlocked;
@@ -203,6 +207,10 @@ public class WorkItemRepository : IWorkItemRepository
                     entity.CreatedDate = dto.CreatedDate;
                     entity.CreatedDateUtc = dto.CreatedDate?.UtcDateTime;
                     entity.ClosedDate = dto.ClosedDate;
+                    entity.StartDate = dto.StartDate;
+                    entity.StartDateUtc = dto.StartDate?.UtcDateTime;
+                    entity.TargetDate = dto.TargetDate;
+                    entity.TargetDateUtc = dto.TargetDate?.UtcDateTime;
                     entity.Severity = dto.Severity;
                     entity.Tags = dto.Tags;
                     entity.IsBlocked = dto.IsBlocked;
@@ -268,7 +276,9 @@ public class WorkItemRepository : IWorkItemRepository
                 StoryPoints: entity.StoryPoints,
                 TimeCriticality: entity.TimeCriticality,
                 ProjectNumber: entity.ProjectNumber,
-                ProjectElement: entity.ProjectElement
+                ProjectElement: entity.ProjectElement,
+                StartDate: entity.StartDate,
+                TargetDate: entity.TargetDate
             );
     }
 
@@ -294,6 +304,10 @@ public class WorkItemRepository : IWorkItemRepository
             CreatedDate = dto.CreatedDate,
             CreatedDateUtc = dto.CreatedDate?.UtcDateTime,
             ClosedDate = dto.ClosedDate,
+            StartDate = dto.StartDate,
+            StartDateUtc = dto.StartDate?.UtcDateTime,
+            TargetDate = dto.TargetDate,
+            TargetDateUtc = dto.TargetDate?.UtcDateTime,
             Severity = dto.Severity,
             Tags = dto.Tags,
             IsBlocked = dto.IsBlocked,

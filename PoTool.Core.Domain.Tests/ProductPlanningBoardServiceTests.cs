@@ -180,6 +180,311 @@ public sealed class ProductPlanningBoardServiceTests
     }
 
     [TestMethod]
+    public async Task BuildPlanningBoardAsync_PersistedIntentWinsOverDifferingTfsDates()
+    {
+        var sessionStore = new InMemoryProductPlanningSessionStore();
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var tfsClient = new RecordingTfsClient();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+        var product = CreateProduct(7, "Roadmap Product", [100], [10]);
+        intentStore.Seed(new ProductPlanningIntentRecord(
+            7,
+            2102,
+            sprints[10][1].StartUtc!.Value.UtcDateTime.Date,
+            2,
+            null,
+            DateTime.UtcNow));
+
+        var service = CreateService(
+            sessionStore,
+            intentStore,
+            tfsClient,
+            [product],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(2101, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"),
+                    CreateWorkItem(
+                        2102,
+                        "Epic",
+                        "Roadmap Epic 2",
+                        100,
+                        2d,
+                        "roadmap",
+                        startDate: sprints[10][3].StartUtc,
+                        targetDate: sprints[10][4].EndUtc!.Value.AddDays(-1))
+                ]
+            },
+            sprints);
+
+        var board = await service.BuildPlanningBoardAsync(7);
+        var resetBoard = await service.ResetPlanningBoardAsync(7);
+
+        Assert.IsNotNull(board);
+        Assert.AreEqual(1, board.EpicItems.Single(static epic => epic.EpicId == 2102).PlannedStartSprintIndex);
+        Assert.IsNotNull(resetBoard);
+        Assert.AreEqual(1, resetBoard.EpicItems.Single(static epic => epic.EpicId == 2102).PlannedStartSprintIndex);
+        Assert.IsEmpty(tfsClient.PlanningDateUpdates);
+    }
+
+    [TestMethod]
+    public async Task BuildPlanningBoardAsync_RecoversExactIntentFromTfsDates_AndPersistsIt()
+    {
+        var sessionStore = new InMemoryProductPlanningSessionStore();
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var tfsClient = new RecordingTfsClient();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+
+        var service = CreateService(
+            sessionStore,
+            intentStore,
+            tfsClient,
+            [
+                CreateProduct(7, "Roadmap Product", [100], [10])
+            ],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(
+                        2201,
+                        "Epic",
+                        "Roadmap Epic 1",
+                        100,
+                        1d,
+                        "roadmap",
+                        startDate: sprints[10][0].StartUtc,
+                        targetDate: sprints[10][1].EndUtc!.Value.AddDays(-1))
+                ]
+            },
+            sprints);
+
+        var board = await service.BuildPlanningBoardAsync(7);
+        var persistedIntent = (await intentStore.GetByProductAsync(7)).Single();
+
+        Assert.IsNotNull(board);
+        Assert.AreEqual(0, board.EpicItems.Single().PlannedStartSprintIndex);
+        Assert.AreEqual(2, persistedIntent.DurationInSprints);
+        Assert.AreEqual(ProductPlanningRecoveryStatus.RecoveredExact, persistedIntent.RecoveryStatus);
+        Assert.IsEmpty(tfsClient.PlanningDateUpdates);
+    }
+
+    [TestMethod]
+    public async Task BuildPlanningBoardAsync_RecoversWithNormalization_AndRewritesTfsDates()
+    {
+        var sessionStore = new InMemoryProductPlanningSessionStore();
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var tfsClient = new RecordingTfsClient();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+
+        var service = CreateService(
+            sessionStore,
+            intentStore,
+            tfsClient,
+            [
+                CreateProduct(7, "Roadmap Product", [100], [10])
+            ],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(
+                        2301,
+                        "Epic",
+                        "Roadmap Epic 1",
+                        100,
+                        1d,
+                        "roadmap",
+                        startDate: sprints[10][0].StartUtc!.Value.AddDays(2),
+                        targetDate: sprints[10][1].StartUtc!.Value.AddDays(3))
+                ]
+            },
+            sprints);
+
+        _ = await service.BuildPlanningBoardAsync(7);
+        var persistedIntent = (await intentStore.GetByProductAsync(7)).Single();
+
+        Assert.AreEqual(ProductPlanningRecoveryStatus.RecoveredWithNormalization, persistedIntent.RecoveryStatus);
+        Assert.HasCount(1, tfsClient.PlanningDateUpdates);
+        Assert.AreEqual(2301, tfsClient.PlanningDateUpdates[0].WorkItemId);
+        Assert.AreEqual(DateOnly.FromDateTime(sprints[10][0].StartUtc!.Value.UtcDateTime), tfsClient.PlanningDateUpdates[0].StartDate);
+        Assert.AreEqual(DateOnly.FromDateTime(sprints[10][1].EndUtc!.Value.UtcDateTime.AddDays(-1)), tfsClient.PlanningDateUpdates[0].TargetDate);
+    }
+
+    [TestMethod]
+    public async Task BuildPlanningBoardAsync_RecoveryFailureFallsBackToBootstrap()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var tfsClient = new RecordingTfsClient();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            intentStore,
+            tfsClient,
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(
+                        2401,
+                        "Epic",
+                        "Roadmap Epic 1",
+                        100,
+                        1d,
+                        "roadmap",
+                        startDate: new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                        targetDate: sprints[10][0].EndUtc!.Value.AddDays(-1))
+                ]
+            },
+            sprints);
+
+        var board = await service.BuildPlanningBoardAsync(7);
+
+        Assert.IsNotNull(board);
+        Assert.AreEqual(0, board.EpicItems.Single().PlannedStartSprintIndex);
+        Assert.IsEmpty(await intentStore.GetByProductAsync(7));
+        Assert.IsEmpty(tfsClient.PlanningDateUpdates);
+    }
+
+    [TestMethod]
+    public async Task BuildPlanningBoardAsync_RemovesPersistedIntentForEpicThatDisappearedUpstream()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+        intentStore.Seed(
+            new ProductPlanningIntentRecord(7, 2501, sprints[10][0].StartUtc!.Value.UtcDateTime.Date, 1, null, DateTime.UtcNow),
+            new ProductPlanningIntentRecord(7, 2599, sprints[10][1].StartUtc!.Value.UtcDateTime.Date, 1, null, DateTime.UtcNow));
+
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            intentStore,
+            new RecordingTfsClient(),
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(2501, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap")
+                ]
+            },
+            sprints);
+
+        _ = await service.BuildPlanningBoardAsync(7);
+        var intents = await intentStore.GetByProductAsync(7);
+
+        CollectionAssert.AreEqual(new[] { 2501 }, intents.Select(static intent => intent.EpicId).ToArray());
+    }
+
+    [TestMethod]
+    public async Task ExecuteMoveEpicBySprintsAsync_PersistsIntentAndWritesPlanningDates()
+    {
+        var sessionStore = new InMemoryProductPlanningSessionStore();
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var tfsClient = new RecordingTfsClient();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 8);
+
+        var service = CreateService(
+            sessionStore,
+            intentStore,
+            tfsClient,
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(2601, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"),
+                    CreateWorkItem(2602, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap")
+                ]
+            },
+            sprints);
+
+        var board = await service.ExecuteMoveEpicBySprintsAsync(7, 2602, 2);
+        var intents = await intentStore.GetByProductAsync(7);
+
+        Assert.IsNotNull(board);
+        Assert.AreEqual(3, board.EpicItems.Single(static epic => epic.EpicId == 2602).ComputedStartSprintIndex);
+        Assert.AreEqual(2, intents.Count);
+        Assert.HasCount(2, tfsClient.PlanningDateUpdates);
+        Assert.AreEqual(
+            DateOnly.FromDateTime(sprints[10][3].StartUtc!.Value.UtcDateTime),
+            tfsClient.PlanningDateUpdates.Single(static update => update.WorkItemId == 2602).StartDate);
+    }
+
+    [TestMethod]
+    public async Task ExecuteMoveEpicBySprintsAsync_WithInsufficientCalendarCoverage_Throws()
+    {
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            new InMemoryProductPlanningIntentStore(),
+            new RecordingTfsClient(),
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(2701, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"),
+                    CreateWorkItem(2702, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap")
+                ]
+            },
+            new Dictionary<int, IReadOnlyList<SprintDto>>
+            {
+                [10] = CreateSequentialSprints(10, new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), 2)
+            });
+
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => service.ExecuteMoveEpicBySprintsAsync(7, 2702, 2).AsTask());
+    }
+
+    [TestMethod]
+    public async Task BuildPlanningBoardAsync_WithAmbiguousCalendarAndPersistedIntent_Throws()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        intentStore.Seed(new ProductPlanningIntentRecord(7, 2801, new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), 1, null, DateTime.UtcNow));
+
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            intentStore,
+            new RecordingTfsClient(),
+            [CreateProduct(7, "Roadmap Product", [100], [10, 11])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(2801, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap")
+                ]
+            },
+            new Dictionary<int, IReadOnlyList<SprintDto>>
+            {
+                [10] = CreateSequentialSprints(10, new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), 2),
+                [11] =
+                [
+                    new SprintDto(
+                        1,
+                        11,
+                        "team-11-sprint-1",
+                        "Team 11\\Sprint 1",
+                        "Sprint 1",
+                        new DateTimeOffset(new DateTime(2026, 1, 12, 0, 0, 0, DateTimeKind.Utc), TimeSpan.Zero),
+                        new DateTimeOffset(new DateTime(2026, 1, 26, 0, 0, 0, DateTimeKind.Utc), TimeSpan.Zero),
+                        null,
+                        DateTimeOffset.UtcNow)
+                ]
+            });
+
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => service.BuildPlanningBoardAsync(7).AsTask());
+    }
+
+    [TestMethod]
     public async Task Sessions_AreIsolatedPerProduct()
     {
         var store = new InMemoryProductPlanningSessionStore();
@@ -271,10 +576,13 @@ public sealed class ProductPlanningBoardServiceTests
     [TestMethod]
     public async Task BuildPlanningBoardAsync_WhenProductMissing_ReturnsNull()
     {
-        var service = new ProductPlanningBoardService(
-            new FakeProductRepository(),
-            new FakeWorkItemReadProvider(),
-            new InMemoryProductPlanningSessionStore());
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            new InMemoryProductPlanningIntentStore(),
+            new RecordingTfsClient(),
+            [],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>(),
+            CreateDefaultSprintsByTeam([10]));
 
         var board = await service.BuildPlanningBoardAsync(999);
 

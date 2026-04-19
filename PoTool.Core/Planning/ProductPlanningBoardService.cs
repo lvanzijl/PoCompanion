@@ -1,6 +1,7 @@
 using PoTool.Core.Contracts;
 using PoTool.Core.Domain.Planning;
 using PoTool.Shared.Planning;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
 namespace PoTool.Core.Planning;
@@ -30,24 +31,35 @@ public interface IProductPlanningBoardService
 }
 
 /// <summary>
-/// Stateless application-layer bridge between active product/work-item inputs and the planning engine.
+/// Application-layer bridge between active product/work-item inputs and the planning engine.
 /// </summary>
 public sealed class ProductPlanningBoardService : IProductPlanningBoardService
 {
+    private static readonly DateOnly LegacyInvalidStartDateCutoff = new(2021, 4, 19);
+
     private readonly IProductRepository _productRepository;
     private readonly IWorkItemReadProvider _workItemReadProvider;
     private readonly IProductPlanningSessionStore _sessionStore;
+    private readonly IProductPlanningIntentStore _intentStore;
+    private readonly ISprintRepository _sprintRepository;
+    private readonly ITfsClient _tfsClient;
     private readonly PlanningRecomputeService _recomputeService;
     private readonly PlanningOperationService _operationService;
 
     public ProductPlanningBoardService(
         IProductRepository productRepository,
         IWorkItemReadProvider workItemReadProvider,
-        IProductPlanningSessionStore sessionStore)
+        IProductPlanningSessionStore sessionStore,
+        IProductPlanningIntentStore intentStore,
+        ISprintRepository sprintRepository,
+        ITfsClient tfsClient)
         : this(
             productRepository,
             workItemReadProvider,
             sessionStore,
+            intentStore,
+            sprintRepository,
+            tfsClient,
             new PlanningRecomputeService(),
             new PlanningOperationService())
     {
@@ -57,12 +69,18 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
         IProductRepository productRepository,
         IWorkItemReadProvider workItemReadProvider,
         IProductPlanningSessionStore sessionStore,
+        IProductPlanningIntentStore intentStore,
+        ISprintRepository sprintRepository,
+        ITfsClient tfsClient,
         PlanningRecomputeService recomputeService,
         PlanningOperationService operationService)
     {
         _productRepository = productRepository ?? throw new ArgumentNullException(nameof(productRepository));
         _workItemReadProvider = workItemReadProvider ?? throw new ArgumentNullException(nameof(workItemReadProvider));
         _sessionStore = sessionStore ?? throw new ArgumentNullException(nameof(sessionStore));
+        _intentStore = intentStore ?? throw new ArgumentNullException(nameof(intentStore));
+        _sprintRepository = sprintRepository ?? throw new ArgumentNullException(nameof(sprintRepository));
+        _tfsClient = tfsClient ?? throw new ArgumentNullException(nameof(tfsClient));
         _recomputeService = recomputeService ?? throw new ArgumentNullException(nameof(recomputeService));
         _operationService = operationService ?? throw new ArgumentNullException(nameof(operationService));
     }
@@ -128,7 +146,7 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             _sessionStore.Reset(productId);
         }
 
-        var state = GetOrBootstrapSessionState(planningContext);
+        var state = GetOrLoadSessionState(planningContext);
         return CreateReadModel(planningContext, state, Array.Empty<PlanningValidationIssue>(), Array.Empty<int>(), Array.Empty<int>());
     }
 
@@ -143,8 +161,10 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             return null;
         }
 
-        var currentState = GetOrBootstrapSessionState(planningContext);
+        var currentState = GetOrLoadSessionState(planningContext);
         var result = execute(currentState);
+
+        await PersistPlanningIntentAsync(planningContext, result.State, cancellationToken);
         _sessionStore.SetState(productId, result.State);
 
         return CreateReadModel(
@@ -176,39 +196,386 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             .Where(static workItem => IsRoadmapEpic(workItem))
             .OrderBy(static workItem => workItem.BacklogPriority ?? double.MaxValue)
             .ThenBy(static workItem => workItem.TfsId)
-            .Select((workItem, index) => new BootstrapEpic(
+            .Select((workItem, index) => new ActiveRoadmapEpic(
                 workItem.TfsId,
                 string.IsNullOrWhiteSpace(workItem.Title) ? $"Epic {workItem.TfsId}" : workItem.Title,
-                index + 1))
+                index + 1,
+                workItem))
             .ToArray();
 
-        var bootstrapState = roadmapEpics.Length == 0
-            ? PlanningState.Empty
-            : _recomputeService.RecomputeFrom(
-                new PlanningState(
-                    roadmapEpics
-                        .Select((epic, index) => new PlanningEpicState(
-                            epic.EpicId,
-                            epic.RoadmapOrder,
-                            index,
-                            0,
-                            1,
-                            0))
-                        .ToArray()),
-                0);
+        var activeEpicIds = roadmapEpics.Select(static epic => epic.EpicId).ToArray();
+        await _intentStore.DeleteMissingEpicsAsync(product.Id, activeEpicIds, cancellationToken);
 
-        return new PlanningContext(product.Id, product.Name, roadmapEpics, bootstrapState);
+        var persistedIntents = await _intentStore.GetByProductAsync(product.Id, cancellationToken);
+        var calendarResolution = await ResolveCalendarAsync(product, cancellationToken);
+
+        var recoveryTimestampUtc = DateTime.UtcNow;
+        var recoveredIntents = new List<ProductPlanningIntentRecord>();
+        var normalizedRecoveries = new List<PlanningDateWriteRequest>();
+        var stateEpics = new List<PlanningEpicState>(roadmapEpics.Length);
+        var persistedIntentByEpicId = persistedIntents.ToDictionary(static intent => intent.EpicId);
+
+        foreach (var (epic, index) in roadmapEpics.Select((epic, index) => (epic, index)))
+        {
+            if (persistedIntentByEpicId.TryGetValue(epic.EpicId, out var persistedIntent))
+            {
+                var persistedStartIndex = ResolvePersistedStartIndex(epic.EpicId, persistedIntent, calendarResolution);
+                stateEpics.Add(new PlanningEpicState(
+                    epic.EpicId,
+                    epic.RoadmapOrder,
+                    persistedStartIndex,
+                    0,
+                    persistedIntent.DurationInSprints,
+                    0));
+                continue;
+            }
+
+            if (TryRecoverIntent(
+                    product.Id,
+                    epic,
+                    calendarResolution,
+                    recoveryTimestampUtc,
+                    out var recoveredIntent,
+                    out var recoveredStartIndex,
+                    out var planningDateWriteRequest))
+            {
+                recoveredIntents.Add(recoveredIntent!);
+                if (planningDateWriteRequest is not null)
+                {
+                    normalizedRecoveries.Add(planningDateWriteRequest.Value);
+                }
+
+                stateEpics.Add(new PlanningEpicState(
+                    epic.EpicId,
+                    epic.RoadmapOrder,
+                    recoveredStartIndex,
+                    0,
+                    recoveredIntent!.DurationInSprints,
+                    0));
+                continue;
+            }
+
+            stateEpics.Add(new PlanningEpicState(
+                epic.EpicId,
+                epic.RoadmapOrder,
+                index,
+                0,
+                1,
+                0));
+        }
+
+        if (recoveredIntents.Count > 0)
+        {
+            await _intentStore.UpsertForProductAsync(product.Id, recoveredIntents, cancellationToken);
+        }
+
+        foreach (var normalizedRecovery in normalizedRecoveries)
+        {
+            await _tfsClient.UpdateWorkItemPlanningDatesAsync(
+                normalizedRecovery.EpicId,
+                normalizedRecovery.StartDate,
+                normalizedRecovery.TargetDate,
+                cancellationToken);
+        }
+
+        var baseState = stateEpics.Count == 0
+            ? PlanningState.Empty
+            : _recomputeService.RecomputeFrom(new PlanningState(stateEpics), 0);
+
+        return new PlanningContext(product.Id, product.Name, roadmapEpics, baseState, calendarResolution);
     }
 
-    private PlanningState GetOrBootstrapSessionState(PlanningContext planningContext)
+    private PlanningState GetOrLoadSessionState(PlanningContext planningContext)
     {
-        if (_sessionStore.TryGetState(planningContext.ProductId, out var sessionState))
+        if (_sessionStore.TryGetState(planningContext.ProductId, out var sessionState) &&
+            SessionStateMatchesActiveScope(sessionState, planningContext.Epics))
         {
             return sessionState;
         }
 
-        _sessionStore.SetState(planningContext.ProductId, planningContext.BootstrapState);
-        return planningContext.BootstrapState;
+        _sessionStore.SetState(planningContext.ProductId, planningContext.BaseState);
+        return planningContext.BaseState;
+    }
+
+    private async Task PersistPlanningIntentAsync(
+        PlanningContext planningContext,
+        PlanningState state,
+        CancellationToken cancellationToken)
+    {
+        var calendar = RequireCalendar(planningContext.CalendarResolution, planningContext.ProductId);
+        var updatedAtUtc = DateTime.UtcNow;
+        var intents = state.Epics
+            .Select(epic => MapToIntentRecord(planningContext.ProductId, epic, calendar, updatedAtUtc))
+            .ToArray();
+
+        await _intentStore.UpsertForProductAsync(planningContext.ProductId, intents, cancellationToken);
+        await _intentStore.DeleteMissingEpicsAsync(
+            planningContext.ProductId,
+            planningContext.Epics.Select(static epic => epic.EpicId).ToArray(),
+            cancellationToken);
+
+        foreach (var intent in intents)
+        {
+            if (!TryCreatePlanningDateWriteRequest(intent.EpicId, intent, calendar, out var writeRequest))
+            {
+                throw new InvalidOperationException($"Unable to project planning dates for epic {intent.EpicId} in product {planningContext.ProductId}.");
+            }
+
+            await _tfsClient.UpdateWorkItemPlanningDatesAsync(
+                writeRequest.EpicId,
+                writeRequest.StartDate,
+                writeRequest.TargetDate,
+                cancellationToken);
+        }
+    }
+
+    private static bool SessionStateMatchesActiveScope(PlanningState sessionState, IReadOnlyList<ActiveRoadmapEpic> activeEpics)
+    {
+        if (sessionState.Epics.Count != activeEpics.Count)
+        {
+            return false;
+        }
+
+        var activeEpicIds = activeEpics.Select(static epic => epic.EpicId).OrderBy(static id => id).ToArray();
+        var sessionEpicIds = sessionState.Epics.Select(static epic => epic.EpicId).OrderBy(static id => id).ToArray();
+        return activeEpicIds.SequenceEqual(sessionEpicIds);
+    }
+
+    private static ProductSprintCalendar RequireCalendar(ProductSprintCalendarResolution calendarResolution, int productId)
+    {
+        if (calendarResolution.Calendar is null)
+        {
+            throw new InvalidOperationException(
+                $"Product {productId} does not have an unambiguous sprint calendar required for durable planning intent. {calendarResolution.FailureReason}");
+        }
+
+        return calendarResolution.Calendar;
+    }
+
+    private int ResolvePersistedStartIndex(
+        int epicId,
+        ProductPlanningIntentRecord intent,
+        ProductSprintCalendarResolution calendarResolution)
+    {
+        var calendar = RequireCalendar(calendarResolution, intent.ProductId);
+        if (!calendar.StartIndexByDate.TryGetValue(intent.StartSprintStartDateUtc.Date, out var startIndex))
+        {
+            throw new InvalidOperationException(
+                $"Persisted planning intent for epic {epicId} in product {intent.ProductId} references missing sprint boundary {intent.StartSprintStartDateUtc:yyyy-MM-dd}."
+            );
+        }
+
+        return startIndex;
+    }
+
+    private static ProductPlanningIntentRecord MapToIntentRecord(
+        int productId,
+        PlanningEpicState epic,
+        ProductSprintCalendar calendar,
+        DateTime updatedAtUtc)
+    {
+        if (epic.PlannedStartSprintIndex < 0 || epic.PlannedStartSprintIndex >= calendar.Sprints.Count)
+        {
+            throw new InvalidOperationException(
+                $"Epic {epic.EpicId} references missing sprint index {epic.PlannedStartSprintIndex} in the canonical calendar.");
+        }
+
+        if (epic.DurationInSprints <= 0)
+        {
+            throw new InvalidOperationException($"Epic {epic.EpicId} has invalid duration {epic.DurationInSprints}.");
+        }
+
+        return new ProductPlanningIntentRecord(
+            productId,
+            epic.EpicId,
+            calendar.Sprints[epic.PlannedStartSprintIndex].StartDateUtc,
+            epic.DurationInSprints,
+            RecoveryStatus: null,
+            UpdatedAtUtc: updatedAtUtc);
+    }
+
+    private static bool TryCreatePlanningDateWriteRequest(
+        int epicId,
+        ProductPlanningIntentRecord intent,
+        ProductSprintCalendar calendar,
+        out PlanningDateWriteRequest writeRequest)
+    {
+        writeRequest = default;
+
+        if (!calendar.StartIndexByDate.TryGetValue(intent.StartSprintStartDateUtc.Date, out var startIndex))
+        {
+            return false;
+        }
+
+        var finalSprintIndex = startIndex + intent.DurationInSprints - 1;
+        if (finalSprintIndex < startIndex || finalSprintIndex >= calendar.Sprints.Count)
+        {
+            return false;
+        }
+
+        var startSprint = calendar.Sprints[startIndex];
+        var finalSprint = calendar.Sprints[finalSprintIndex];
+        writeRequest = new PlanningDateWriteRequest(
+            epicId,
+            DateOnly.FromDateTime(startSprint.StartDateUtc),
+            DateOnly.FromDateTime(finalSprint.EndExclusiveDateUtc.AddDays(-1)));
+        return true;
+    }
+
+    private bool TryRecoverIntent(
+        int productId,
+        ActiveRoadmapEpic epic,
+        ProductSprintCalendarResolution calendarResolution,
+        DateTime recoveredAtUtc,
+        out ProductPlanningIntentRecord? recoveredIntent,
+        out int recoveredStartIndex,
+        out PlanningDateWriteRequest? planningDateWriteRequest)
+    {
+        recoveredIntent = null;
+        recoveredStartIndex = -1;
+        planningDateWriteRequest = null;
+
+        var calendar = calendarResolution.Calendar;
+        if (calendar is null)
+        {
+            return false;
+        }
+
+        var startDate = epic.WorkItem.StartDate;
+        var targetDate = epic.WorkItem.TargetDate;
+        if (!startDate.HasValue || !targetDate.HasValue)
+        {
+            return false;
+        }
+
+        var startDateOnly = DateOnly.FromDateTime(startDate.Value.UtcDateTime.Date);
+        var targetDateOnly = DateOnly.FromDateTime(targetDate.Value.UtcDateTime.Date);
+
+        if (startDateOnly < LegacyInvalidStartDateCutoff || targetDateOnly < startDateOnly)
+        {
+            return false;
+        }
+
+        if (!TryFindSprintContainingDate(calendar, startDateOnly, out var startSprintIndex) ||
+            !TryFindSprintContainingDate(calendar, targetDateOnly, out var endSprintIndex))
+        {
+            return false;
+        }
+
+        var durationInSprints = endSprintIndex - startSprintIndex + 1;
+        if (durationInSprints < 1)
+        {
+            return false;
+        }
+
+        var startSprint = calendar.Sprints[startSprintIndex];
+        var endSprint = calendar.Sprints[endSprintIndex];
+        var exactRecovery =
+            startDateOnly == DateOnly.FromDateTime(startSprint.StartDateUtc) &&
+            targetDateOnly == DateOnly.FromDateTime(endSprint.EndExclusiveDateUtc.AddDays(-1));
+
+        var recoveryStatus = exactRecovery
+            ? ProductPlanningRecoveryStatus.RecoveredExact
+            : ProductPlanningRecoveryStatus.RecoveredWithNormalization;
+
+        recoveredIntent = new ProductPlanningIntentRecord(
+            productId,
+            epic.EpicId,
+            startSprint.StartDateUtc,
+            durationInSprints,
+            recoveryStatus,
+            recoveredAtUtc);
+        recoveredStartIndex = startSprintIndex;
+
+        if (!exactRecovery)
+        {
+            planningDateWriteRequest = new PlanningDateWriteRequest(
+                epic.EpicId,
+                DateOnly.FromDateTime(startSprint.StartDateUtc),
+                DateOnly.FromDateTime(endSprint.EndExclusiveDateUtc.AddDays(-1)));
+        }
+
+        return true;
+    }
+
+    private static bool TryFindSprintContainingDate(ProductSprintCalendar calendar, DateOnly date, out int sprintIndex)
+    {
+        for (var index = 0; index < calendar.Sprints.Count; index++)
+        {
+            var sprint = calendar.Sprints[index];
+            var startDate = DateOnly.FromDateTime(sprint.StartDateUtc);
+            var endDateInclusive = DateOnly.FromDateTime(sprint.EndExclusiveDateUtc.AddDays(-1));
+            if (date >= startDate && date <= endDateInclusive)
+            {
+                sprintIndex = index;
+                return true;
+            }
+        }
+
+        sprintIndex = -1;
+        return false;
+    }
+
+    private async Task<ProductSprintCalendarResolution> ResolveCalendarAsync(ProductDto product, CancellationToken cancellationToken)
+    {
+        if (product.TeamIds.Count == 0)
+        {
+            return ProductSprintCalendarResolution.Failed("Product has no linked teams.");
+        }
+
+        var windows = new Dictionary<(DateTime Start, DateTime EndExclusive), ProductSprintWindow>();
+        foreach (var teamId in product.TeamIds.Distinct().OrderBy(static teamId => teamId))
+        {
+            var teamSprints = await _sprintRepository.GetSprintsForTeamAsync(teamId, cancellationToken);
+            foreach (var sprint in teamSprints)
+            {
+                if (!sprint.StartUtc.HasValue || !sprint.EndUtc.HasValue)
+                {
+                    continue;
+                }
+
+                var startDateUtc = sprint.StartUtc.Value.UtcDateTime.Date;
+                var endExclusiveDateUtc = sprint.EndUtc.Value.UtcDateTime.Date;
+                if (endExclusiveDateUtc <= startDateUtc)
+                {
+                    return ProductSprintCalendarResolution.Failed(
+                        $"Sprint '{sprint.Name}' for team {teamId} has invalid boundaries {startDateUtc:yyyy-MM-dd}..{endExclusiveDateUtc:yyyy-MM-dd}.");
+                }
+
+                var key = (startDateUtc, endExclusiveDateUtc);
+                if (!windows.ContainsKey(key))
+                {
+                    windows.Add(key, new ProductSprintWindow(startDateUtc, endExclusiveDateUtc));
+                }
+            }
+        }
+
+        if (windows.Count == 0)
+        {
+            return ProductSprintCalendarResolution.Failed("No sprint windows with non-null boundaries were available for the product.");
+        }
+
+        var orderedWindows = windows.Values
+            .OrderBy(static window => window.StartDateUtc)
+            .ThenBy(static window => window.EndExclusiveDateUtc)
+            .ToArray();
+
+        for (var index = 1; index < orderedWindows.Length; index++)
+        {
+            var previous = orderedWindows[index - 1];
+            var current = orderedWindows[index];
+            if (current.StartDateUtc < previous.EndExclusiveDateUtc)
+            {
+                return ProductSprintCalendarResolution.Failed(
+                    $"Product sprint calendar is ambiguous because {previous.StartDateUtc:yyyy-MM-dd}..{previous.EndExclusiveDateUtc:yyyy-MM-dd} overlaps {current.StartDateUtc:yyyy-MM-dd}..{current.EndExclusiveDateUtc:yyyy-MM-dd}.");
+            }
+        }
+
+        return ProductSprintCalendarResolution.Succeeded(new ProductSprintCalendar(
+            orderedWindows,
+            orderedWindows
+                .Select((window, index) => new KeyValuePair<DateTime, int>(window.StartDateUtc.Date, index))
+                .ToDictionary()));
     }
 
     private ProductPlanningBoardDto CreateReadModel(
@@ -299,11 +666,28 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
     private sealed record PlanningContext(
         int ProductId,
         string ProductName,
-        IReadOnlyList<BootstrapEpic> Epics,
-        PlanningState BootstrapState);
+        IReadOnlyList<ActiveRoadmapEpic> Epics,
+        PlanningState BaseState,
+        ProductSprintCalendarResolution CalendarResolution);
 
-    private sealed record BootstrapEpic(
+    private sealed record ActiveRoadmapEpic(
         int EpicId,
         string EpicTitle,
-        int RoadmapOrder);
+        int RoadmapOrder,
+        WorkItemDto WorkItem);
+
+    private sealed record ProductSprintCalendarResolution(ProductSprintCalendar? Calendar, string? FailureReason)
+    {
+        public static ProductSprintCalendarResolution Succeeded(ProductSprintCalendar calendar) => new(calendar, null);
+
+        public static ProductSprintCalendarResolution Failed(string reason) => new(null, reason);
+    }
+
+    private sealed record ProductSprintCalendar(
+        IReadOnlyList<ProductSprintWindow> Sprints,
+        IReadOnlyDictionary<DateTime, int> StartIndexByDate);
+
+    private sealed record ProductSprintWindow(DateTime StartDateUtc, DateTime EndExclusiveDateUtc);
+
+    private readonly record struct PlanningDateWriteRequest(int EpicId, DateOnly StartDate, DateOnly TargetDate);
 }
