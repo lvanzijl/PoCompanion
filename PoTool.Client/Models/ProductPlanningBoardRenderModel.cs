@@ -56,8 +56,8 @@ public static class ProductPlanningBoardRenderModelFactory
                 return new ProductPlanningTrackRow(
                     track.TrackIndex,
                     track.IsMainLane,
-                    track.IsMainLane ? "Main lane" : $"Parallel track {track.TrackIndex}",
-                    track.IsMainLane ? "Primary roadmap sequence" : "Derived secondary execution track",
+                    track.IsMainLane ? "Main plan" : $"Parallel lane {track.TrackIndex}",
+                    track.IsMainLane ? "Primary sequence on this board" : "Parallel work derived automatically from the plan",
                     epics);
             })
             .ToArray();
@@ -117,23 +117,23 @@ public static class ProductPlanningBoardRenderModelFactory
         {
             return (
                 ProductPlanningBoardStatusKind.Warning,
-                "Planning projection blocked",
-                $"{blockingDiagnosticCount} blocking planning diagnostic(s) need attention before the board can be trusted for reliable projection.");
+                "Plan needs attention",
+                $"{blockingDiagnosticCount} blocking issue(s) affect the plan or the dates reported to TFS.");
         }
 
         if (hasOperationalDiagnostics)
         {
             return (
                 ProductPlanningBoardStatusKind.Warning,
-                "Operational diagnostics present",
-                $"{recoveredEpicCount} recovered epic(s) and {driftedEpicCount} drifted epic(s) are being surfaced from the current planning board state.");
+                "Check reporting details",
+                $"{recoveredEpicCount} epic(s) were imported from existing data and {driftedEpicCount} epic(s) are out of sync with TFS.");
         }
 
         if (hasValidationIssues)
         {
             return (
                 ProductPlanningBoardStatusKind.Warning,
-                "Validation issues present",
+                "Planning issues present",
                 $"{board.Issues.Count} issue(s) need attention before the plan is considered stable.");
         }
 
@@ -141,13 +141,13 @@ public static class ProductPlanningBoardRenderModelFactory
         {
             return (
                 ProductPlanningBoardStatusKind.Changed,
-                "Working session updated",
-                $"{board.ChangedEpicIds.Count} changed epic(s) and {board.AffectedEpicIds.Count} affected epic(s) are highlighted from the latest operation.");
+                "Plan updated",
+                $"{board.ChangedEpicIds.Count} changed epic(s) and {board.AffectedEpicIds.Count} affected epic(s) are highlighted from your latest action.");
         }
 
         return (
             ProductPlanningBoardStatusKind.Stable,
-            "Board matches current durable base",
-            "No recent operation deltas are highlighted, and the board is ready for the next explicit planning decision.");
+            "Saved plan loaded",
+            "This board defines the plan, and no recent changes are highlighted.");
     }
 }
