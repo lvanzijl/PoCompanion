@@ -32,6 +32,26 @@ public sealed class PlanBoardReconciliationAuditTests
         StringAssert.Contains(content, "Change priority order");
         StringAssert.Contains(content, "Your plan");
         StringAssert.Contains(content, "Calculated schedule");
+        StringAssert.Contains(content, "Quick move");
+        StringAssert.Contains(content, "Exact move");
+        StringAssert.Contains(content, "Apply exact move");
+    }
+
+    [TestMethod]
+    public void PlanBoard_QuickMoveControls_StayOnDefaultEndpointAndSupportRepeatFlow()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var pagePath = Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "PlanBoard.razor");
+        var content = File.ReadAllText(pagePath);
+
+        StringAssert.Contains(content, "ExecuteQuickSpacingAsync(epic.EpicId, -2)");
+        StringAssert.Contains(content, "ExecuteQuickSpacingAsync(epic.EpicId, -1)");
+        StringAssert.Contains(content, "ExecuteQuickSpacingAsync(epic.EpicId, 1)");
+        StringAssert.Contains(content, "ExecuteQuickSpacingAsync(epic.EpicId, 2)");
+        StringAssert.Contains(content, "RepeatLastSpacingAsync(epic.EpicId)");
+        StringAssert.Contains(content, "GetRepeatLastMoveLabel(lastSpacingDelta)");
+        StringAssert.Contains(content, "ProductPlanningBoardClientService.AdjustSpacingBeforeAsync");
+        StringAssert.Contains(content, "Latest board change:");
     }
 
     private static string GetRepositoryRoot()

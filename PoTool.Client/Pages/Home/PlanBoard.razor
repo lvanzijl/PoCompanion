@@ -377,6 +377,13 @@
                                                         </MudAlert>
                                                     }
 
+                                                    @if (epic.IsChanged && !string.IsNullOrWhiteSpace(renderModel.LatestChangeDetail))
+                                                    {
+                                                        <MudAlert Severity="Severity.Success" Variant="Variant.Text" Dense="true" Class="planning-board-change-alert planning-board-change-alert--inline">
+                                                            Latest board change: @renderModel.LatestChangeDetail
+                                                        </MudAlert>
+                                                    }
+
                                                     @if (epic.Issues.Count > 0)
                                                     {
                                                         <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true">
@@ -405,10 +412,10 @@
                                                         </MudAlert>
                                                     }
 
-                                                    @if (_epicActionMessages.TryGetValue(epic.EpicId, out var actionMessage) && !string.IsNullOrWhiteSpace(actionMessage))
+                                                    @if (_epicActionFeedback.TryGetValue(epic.EpicId, out var actionFeedback) && !string.IsNullOrWhiteSpace(actionFeedback.Message))
                                                     {
-                                                        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
-                                                            @actionMessage
+                                                        <MudAlert Severity="@actionFeedback.Severity" Variant="Variant.Outlined" Dense="true">
+                                                            @actionFeedback.Message
                                                         </MudAlert>
                                                     }
 
@@ -424,6 +431,45 @@
                                                             <MudText Typo="Typo.body2" Color="Color.Secondary">
                                                                 Default move: this Epic changes first, and following work shifts with it automatically.
                                                             </MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Quick move</MudText>
+                                                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="planning-board-quick-actions">
+                                                                <CompactButton ButtonRole="ButtonRole.Action"
+                                                                               Icon="@Icons.Material.Filled.Remove"
+                                                                               Disabled="@_isBusy"
+                                                                               OnClick="@(_ => ExecuteQuickSpacingAsync(epic.EpicId, -2))">
+                                                                    -2 sprints
+                                                                </CompactButton>
+                                                                <CompactButton ButtonRole="ButtonRole.Action"
+                                                                               Icon="@Icons.Material.Filled.Remove"
+                                                                               Disabled="@_isBusy"
+                                                                               OnClick="@(_ => ExecuteQuickSpacingAsync(epic.EpicId, -1))">
+                                                                    -1 sprint
+                                                                </CompactButton>
+                                                                <CompactButton ButtonRole="ButtonRole.Action"
+                                                                               Icon="@Icons.Material.Filled.Add"
+                                                                               Disabled="@_isBusy"
+                                                                               OnClick="@(_ => ExecuteQuickSpacingAsync(epic.EpicId, 1))">
+                                                                    +1 sprint
+                                                                </CompactButton>
+                                                                <CompactButton ButtonRole="ButtonRole.Action"
+                                                                               Icon="@Icons.Material.Filled.Add"
+                                                                               Disabled="@_isBusy"
+                                                                               OnClick="@(_ => ExecuteQuickSpacingAsync(epic.EpicId, 2))">
+                                                                    +2 sprints
+                                                                </CompactButton>
+                                                                @if (GetActionState(epic.EpicId).LastSpacingDelta is int lastSpacingDelta)
+                                                                {
+                                                                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                                                                   Icon="@Icons.Material.Filled.Repeat"
+                                                                                   Disabled="@_isBusy"
+                                                                                   OnClick="@(_ => RepeatLastSpacingAsync(epic.EpicId))">
+                                                                        @GetRepeatLastMoveLabel(lastSpacingDelta)
+                                                                    </CompactButton>
+                                                                }
+                                                            </MudStack>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">One click applies one sprint adjustment immediately. Use the same quick button again to repeat the move.</MudText>
+                                                            <MudDivider Class="my-1" />
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Exact move</MudText>
                                                             <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End" Wrap="Wrap.Wrap">
                                                                 <MudNumericField T="int"
                                                                                  Label="Sprint change"
@@ -431,15 +477,15 @@
                                                                                  Margin="Margin.Dense"
                                                                                  Value="@GetActionState(epic.EpicId).SpacingDelta"
                                                                                  ValueChanged="@(value => SetSpacingDelta(epic.EpicId, value))"
-                                                                                 Class="planning-board-number-field" />
-                                                                <CompactButton ButtonRole="ButtonRole.Action"
+                                                                                 Class="planning-board-number-field planning-board-number-field--secondary" />
+                                                                <CompactButton ButtonRole="ButtonRole.Utility"
                                                                                Icon="@Icons.Material.Filled.SpaceBar"
                                                                                Disabled="@_isBusy"
                                                                                OnClick="@(_ => ExecuteAdjustSpacingAsync(epic.EpicId))">
-                                                                    Move Epic
+                                                                    Apply exact move
                                                                 </CompactButton>
                                                             </MudStack>
-                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Use a positive or negative sprint change. A change of zero has no effect and is not allowed.</MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Use a positive or negative sprint change when you need a larger exact adjustment.</MudText>
                                                         </MudStack>
                                                     </MudPaper>
 
@@ -579,7 +625,10 @@
         public int SpacingDelta { get; set; } = 1;
         public int ShiftDelta { get; set; } = 1;
         public int ReorderTarget { get; set; } = 1;
+        public int? LastSpacingDelta { get; set; }
     }
+
+    private readonly record struct EpicActionFeedback(string Message, Severity Severity);
 
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<ProjectDto> _projects = new();
@@ -595,7 +644,7 @@
     private IDisposable? _filterSubscription;
     private BoardFeedback? _boardFeedback;
     private readonly Dictionary<int, EpicActionState> _epicActionState = new();
-    private readonly Dictionary<int, string> _epicActionMessages = new();
+    private readonly Dictionary<int, EpicActionFeedback> _epicActionFeedback = new();
 
     private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
     private string? _boardFeedbackMessage => _boardFeedback?.Message;
@@ -732,16 +781,7 @@
     private async Task ExecuteAdjustSpacingAsync(int epicId)
     {
         var state = GetActionState(epicId);
-        if (!ValidateDelta(epicId, state.SpacingDelta, "Move Epic requires a non-zero sprint change."))
-        {
-            return;
-        }
-
-        await ExecuteEpicOperationAsync(
-            epicId,
-            () => ProductPlanningBoardClientService.AdjustSpacingBeforeAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, state.SpacingDelta)),
-            "Move Epic",
-            new BoardFeedback("Epic moved. Following work shifted automatically where needed.", Severity.Success));
+        await ExecuteDefaultMoveAsync(epicId, state.SpacingDelta, "Move Epic requires a non-zero sprint change.");
     }
 
     private async Task ExecuteShiftPlanAsync(int epicId)
@@ -760,7 +800,7 @@
         var state = GetActionState(epicId);
         if (state.ReorderTarget < 1)
         {
-            _epicActionMessages[epicId] = "Change priority order requires a value of 1 or higher.";
+            SetEpicActionFeedback(epicId, "Change priority order requires a value of 1 or higher.", Severity.Warning);
             return;
         }
 
@@ -780,7 +820,47 @@
             "Update TFS dates",
             new BoardFeedback("TFS dates were updated from the plan shown on this board.", Severity.Success));
 
-    private async Task ExecuteEpicOperationAsync(
+    private async Task ExecuteQuickSpacingAsync(int epicId, int delta)
+    {
+        GetActionState(epicId).SpacingDelta = delta;
+        await ExecuteDefaultMoveAsync(epicId, delta, "Quick move requires a non-zero sprint change.");
+    }
+
+    private async Task RepeatLastSpacingAsync(int epicId)
+    {
+        var state = GetActionState(epicId);
+        if (!state.LastSpacingDelta.HasValue)
+        {
+            SetEpicActionFeedback(epicId, "Repeat last move is only available after a successful move.", Severity.Info);
+            return;
+        }
+
+        await ExecuteDefaultMoveAsync(epicId, state.LastSpacingDelta.Value, "Repeat last move requires a non-zero sprint change.");
+    }
+
+    private async Task ExecuteDefaultMoveAsync(int epicId, int delta, string validationMessage)
+    {
+        if (!ValidateDelta(epicId, delta, validationMessage))
+        {
+            return;
+        }
+
+        var success = await ExecuteEpicOperationAsync(
+            epicId,
+            () => ProductPlanningBoardClientService.AdjustSpacingBeforeAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, delta)),
+            "Move Epic",
+            new BoardFeedback("Epic moved. Following work shifted automatically where needed.", Severity.Success));
+
+        if (success)
+        {
+            var state = GetActionState(epicId);
+            state.SpacingDelta = delta;
+            state.LastSpacingDelta = delta;
+            SetEpicActionFeedback(epicId, BuildQuickMoveFeedback(delta), Severity.Success);
+        }
+    }
+
+    private async Task<bool> ExecuteEpicOperationAsync(
         int epicId,
         Func<Task<ProductPlanningBoardClientResult>> operation,
         string actionName,
@@ -788,14 +868,14 @@
     {
         if (!_selectedProductId.HasValue || _isBusy)
         {
-            return;
+            return false;
         }
 
         _isBusy = true;
         try
         {
             var result = await operation();
-            HandleBoardResult(
+            return HandleBoardResult(
                 result,
                 $"{actionName} failed.",
                 epicId,
@@ -807,7 +887,7 @@
         }
     }
 
-    private void HandleBoardResult(ProductPlanningBoardClientResult result, string fallbackError, int? epicId, BoardFeedback? successFeedback)
+    private bool HandleBoardResult(ProductPlanningBoardClientResult result, string fallbackError, int? epicId, BoardFeedback? successFeedback)
     {
         if (result.IsSuccess && result.Board is not null)
         {
@@ -818,22 +898,24 @@
             _boardFeedback = successFeedback;
             if (epicId.HasValue)
             {
-                _epicActionMessages.Remove(epicId.Value);
+                _epicActionFeedback.Remove(epicId.Value);
             }
 
-            return;
+            return true;
         }
 
         var message = string.IsNullOrWhiteSpace(result.ErrorMessage) ? fallbackError : result.ErrorMessage;
         _boardFeedback = new BoardFeedback(message!, result.IsNotFound ? Severity.Warning : Severity.Error);
         if (epicId.HasValue)
         {
-            _epicActionMessages[epicId.Value] = message!;
+            SetEpicActionFeedback(epicId.Value, message!, result.IsNotFound ? Severity.Warning : Severity.Error);
         }
 
         _boardState = result.IsNotFound
             ? DataStateViewModel<ProductPlanningBoardDto>.Invalid(message)
             : DataStateViewModel<ProductPlanningBoardDto>.Failed(message);
+
+        return false;
     }
 
     private async Task LoadBoardAsync(int productId, BoardFeedback? successFeedback)
@@ -874,9 +956,9 @@
             _epicActionState.Remove(staleEpicId);
         }
 
-        foreach (var staleEpicId in _epicActionMessages.Keys.Where(epicId => !activeEpicIds.Contains(epicId)).ToArray())
+        foreach (var staleEpicId in _epicActionFeedback.Keys.Where(epicId => !activeEpicIds.Contains(epicId)).ToArray())
         {
-            _epicActionMessages.Remove(staleEpicId);
+            _epicActionFeedback.Remove(staleEpicId);
         }
     }
 
@@ -896,36 +978,58 @@
     {
         if (delta != 0)
         {
-            _epicActionMessages.Remove(epicId);
+            _epicActionFeedback.Remove(epicId);
             return true;
         }
 
-        _epicActionMessages[epicId] = message;
+        SetEpicActionFeedback(epicId, message, Severity.Warning);
         return false;
     }
 
     private void SetMoveDelta(int epicId, int value)
     {
         GetActionState(epicId).MoveDelta = value;
-        _epicActionMessages.Remove(epicId);
+        _epicActionFeedback.Remove(epicId);
     }
 
     private void SetSpacingDelta(int epicId, int value)
     {
         GetActionState(epicId).SpacingDelta = value;
-        _epicActionMessages.Remove(epicId);
+        _epicActionFeedback.Remove(epicId);
     }
 
     private void SetShiftDelta(int epicId, int value)
     {
         GetActionState(epicId).ShiftDelta = value;
-        _epicActionMessages.Remove(epicId);
+        _epicActionFeedback.Remove(epicId);
     }
 
     private void SetReorderTarget(int epicId, int value)
     {
         GetActionState(epicId).ReorderTarget = value;
-        _epicActionMessages.Remove(epicId);
+        _epicActionFeedback.Remove(epicId);
+    }
+
+    private void SetEpicActionFeedback(int epicId, string message, Severity severity)
+        => _epicActionFeedback[epicId] = new EpicActionFeedback(message, severity);
+
+    private string BuildQuickMoveFeedback(int delta)
+    {
+        var latestChangeSummary = _renderModel is not null
+            && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeTitle)
+            && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeDetail)
+                ? $"{_renderModel.LatestChangeTitle}. {_renderModel.LatestChangeDetail}"
+                : "Review the updated and shifted Epic cards below.";
+
+        return $"Applied {FormatSprintDelta(delta)}. {latestChangeSummary}";
+    }
+
+    private static string GetRepeatLastMoveLabel(int delta) => $"Repeat {FormatSprintDelta(delta)}";
+
+    private static string FormatSprintDelta(int delta)
+    {
+        var sprintLabel = Math.Abs(delta) == 1 ? "sprint" : "sprints";
+        return $"{(delta > 0 ? "+" : string.Empty)}{delta} {sprintLabel}";
     }
 
     private string GetTrackGridStyle(int maxSprintCount) => $"grid-template-columns: repeat({Math.Max(1, maxSprintCount)}, minmax(12rem, 1fr));";
@@ -1158,7 +1262,7 @@
         _renderModel = null;
         _boardFeedback = null;
         _epicActionState.Clear();
-        _epicActionMessages.Clear();
+        _epicActionFeedback.Clear();
     }
 
     private static bool HasPlanningGap(ProjectPlanningSummaryDto projectPlanningSummary)

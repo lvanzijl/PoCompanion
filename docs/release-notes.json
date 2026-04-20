@@ -2,6 +2,14 @@
   {
     "date": "2026-04-20",
     "type": "Changed",
+    "title": "Plan Board now supports one-click sprint nudges and repeat moves for faster reshaping",
+    "impact": "The /planning/plan-board workspace now keeps the default \"Move Epic\" behavior but adds visible one-click -2, -1, +1, and +2 sprint controls, leaves exact numeric entry available as a secondary path, keeps a repeat-last-move action on the same Epic, and mirrors the latest changed/shifted summary directly on updated Epic cards so consecutive planning adjustments take less typing and less scanning.",
+    "area": "Planning / Plan Board / Interaction Speed",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-20",
+    "type": "Changed",
     "title": "Plan Board now uses one default move action and hides precision overrides until needed",
     "impact": "The /planning/plan-board workspace now promotes one primary \"Move Epic\" action that moves the selected Epic and shifts following work by default, moves one-off scheduling overrides into collapsed advanced options, summarizes what changed after each move, and separates \"Your plan\" from the calculated schedule so planning stays precise without forcing as many upfront interaction choices.",
     "area": "Planning / Plan Board / Interaction Speed",
