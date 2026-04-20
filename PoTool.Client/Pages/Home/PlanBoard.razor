@@ -414,7 +414,7 @@
 
                                                     @if (_epicActionFeedback.TryGetValue(epic.EpicId, out var actionFeedback) && !string.IsNullOrWhiteSpace(actionFeedback.Message))
                                                     {
-                                                        <MudAlert Severity="@actionFeedback.Severity" Variant="Variant.Outlined" Dense="true">
+                                                        <MudAlert Severity="@actionFeedback.Level" Variant="Variant.Outlined" Dense="true">
                                                             @actionFeedback.Message
                                                         </MudAlert>
                                                     }
@@ -628,7 +628,7 @@
         public int? LastSpacingDelta { get; set; }
     }
 
-    private readonly record struct EpicActionFeedback(string Message, Severity Severity);
+    private readonly record struct EpicActionFeedback(string Message, Severity Level);
 
     private List<BreadcrumbItem> _breadcrumbs = new();
     private List<ProjectDto> _projects = new();
