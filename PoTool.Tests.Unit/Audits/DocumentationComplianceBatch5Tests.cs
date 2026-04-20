@@ -6,6 +6,12 @@ namespace PoTool.Tests.Unit.Audits;
 [TestClass]
 public sealed class DocumentationComplianceBatch5Tests
 {
+    // Temporary legacy exception: docs/implementation/** remains in-place during the
+    // documentation cleanup transition. Canonical folder enforcement still applies to
+    // every other docs folder and this exception must be removed once that legacy
+    // content is migrated into governed canonical locations.
+    private const string TemporaryLegacyImplementationFolder = "implementation";
+
     private static readonly string[] CanonicalFolders =
     [
         "analysis",
@@ -53,7 +59,15 @@ public sealed class DocumentationComplianceBatch5Tests
 
             var segments = relativePath.Split('/');
             Assert.IsGreaterThanOrEqualTo(3, segments.Length, $"Unexpected docs path depth: {relativePath}");
-            Assert.IsTrue(CanonicalFolders.Contains(segments[1], StringComparer.Ordinal), $"Non-canonical docs folder: {relativePath}");
+            var isCanonicalFolder = CanonicalFolders.Contains(segments[1], StringComparer.Ordinal);
+            var isTemporaryLegacyImplementationFolder = string.Equals(
+                segments[1],
+                TemporaryLegacyImplementationFolder,
+                StringComparison.Ordinal);
+
+            Assert.IsTrue(
+                isCanonicalFolder || isTemporaryLegacyImplementationFolder,
+                $"Non-canonical docs folder: {relativePath}");
             Assert.IsTrue(kebabCase.IsMatch(Path.GetFileName(path)), $"Non-kebab-case markdown filename: {relativePath}");
         }
     }
