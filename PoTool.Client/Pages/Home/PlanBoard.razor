@@ -194,7 +194,9 @@
                         <MudText Typo="Typo.body2" Color="Color.Secondary">@renderModel.StatusDetail</MudText>
 
                         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true" Class="planning-board-authority-banner">
-                            @ProductPlanningBoardUxText.AuthoritySummary
+                            @(renderModel.HasBlockingDiagnostics
+                                ? ProductPlanningBoardUxText.AuthoritySummaryWithBlockingIssues
+                                : ProductPlanningBoardUxText.AuthoritySummary)
                         </MudAlert>
 
                         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
@@ -410,7 +412,7 @@
                                                                         Move Epic
                                                                     </CompactButton>
                                                                 </MudStack>
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">This will only move this Epic. Use a positive or negative sprint change; zero is rejected locally.</MudText>
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">This will only move this Epic. Use a positive or negative sprint change; a change of zero has no effect and is not allowed.</MudText>
                                                             </MudStack>
                                                         </MudItem>
                                                         <MudItem xs="12" md="6">

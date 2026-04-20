@@ -4,8 +4,23 @@ namespace PoTool.Client.Models;
 
 public static class ProductPlanningBoardUxText
 {
+    private static readonly IReadOnlyList<(string From, string To)> VisibleTextReplacements =
+    [
+        ("Recovered + normalized", "Imported from existing data and cleaned up"),
+        ("TFS projection", "TFS reported dates"),
+        ("internal intent", "saved plan"),
+        ("Internal intent", "Saved plan"),
+        ("Recovered", "Imported from existing data"),
+        ("recovered", "imported from existing data"),
+        ("Projection", "Reported dates"),
+        ("projection", "reported dates"),
+        ("durable", "saved"),
+        ("Durable", "Saved")
+    ];
+
     public const string HeaderSummary = "Product-scoped epic planning with explicit actions and automatically derived parallel work.";
     public const string AuthoritySummary = "This board defines your plan. Dates are written to TFS for reporting.";
+    public const string AuthoritySummaryWithBlockingIssues = "This board defines your plan. The dates reported to TFS need attention in the blocking issues below.";
 
     public static string TranslateVisibleText(string text)
     {
@@ -14,17 +29,13 @@ public static class ProductPlanningBoardUxText
             return string.Empty;
         }
 
-        return text
-            .Replace("TFS projection", "TFS reported dates", StringComparison.Ordinal)
-            .Replace("Projection", "Reported dates", StringComparison.Ordinal)
-            .Replace("projection", "reported dates", StringComparison.Ordinal)
-            .Replace("internal intent", "saved plan", StringComparison.Ordinal)
-            .Replace("Internal intent", "Saved plan", StringComparison.Ordinal)
-            .Replace("Recovered + normalized", "Imported from existing data and cleaned up", StringComparison.Ordinal)
-            .Replace("Recovered", "Imported from existing data", StringComparison.Ordinal)
-            .Replace("recovered", "imported from existing data", StringComparison.Ordinal)
-            .Replace("durable", "saved", StringComparison.Ordinal)
-            .Replace("Durable", "Saved", StringComparison.Ordinal);
+        var translated = text;
+        foreach (var (from, to) in VisibleTextReplacements.OrderByDescending(static replacement => replacement.From.Length))
+        {
+            translated = translated.Replace(from, to, StringComparison.Ordinal);
+        }
+
+        return translated;
     }
 
     public static string GetIntentSourceLabel(PlanningBoardEpicItemDto epic)

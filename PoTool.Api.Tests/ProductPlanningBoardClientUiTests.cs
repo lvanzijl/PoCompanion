@@ -233,11 +233,9 @@ public sealed class ProductPlanningBoardClientUiTests
     [TestMethod]
     public void ProductPlanningBoardUxText_TranslateVisibleText_UsesPlanningLanguage()
     {
-        var translated = ProductPlanningBoardUxText.TranslateVisibleText("Recovered projection differs from internal intent and durable state.");
+        var translated = ProductPlanningBoardUxText.TranslateVisibleText("Recovered + normalized projection differs from internal intent and durable state.");
 
-        StringAssert.Contains(translated, "Imported from existing data");
-        StringAssert.Contains(translated, "reported dates");
-        StringAssert.Contains(translated, "saved plan");
+        Assert.AreEqual("Imported from existing data and cleaned up reported dates differs from saved plan and saved state.", translated);
         Assert.IsFalse(translated.Contains("durable", StringComparison.OrdinalIgnoreCase));
     }
 
