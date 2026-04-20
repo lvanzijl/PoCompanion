@@ -196,6 +196,8 @@ public sealed class ProductPlanningBoardClientUiTests
             [
                 new PlanningBoardDiagnosticDto("Error", "CalendarResolutionFailure", "Sprint calendar is ambiguous.", null, true, false)
             ],
+            ChangedEpicIds = [],
+            AffectedEpicIds = [],
             EpicItems =
             [
                 new PlanningBoardEpicItemDto(
