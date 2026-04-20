@@ -28,6 +28,8 @@ public interface IProductPlanningBoardService
     ValueTask<ProductPlanningBoardDto?> ExecuteReorderEpicAsync(int productId, int epicId, int targetRoadmapOrder, CancellationToken cancellationToken = default);
 
     ValueTask<ProductPlanningBoardDto?> ExecuteShiftPlanAsync(int productId, int epicId, int deltaSprints, CancellationToken cancellationToken = default);
+
+    ValueTask<ProductPlanningBoardDto?> ExecuteReconcileProjectionAsync(int productId, int epicId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -130,6 +132,11 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
         return ExecuteAsync(productId, state => _operationService.ShiftPlan(state, epicId, deltaSprints), cancellationToken);
     }
 
+    public ValueTask<ProductPlanningBoardDto?> ExecuteReconcileProjectionAsync(int productId, int epicId, CancellationToken cancellationToken = default)
+    {
+        return ReconcileProjectionAsync(productId, epicId, cancellationToken);
+    }
+
     private async ValueTask<ProductPlanningBoardDto?> BuildAsync(
         int productId,
         bool reset,
@@ -173,6 +180,71 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             result.ValidationIssues,
             result.ChangedEpicIds,
             result.AffectedEpicIds);
+    }
+
+    private async ValueTask<ProductPlanningBoardDto?> ReconcileProjectionAsync(
+        int productId,
+        int epicId,
+        CancellationToken cancellationToken)
+    {
+        var planningContext = await BuildPlanningContextAsync(productId, cancellationToken);
+        if (planningContext is null)
+        {
+            return null;
+        }
+
+        var state = GetOrLoadSessionState(planningContext);
+        if (!planningContext.IntentByEpicId.TryGetValue(epicId, out var intent))
+        {
+            throw new InvalidOperationException(
+                $"Epic {epicId} does not have internal planning intent to reconcile for product {productId}.");
+        }
+
+        if (!planningContext.OperationalStateByEpicId.TryGetValue(epicId, out var operationalState))
+        {
+            throw new InvalidOperationException(
+                $"Epic {epicId} is not available on the planning board for product {productId}.");
+        }
+
+        var driftStatus = operationalState.DriftStatus;
+        if (!driftStatus.HasValue)
+        {
+            throw new InvalidOperationException(
+                $"Epic {epicId} does not currently have planning drift to reconcile for product {productId}.");
+        }
+
+        if (!CanReconcileProjection(driftStatus.Value))
+        {
+            throw new InvalidOperationException(GetReconciliationBlockedMessage(productId, epicId, driftStatus.Value, intent.StartSprintStartDateUtc));
+        }
+
+        var calendar = RequireCalendar(planningContext.CalendarResolution, planningContext.ProductId);
+        var projectionStatus = TryCreatePlanningDateWriteRequest(epicId, intent, calendar, out var writeRequest);
+        if (projectionStatus != PlanningProjectionStatus.Success)
+        {
+            throw new InvalidOperationException(
+                $"Unable to reconcile TFS projection for epic {epicId} in product {productId}. {DescribeProjectionFailure(projectionStatus, intent.StartSprintStartDateUtc)}");
+        }
+
+        var writeSucceeded = await _tfsClient.UpdateWorkItemPlanningDatesAsync(
+            writeRequest.EpicId,
+            writeRequest.StartDate,
+            writeRequest.TargetDate,
+            cancellationToken);
+
+        if (!writeSucceeded)
+        {
+            throw new InvalidOperationException(
+                $"Reconciliation failed because TFS rejected the projected planning dates for epic {epicId} in product {productId}.");
+        }
+
+        var reconciledContext = CreateReconciledPlanningContext(planningContext, epicId, intent, writeRequest);
+        return CreateReadModel(
+            reconciledContext,
+            state,
+            Array.Empty<PlanningValidationIssue>(),
+            Array.Empty<int>(),
+            Array.Empty<int>());
     }
 
     private async ValueTask<PlanningContext?> BuildPlanningContextAsync(int productId, CancellationToken cancellationToken)
@@ -296,12 +368,18 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             ? PlanningState.Empty
             : _recomputeService.RecomputeFrom(new PlanningState(stateEpics), 0);
 
+        var intentByEpicId = persistedIntents
+            .Concat(recoveredIntents)
+            .GroupBy(static intent => intent.EpicId)
+            .ToDictionary(static group => group.Key, static group => group.Last());
+
         return new PlanningContext(
             product.Id,
             product.Name,
             roadmapEpics,
             baseState,
             calendarResolution,
+            intentByEpicId,
             operationalStateByEpicId,
             boardDiagnostics);
     }
@@ -630,12 +708,13 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
 
         var (driftStatus, driftDiagnostics) = DetermineDrift(epic, intent, calendarResolution);
         diagnostics.AddRange(driftDiagnostics);
+        var canReconcileProjection = driftStatus.HasValue && CanReconcileProjection(driftStatus.Value);
 
         return new PlanningEpicOperationalState(
             intentSource,
             intent.RecoveryStatus,
             driftStatus,
-            CanReconcileProjection: false,
+            canReconcileProjection,
             diagnostics);
     }
 
@@ -791,7 +870,8 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                 "Warning",
                 "MissingTfsDates",
                 epic.EpicId,
-                "Internal planning intent exists, but one or both TFS projected dates are missing."));
+                "Internal planning intent exists, but one or both TFS projected dates are missing.",
+                canReconcileProjection: true));
             return (PlanningBoardDriftStatus.MissingTfsDates, diagnostics);
         }
 
@@ -803,7 +883,8 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                 "Warning",
                 "LegacyInvalidTfsDatesIgnored",
                 epic.EpicId,
-                "Current TFS projected dates are legacy-invalid and do not match the internal planning intent projection."));
+                "Current TFS projected dates are legacy-invalid and do not match the internal planning intent projection.",
+                canReconcileProjection: true));
             return (PlanningBoardDriftStatus.LegacyInvalidTfsDates, diagnostics);
         }
 
@@ -813,7 +894,8 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                 "Warning",
                 "StaleTfsProjection",
                 epic.EpicId,
-                $"Current TFS projected dates ({currentStartDate:yyyy-MM-dd} → {currentTargetDate:yyyy-MM-dd}) differ from the internal planning intent projection ({writeRequest.StartDate:yyyy-MM-dd} → {writeRequest.TargetDate:yyyy-MM-dd})."));
+                $"Current TFS projected dates ({currentStartDate:yyyy-MM-dd} → {currentTargetDate:yyyy-MM-dd}) differ from the internal planning intent projection ({writeRequest.StartDate:yyyy-MM-dd} → {writeRequest.TargetDate:yyyy-MM-dd}).",
+                canReconcileProjection: true));
             return (PlanningBoardDriftStatus.TfsProjectionMismatch, diagnostics);
         }
 
@@ -844,6 +926,73 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             PlanningProjectionStatus.InsufficientFutureSprintCoverage => "The canonical sprint calendar does not contain enough future coverage for the requested duration.",
             _ => "The planning projection could not be computed."
         };
+
+    private static bool CanReconcileProjection(PlanningBoardDriftStatus driftStatus)
+        => driftStatus is PlanningBoardDriftStatus.MissingTfsDates
+            or PlanningBoardDriftStatus.TfsProjectionMismatch
+            or PlanningBoardDriftStatus.LegacyInvalidTfsDates;
+
+    private static string GetReconciliationBlockedMessage(
+        int productId,
+        int epicId,
+        PlanningBoardDriftStatus driftStatus,
+        DateTime startSprintStartDateUtc)
+        => driftStatus switch
+        {
+            PlanningBoardDriftStatus.NoDrift => $"Epic {epicId} does not currently have planning drift to reconcile for product {productId}.",
+            PlanningBoardDriftStatus.CalendarResolutionFailure => $"Epic {epicId} cannot be reconciled for product {productId} because the canonical sprint calendar is not currently resolvable.",
+            PlanningBoardDriftStatus.InsufficientFutureSprintCoverage => $"Epic {epicId} cannot be reconciled for product {productId} because the canonical sprint calendar does not have enough future coverage for the persisted intent starting at {startSprintStartDateUtc:yyyy-MM-dd}.",
+            _ => $"Epic {epicId} cannot be reconciled for product {productId}."
+        };
+
+    private PlanningContext CreateReconciledPlanningContext(
+        PlanningContext planningContext,
+        int epicId,
+        ProductPlanningIntentRecord intent,
+        PlanningDateWriteRequest writeRequest)
+    {
+        ActiveRoadmapEpic? updatedEpic = null;
+        var updatedEpics = planningContext.Epics
+            .Select(epic =>
+            {
+                if (epic.EpicId != epicId)
+                {
+                    return epic;
+                }
+
+                updatedEpic = epic with
+                {
+                    WorkItem = epic.WorkItem with
+                    {
+                        StartDate = ToUtcDateTimeOffset(writeRequest.StartDate),
+                        TargetDate = ToUtcDateTimeOffset(writeRequest.TargetDate)
+                    }
+                };
+
+                return updatedEpic;
+            })
+            .ToArray();
+
+        if (updatedEpic is null)
+        {
+            throw new InvalidOperationException(
+                $"Epic {epicId} is not available on the planning board for product {planningContext.ProductId}.");
+        }
+
+        var updatedOperationalStates = new Dictionary<int, PlanningEpicOperationalState>(planningContext.OperationalStateByEpicId)
+        {
+            [epicId] = CreatePersistedOperationalState(updatedEpic, intent, planningContext.CalendarResolution)
+        };
+
+        return planningContext with
+        {
+            Epics = updatedEpics,
+            OperationalStateByEpicId = updatedOperationalStates
+        };
+    }
+
+    private static DateTimeOffset ToUtcDateTimeOffset(DateOnly date)
+        => new(DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc), TimeSpan.Zero);
 
     private ProductPlanningBoardDto CreateReadModel(
         PlanningContext planningContext,
@@ -962,6 +1111,7 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
         IReadOnlyList<ActiveRoadmapEpic> Epics,
         PlanningState BaseState,
         ProductSprintCalendarResolution CalendarResolution,
+        IReadOnlyDictionary<int, ProductPlanningIntentRecord> IntentByEpicId,
         IReadOnlyDictionary<int, PlanningEpicOperationalState> OperationalStateByEpicId,
         IReadOnlyList<PlanningBoardDiagnosticDto> Diagnostics);
 

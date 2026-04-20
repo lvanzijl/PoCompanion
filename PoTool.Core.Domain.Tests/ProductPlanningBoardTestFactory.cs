@@ -312,11 +312,12 @@ internal static class ProductPlanningBoardTestFactory
     internal sealed class RecordingTfsClient : ITfsClient
     {
         public List<(int WorkItemId, DateOnly StartDate, DateOnly TargetDate)> PlanningDateUpdates { get; } = [];
+        public bool UpdateWorkItemPlanningDatesResult { get; set; } = true;
 
         public Task<bool> UpdateWorkItemPlanningDatesAsync(int workItemId, DateOnly startDate, DateOnly targetDate, CancellationToken cancellationToken = default)
         {
             PlanningDateUpdates.Add((workItemId, startDate, targetDate));
-            return Task.FromResult(targetDate >= startDate);
+            return Task.FromResult(UpdateWorkItemPlanningDatesResult && targetDate >= startDate);
         }
 
         public Task<IEnumerable<WorkItemDto>> GetWorkItemsAsync(string areaPath, CancellationToken cancellationToken = default) => throw new NotSupportedException();

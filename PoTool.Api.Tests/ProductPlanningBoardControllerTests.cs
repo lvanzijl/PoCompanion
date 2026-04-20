@@ -87,6 +87,51 @@ public sealed class ProductPlanningBoardControllerTests
     }
 
     [TestMethod]
+    public async Task ReconcileProjection_WithDriftedEpic_ReturnsUpdatedBoard()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+        intentStore.Seed(new ProductPlanningIntentRecord(
+            7,
+            1710,
+            sprints[10][1].StartUtc!.Value.UtcDateTime.Date,
+            2,
+            null,
+            DateTime.UtcNow));
+
+        var controller = new ProductPlanningBoardController(
+            CreateService(
+                new InMemoryProductPlanningSessionStore(),
+                intentStore,
+                new RecordingTfsClient(),
+                [CreateProduct(7, "Roadmap Product", [100], [10])],
+                new Dictionary<int, IReadOnlyList<WorkItemDto>>
+                {
+                    [100] =
+                    [
+                        CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                        CreateWorkItem(
+                            1710,
+                            "Epic",
+                            "Roadmap Epic 1",
+                            100,
+                            1d,
+                            "roadmap",
+                            startDate: sprints[10][3].StartUtc,
+                            targetDate: sprints[10][4].EndUtc!.Value.AddDays(-1))
+                    ]
+                },
+                sprints));
+
+        var board = await Unwrap(controller.ReconcileProjection(7, new ProductPlanningEpicRequest(1710), CancellationToken.None));
+
+        Assert.AreEqual(PlanningBoardDriftStatus.NoDrift, board.EpicItems.Single().DriftStatus);
+        Assert.IsFalse(board.EpicItems.Single().CanReconcileProjection);
+        Assert.IsEmpty(board.ChangedEpicIds);
+        Assert.IsEmpty(board.AffectedEpicIds);
+    }
+
+    [TestMethod]
     public async Task SequentialApiCalls_ReuseSessionState_AndResetClearsIt()
     {
         var controller = CreateController(
@@ -145,7 +190,8 @@ public sealed class ProductPlanningBoardControllerTests
             () => controller.RunInParallel(999, new ProductPlanningEpicRequest(1), CancellationToken.None),
             () => controller.ReturnToMain(999, new ProductPlanningEpicRequest(1), CancellationToken.None),
             () => controller.ReorderEpic(999, new ReorderProductPlanningEpicRequest(1, 1), CancellationToken.None),
-            () => controller.ShiftPlan(999, new ProductPlanningEpicDeltaRequest(1, 1), CancellationToken.None)
+            () => controller.ShiftPlan(999, new ProductPlanningEpicDeltaRequest(1, 1), CancellationToken.None),
+            () => controller.ReconcileProjection(999, new ProductPlanningEpicRequest(1), CancellationToken.None)
         };
 
         foreach (var endpoint in endpoints)
@@ -199,6 +245,51 @@ public sealed class ProductPlanningBoardControllerTests
         var payload = ((ConflictObjectResult)result.Result).Value!;
         var message = payload.GetType().GetProperty("message")!.GetValue(payload) as string;
         StringAssert.Contains(message, "unambiguous sprint calendar");
+    }
+
+    [TestMethod]
+    public async Task ReconcileProjection_WithoutDrift_ReturnsConflictWithMessage()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+        intentStore.Seed(new ProductPlanningIntentRecord(
+            7,
+            1952,
+            sprints[10][1].StartUtc!.Value.UtcDateTime.Date,
+            2,
+            null,
+            DateTime.UtcNow));
+
+        var controller = new ProductPlanningBoardController(
+            CreateService(
+                new InMemoryProductPlanningSessionStore(),
+                intentStore,
+                new RecordingTfsClient(),
+                [CreateProduct(7, "Roadmap Product", [100], [10])],
+                new Dictionary<int, IReadOnlyList<WorkItemDto>>
+                {
+                    [100] =
+                    [
+                        CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                        CreateWorkItem(
+                            1952,
+                            "Epic",
+                            "Roadmap Epic 1",
+                            100,
+                            1d,
+                            "roadmap",
+                            startDate: sprints[10][1].StartUtc,
+                            targetDate: sprints[10][2].EndUtc!.Value.AddDays(-1))
+                    ]
+                },
+                sprints));
+
+        var result = await controller.ReconcileProjection(7, new ProductPlanningEpicRequest(1952), CancellationToken.None);
+
+        Assert.IsInstanceOfType<ConflictObjectResult>(result.Result);
+        var payload = ((ConflictObjectResult)result.Result).Value!;
+        var message = payload.GetType().GetProperty("message")!.GetValue(payload) as string;
+        StringAssert.Contains(message, "does not currently have planning drift");
     }
 
     private static ProductPlanningBoardController CreateController(params WorkItemDto[] workItems)

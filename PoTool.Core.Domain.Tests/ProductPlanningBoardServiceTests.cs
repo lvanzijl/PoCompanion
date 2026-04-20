@@ -590,4 +590,279 @@ public sealed class ProductPlanningBoardServiceTests
 
         Assert.IsNull(board);
     }
+
+    [TestMethod]
+    public async Task ExecuteReconcileProjectionAsync_WhenIntentExistsAndDriftExists_RewritesTfsProjectionWithoutChangingIntent()
+    {
+        var sessionStore = new InMemoryProductPlanningSessionStore();
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var tfsClient = new RecordingTfsClient();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+        var persistedIntent = new ProductPlanningIntentRecord(
+            7,
+            2901,
+            sprints[10][1].StartUtc!.Value.UtcDateTime.Date,
+            2,
+            null,
+            DateTime.UtcNow);
+        intentStore.Seed(persistedIntent);
+
+        var service = CreateService(
+            sessionStore,
+            intentStore,
+            tfsClient,
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(
+                        2901,
+                        "Epic",
+                        "Roadmap Epic 1",
+                        100,
+                        1d,
+                        "roadmap",
+                        startDate: sprints[10][3].StartUtc,
+                        targetDate: sprints[10][4].EndUtc!.Value.AddDays(-1))
+                ]
+            },
+            sprints);
+
+        var board = await service.ExecuteReconcileProjectionAsync(7, 2901);
+        var intentAfter = (await intentStore.GetByProductAsync(7)).Single();
+
+        Assert.IsNotNull(board);
+        Assert.HasCount(1, tfsClient.PlanningDateUpdates);
+        Assert.AreEqual(2901, tfsClient.PlanningDateUpdates[0].WorkItemId);
+        Assert.AreEqual(DateOnly.FromDateTime(sprints[10][1].StartUtc!.Value.UtcDateTime), tfsClient.PlanningDateUpdates[0].StartDate);
+        Assert.AreEqual(DateOnly.FromDateTime(sprints[10][2].EndUtc!.Value.UtcDateTime.AddDays(-1)), tfsClient.PlanningDateUpdates[0].TargetDate);
+
+        var epic = board.EpicItems.Single();
+        Assert.AreEqual(PlanningBoardDriftStatus.NoDrift, epic.DriftStatus);
+        Assert.IsFalse(epic.CanReconcileProjection);
+        Assert.IsEmpty(board.ChangedEpicIds);
+        Assert.IsEmpty(board.AffectedEpicIds);
+        Assert.AreEqual(persistedIntent.StartSprintStartDateUtc, intentAfter.StartSprintStartDateUtc);
+        Assert.AreEqual(persistedIntent.DurationInSprints, intentAfter.DurationInSprints);
+        Assert.AreEqual(persistedIntent.RecoveryStatus, intentAfter.RecoveryStatus);
+        Assert.AreEqual(persistedIntent.UpdatedAtUtc, intentAfter.UpdatedAtUtc);
+    }
+
+    [TestMethod]
+    public async Task ExecuteReconcileProjectionAsync_WhenProductMissing_ReturnsNull()
+    {
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            new InMemoryProductPlanningIntentStore(),
+            new RecordingTfsClient(),
+            [],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>(),
+            CreateDefaultSprintsByTeam([10]));
+
+        var board = await service.ExecuteReconcileProjectionAsync(999, 2901);
+
+        Assert.IsNull(board);
+    }
+
+    [TestMethod]
+    public async Task ExecuteReconcileProjectionAsync_WithoutInternalIntent_Throws()
+    {
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(2902, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap")
+                ]
+            });
+
+        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => service.ExecuteReconcileProjectionAsync(7, 2902).AsTask());
+
+        StringAssert.Contains(exception.Message, "does not have internal planning intent");
+    }
+
+    [TestMethod]
+    public async Task ExecuteReconcileProjectionAsync_WithoutDrift_Throws()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+        intentStore.Seed(new ProductPlanningIntentRecord(
+            7,
+            2903,
+            sprints[10][1].StartUtc!.Value.UtcDateTime.Date,
+            2,
+            null,
+            DateTime.UtcNow));
+
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            intentStore,
+            new RecordingTfsClient(),
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(
+                        2903,
+                        "Epic",
+                        "Roadmap Epic 1",
+                        100,
+                        1d,
+                        "roadmap",
+                        startDate: sprints[10][1].StartUtc,
+                        targetDate: sprints[10][2].EndUtc!.Value.AddDays(-1))
+                ]
+            },
+            sprints);
+
+        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => service.ExecuteReconcileProjectionAsync(7, 2903).AsTask());
+
+        StringAssert.Contains(exception.Message, "does not currently have planning drift");
+    }
+
+    [TestMethod]
+    public async Task ExecuteReconcileProjectionAsync_WhenEpicMissing_Throws()
+    {
+        var service = CreateService(
+            CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+            CreateWorkItem(2904, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"));
+
+        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => service.ExecuteReconcileProjectionAsync(7, 9999).AsTask());
+
+        StringAssert.Contains(exception.Message, "does not have internal planning intent");
+    }
+
+    [TestMethod]
+    public async Task ExecuteReconcileProjectionAsync_WithAmbiguousCalendar_Throws()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        intentStore.Seed(new ProductPlanningIntentRecord(7, 2905, new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), 1, null, DateTime.UtcNow));
+
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            intentStore,
+            new RecordingTfsClient(),
+            [CreateProduct(7, "Roadmap Product", [100], [10, 11])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(2905, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap")
+                ]
+            },
+            new Dictionary<int, IReadOnlyList<SprintDto>>
+            {
+                [10] = CreateSequentialSprints(10, new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), 2),
+                [11] =
+                [
+                    new SprintDto(
+                        1,
+                        11,
+                        "team-11-sprint-1",
+                        "Team 11\\Sprint 1",
+                        "Sprint 1",
+                        new DateTimeOffset(new DateTime(2026, 1, 12, 0, 0, 0, DateTimeKind.Utc), TimeSpan.Zero),
+                        new DateTimeOffset(new DateTime(2026, 1, 26, 0, 0, 0, DateTimeKind.Utc), TimeSpan.Zero),
+                        null,
+                        DateTimeOffset.UtcNow)
+                ]
+            });
+
+        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => service.ExecuteReconcileProjectionAsync(7, 2905).AsTask());
+
+        StringAssert.Contains(exception.Message, "unambiguous sprint calendar");
+    }
+
+    [TestMethod]
+    public async Task ExecuteReconcileProjectionAsync_WithInsufficientFutureCoverage_Throws()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var tfsClient = new RecordingTfsClient();
+        var shortCalendar = new Dictionary<int, IReadOnlyList<SprintDto>>
+        {
+            [10] = CreateSequentialSprints(10, new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc), 2)
+        };
+        intentStore.Seed(new ProductPlanningIntentRecord(7, 2906, new DateTime(2026, 1, 19, 0, 0, 0, DateTimeKind.Utc), 2, null, DateTime.UtcNow));
+
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            intentStore,
+            tfsClient,
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(
+                        2906,
+                        "Epic",
+                        "Roadmap Epic 1",
+                        100,
+                        1d,
+                        "roadmap",
+                        startDate: new DateTimeOffset(2026, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                        targetDate: new DateTimeOffset(2026, 2, 15, 0, 0, 0, TimeSpan.Zero))
+                ]
+            },
+            shortCalendar);
+
+        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => service.ExecuteReconcileProjectionAsync(7, 2906).AsTask());
+
+        StringAssert.Contains(exception.Message, "does not have enough future coverage");
+    }
+
+    [TestMethod]
+    public async Task ExecuteReconcileProjectionAsync_WhenTfsWriteFails_Throws()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var tfsClient = new RecordingTfsClient
+        {
+            UpdateWorkItemPlanningDatesResult = false
+        };
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 6);
+        intentStore.Seed(new ProductPlanningIntentRecord(
+            7,
+            2907,
+            sprints[10][1].StartUtc!.Value.UtcDateTime.Date,
+            2,
+            null,
+            DateTime.UtcNow));
+
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            intentStore,
+            tfsClient,
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(
+                        2907,
+                        "Epic",
+                        "Roadmap Epic 1",
+                        100,
+                        1d,
+                        "roadmap",
+                        startDate: sprints[10][3].StartUtc,
+                        targetDate: sprints[10][4].EndUtc!.Value.AddDays(-1))
+                ]
+            },
+            sprints);
+
+        var exception = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => service.ExecuteReconcileProjectionAsync(7, 2907).AsTask());
+
+        StringAssert.Contains(exception.Message, "TFS rejected");
+        Assert.HasCount(1, tfsClient.PlanningDateUpdates);
+    }
 }

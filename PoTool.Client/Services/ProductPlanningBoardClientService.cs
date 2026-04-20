@@ -41,6 +41,9 @@ public sealed class ProductPlanningBoardClientService
     public Task<ProductPlanningBoardClientResult> ShiftPlanAsync(int productId, ProductPlanningEpicDeltaRequest request, CancellationToken cancellationToken = default)
         => SendAsync(HttpMethod.Post, $"{BuildBoardPath(productId)}/shift-plan", request, cancellationToken);
 
+    public Task<ProductPlanningBoardClientResult> ReconcileProjectionAsync(int productId, ProductPlanningEpicRequest request, CancellationToken cancellationToken = default)
+        => SendAsync(HttpMethod.Post, $"{BuildBoardPath(productId)}/reconcile", request, cancellationToken);
+
     private async Task<ProductPlanningBoardClientResult> SendAsync<TBody>(HttpMethod method, string requestUri, TBody? body, CancellationToken cancellationToken)
     {
         try

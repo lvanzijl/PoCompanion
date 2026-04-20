@@ -94,6 +94,14 @@ public sealed class ProductPlanningBoardClientUiTests
     }
 
     [TestMethod]
+    public async Task ProductPlanningBoardClientService_ReconcileProjectionAsync_PostsEpicRequest()
+    {
+        await AssertEpicMutationAsync(
+            (service, request) => service.ReconcileProjectionAsync(7, request),
+            "/api/products/7/planning-board/reconcile");
+    }
+
+    [TestMethod]
     public async Task ProductPlanningBoardClientService_ReorderEpicAsync_PostsReorderRequest()
     {
         HttpRequestMessage? capturedRequest = null;

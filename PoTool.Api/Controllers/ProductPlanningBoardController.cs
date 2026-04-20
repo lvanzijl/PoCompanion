@@ -138,6 +138,22 @@ public sealed class ProductPlanningBoardController : ControllerBase
             () => _planningBoardService.ExecuteShiftPlanAsync(productId, request.EpicId, request.DeltaSprints, cancellationToken));
     }
 
+    /// <summary>
+    /// Reconciles stale TFS projected planning dates for a single epic from the existing internal planning intent.
+    /// </summary>
+    [HttpPost("reconcile")]
+    [ProducesResponseType(typeof(ProductPlanningBoardDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ProductPlanningBoardDto>> ReconcileProjection(
+        int productId,
+        [FromBody] ProductPlanningEpicRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        return await MapBoardResultAsync(
+            () => _planningBoardService.ExecuteReconcileProjectionAsync(productId, request.EpicId, cancellationToken));
+    }
+
     private async Task<ActionResult<ProductPlanningBoardDto>> MapBoardResultAsync(
         Func<ValueTask<ProductPlanningBoardDto?>> action)
     {

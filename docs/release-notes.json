@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-20",
+    "type": "Changed",
+    "title": "Plan Board can now explicitly reconcile stale TFS planning dates from internal intent",
+    "impact": "When the /planning/plan-board workspace detects stale, missing, or legacy-invalid TFS planning-date projection on an epic that already has internal planning intent, it now exposes one explicit per-epic \"Reconcile TFS projection\" action that rewrites both TFS planning-date fields together from the existing internal intent, refreshes the returned board diagnostics, and leaves the durable internal planning intent unchanged.",
+    "area": "Planning / Plan Board / TFS Projection Reconciliation",
+    "link": "/planning/plan-board"
+  },
+  {
     "date": "2026-04-19",
     "type": "Changed",
     "title": "Plan Board now surfaces planning recovery, drift, and calendar blocker diagnostics",

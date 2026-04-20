@@ -481,6 +481,23 @@
                                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Track numbers are derived automatically; the UI never asks the user to pick an arbitrary track.</MudText>
                                                             </MudStack>
                                                         </MudItem>
+                                                        @if (epic.CanReconcileProjection)
+                                                        {
+                                                            <MudItem xs="12" md="6">
+                                                                <MudStack Spacing="1" Class="planning-board-action-group">
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Projection reconciliation</MudText>
+                                                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                                                        <CompactButton ButtonRole="ButtonRole.Utility"
+                                                                                       Icon="@Icons.Material.Filled.SyncProblem"
+                                                                                       Disabled="@_isBusy"
+                                                                                       OnClick="@(_ => ExecuteReconcileProjectionAsync(epic.EpicId))">
+                                                                            Reconcile TFS projection
+                                                                        </CompactButton>
+                                                                    </MudStack>
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Rewrites the current TFS planning-date projection from the existing internal intent without changing the intent itself.</MudText>
+                                                                </MudStack>
+                                                            </MudItem>
+                                                        }
                                                     </MudGrid>
                                                 </MudStack>
                                             </MudCardContent>
@@ -698,7 +715,18 @@
     private async Task ExecuteReturnToMainAsync(int epicId)
         => await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.ReturnToMainAsync(_selectedProductId!.Value, new ProductPlanningEpicRequest(epicId)), "Return to main");
 
-    private async Task ExecuteEpicOperationAsync(int epicId, Func<Task<ProductPlanningBoardClientResult>> operation, string actionName)
+    private async Task ExecuteReconcileProjectionAsync(int epicId)
+        => await ExecuteEpicOperationAsync(
+            epicId,
+            () => ProductPlanningBoardClientService.ReconcileProjectionAsync(_selectedProductId!.Value, new ProductPlanningEpicRequest(epicId)),
+            "Reconcile TFS projection",
+            new BoardFeedback("TFS projected planning dates reconciled from the existing internal intent.", Severity.Success));
+
+    private async Task ExecuteEpicOperationAsync(
+        int epicId,
+        Func<Task<ProductPlanningBoardClientResult>> operation,
+        string actionName,
+        BoardFeedback? successFeedback = null)
     {
         if (!_selectedProductId.HasValue || _isBusy)
         {
@@ -709,7 +737,11 @@
         try
         {
             var result = await operation();
-            HandleBoardResult(result, $"{actionName} failed.", epicId, new BoardFeedback($"{actionName} applied. Review changed and affected highlights below.", Severity.Success));
+            HandleBoardResult(
+                result,
+                $"{actionName} failed.",
+                epicId,
+                successFeedback ?? new BoardFeedback($"{actionName} applied. Review changed and affected highlights below.", Severity.Success));
         }
         finally
         {
