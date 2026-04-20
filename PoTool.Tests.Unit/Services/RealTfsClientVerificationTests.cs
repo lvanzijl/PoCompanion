@@ -277,6 +277,8 @@ public class RealTfsClientVerificationTests
             "{\"referenceName\":\"System.CreatedDate\"}," +
             "{\"referenceName\":\"System.ChangedDate\"}," +
             "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StartDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.TargetDate\"}," +
             "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
             "{\"referenceName\":\"System.Tags\"}," +
             "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +
@@ -473,6 +475,8 @@ public class RealTfsClientVerificationTests
             "{\"referenceName\":\"System.CreatedDate\"}," +
             "{\"referenceName\":\"System.ChangedDate\"}," +
             "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StartDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.TargetDate\"}," +
             "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
             "{\"referenceName\":\"System.Tags\"}," +
             "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +
@@ -526,6 +530,8 @@ public class RealTfsClientVerificationTests
             "{\"referenceName\":\"System.CreatedDate\"}," +
             "{\"referenceName\":\"System.ChangedDate\"}," +
             "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StartDate\"}," +
+            "{\"referenceName\":\"Microsoft.VSTS.Scheduling.TargetDate\"}," +
             "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
             "{\"referenceName\":\"System.Tags\"}," +
             "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +

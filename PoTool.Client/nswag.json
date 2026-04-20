@@ -301,6 +301,7 @@
         "ProductDeliveryDto",
         "ProductDto",
         "ProductPictureType",
+        "ProductPlanningRecoveryStatus",
         "ProductPipelineInsightsDto",
         "ProductProgressSummaryDto",
         "ProductSprintMetricsDto",

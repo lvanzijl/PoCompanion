@@ -47,6 +47,20 @@ internal static class ProductPlanningBoardTestFactory
 
     internal static ProductPlanningBoardService CreateService(
         InMemoryProductPlanningSessionStore sessionStore,
+        IReadOnlyList<ProductDto> products,
+        IReadOnlyDictionary<int, IReadOnlyList<WorkItemDto>> workItemsByRootId)
+    {
+        return CreateService(
+            sessionStore,
+            new InMemoryProductPlanningIntentStore(),
+            new RecordingTfsClient(),
+            products,
+            workItemsByRootId,
+            CreateDefaultSprintsByTeam([10]));
+    }
+
+    internal static ProductPlanningBoardService CreateService(
+        InMemoryProductPlanningSessionStore sessionStore,
         InMemoryProductPlanningIntentStore intentStore,
         RecordingTfsClient tfsClient,
         IReadOnlyList<ProductDto> products,

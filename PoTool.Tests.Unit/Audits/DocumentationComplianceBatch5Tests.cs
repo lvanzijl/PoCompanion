@@ -11,9 +11,13 @@ public sealed class DocumentationComplianceBatch5Tests
         "analysis",
         "architecture",
         "archive",
-        "implementation",
+        "audits",
+        "history",
+        "plans",
         "reports",
-        "rules"
+        "reviews",
+        "rules",
+        "user"
     ];
 
     [TestMethod]

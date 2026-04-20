@@ -3,6 +3,8 @@ using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Repositories;
 using PoTool.Core.Planning;
+using PoTool.Shared.Planning;
+using PoTool.Tests.Unit.TestSupport;
 
 namespace PoTool.Tests.Unit.Persistence;
 
@@ -16,10 +18,12 @@ public sealed class ProductPlanningIntentStoreTests
             .Options;
 
         var context = new PoToolDbContext(options);
+        var project = PersistenceTestGraph.EnsureProject(context);
         context.Products.Add(new ProductEntity
         {
             Id = 7,
             Name = "Roadmap Product",
+            ProjectId = project.Id,
             CreatedAt = DateTimeOffset.UtcNow,
             LastModified = DateTimeOffset.UtcNow
         });

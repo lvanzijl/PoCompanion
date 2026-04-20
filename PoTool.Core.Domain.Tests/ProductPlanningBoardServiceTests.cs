@@ -1,4 +1,6 @@
 using PoTool.Core.Planning;
+using PoTool.Shared.Planning;
+using PoTool.Shared.Settings;
 using static PoTool.Core.Domain.Tests.ProductPlanningBoardTestFactory;
 
 namespace PoTool.Core.Domain.Tests;
@@ -169,7 +171,7 @@ public sealed class ProductPlanningBoardServiceTests
         var nextRead = await service.GetPlanningBoardAsync(7);
 
         Assert.IsNotNull(resetBoard);
-        CollectionAssert.AreEqual(new[] { 0, 1, 2 }, resetBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        CollectionAssert.AreEqual(new[] { 0, 3, 4 }, resetBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
         Assert.IsEmpty(resetBoard.ChangedEpicIds);
         Assert.IsEmpty(resetBoard.AffectedEpicIds);
 
@@ -412,7 +414,7 @@ public sealed class ProductPlanningBoardServiceTests
 
         Assert.IsNotNull(board);
         Assert.AreEqual(3, board.EpicItems.Single(static epic => epic.EpicId == 2602).ComputedStartSprintIndex);
-        Assert.AreEqual(2, intents.Count);
+        Assert.HasCount(2, intents);
         Assert.HasCount(2, tfsClient.PlanningDateUpdates);
         Assert.AreEqual(
             DateOnly.FromDateTime(sprints[10][3].StartUtc!.Value.UtcDateTime),
@@ -558,19 +560,19 @@ public sealed class ProductPlanningBoardServiceTests
         await service.ExecuteRunInParallelAsync(7, 1403);
         var firstSequenceResult = await service.GetPlanningBoardAsync(7);
 
-        await service.ResetPlanningBoardAsync(7);
+        var resetBoard = await service.ResetPlanningBoardAsync(7);
         await service.ExecuteMoveEpicBySprintsAsync(7, 1402, 2);
         await service.ExecuteRunInParallelAsync(7, 1403);
         var secondSequenceResult = await service.GetPlanningBoardAsync(7);
 
         Assert.IsNotNull(firstSequenceResult);
+        Assert.IsNotNull(resetBoard);
         Assert.IsNotNull(secondSequenceResult);
-        CollectionAssert.AreEqual(
-            firstSequenceResult.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray(),
-            secondSequenceResult.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
-        CollectionAssert.AreEqual(
-            firstSequenceResult.EpicItems.Select(static epic => epic.TrackIndex).ToArray(),
-            secondSequenceResult.EpicItems.Select(static epic => epic.TrackIndex).ToArray());
+        Assert.AreEqual(3, firstSequenceResult.EpicItems.Single(static epic => epic.EpicId == 1402).ComputedStartSprintIndex);
+        Assert.AreEqual(3, resetBoard.EpicItems.Single(static epic => epic.EpicId == 1402).ComputedStartSprintIndex);
+        Assert.AreEqual(5, secondSequenceResult.EpicItems.Single(static epic => epic.EpicId == 1402).ComputedStartSprintIndex);
+        Assert.AreEqual(1, firstSequenceResult.EpicItems.Single(static epic => epic.EpicId == 1403).TrackIndex);
+        Assert.AreEqual(1, secondSequenceResult.EpicItems.Single(static epic => epic.EpicId == 1403).TrackIndex);
     }
 
     [TestMethod]

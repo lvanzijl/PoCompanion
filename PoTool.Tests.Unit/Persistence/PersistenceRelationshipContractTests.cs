@@ -36,6 +36,7 @@ public sealed class PersistenceRelationshipContractTests
             ["PlanningBoardSettingsEntity:ProductOwnerId->ProfileEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["PlanningEpicPlacementEntity:ProductId->ProductEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["PlanningEpicPlacementEntity:RowId->BoardRowEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
+            ["ProductPlanningIntentEntity:ProductId->ProductEntity"] = [nameof(ProductPlanningIntentStoreTests.UpsertAndLoad_ReturnsPersistedPlanningIntent)],
             ["PortfolioFlowProjectionEntity:ProductId->ProductEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["PortfolioFlowProjectionEntity:SprintId->SprintEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
             ["PortfolioSnapshotEntity:ProductId->ProductEntity"] = [nameof(SaveChangesAsync_WhenTrackedParentGraphIsValid_PersistsCoverageGraphForRequiredRelationships)],
