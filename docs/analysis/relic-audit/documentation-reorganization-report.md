@@ -268,7 +268,7 @@ docs/archive/validation/validators-implementation-2026-01-30.md
 docs/implementation
 docs/implementation/battleship-cdc-extension-report.md
 docs/implementation/cdc-critical-fixes.md
-docs/implementation/cdc-fallback-timestamp-hardening.md
+docs/reports/2026-04-18-cdc-fallback-timestamp-hardening.md
 docs/implementation/cdc-fix-report-empty-snapshot-snapshotcount.md
 docs/implementation/phase-a-corrections.md
 docs/implementation/phase-a-foundation.md
