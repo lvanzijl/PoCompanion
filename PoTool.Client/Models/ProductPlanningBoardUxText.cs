@@ -5,7 +5,7 @@ namespace PoTool.Client.Models;
 
 public static class ProductPlanningBoardUxText
 {
-    private static readonly (string From, string To)[] VisibleTextReplacements = new[]
+    private static readonly (string From, string To)[] VisibleTextReplacements = new (string From, string To)[]
     {
         ("Recovered + normalized", "Imported from existing data and cleaned up"),
         ("TFS projection", "TFS reported dates"),
@@ -14,7 +14,6 @@ public static class ProductPlanningBoardUxText
         ("Recovered", "Imported from existing data"),
         ("durable", "saved")
     }
-    .Select(static replacement => (From: replacement.Item1, To: replacement.Item2))
     .OrderByDescending(static replacement => replacement.From.Length)
     .ToArray();
 
@@ -73,6 +72,13 @@ public static class ProductPlanningBoardUxText
         if (replacement.StartsWith("TFS ", StringComparison.Ordinal))
         {
             return replacement;
+        }
+
+        if (replacement.Length == 1)
+        {
+            return char.IsUpper(matchedText[0])
+                ? replacement
+                : char.ToLowerInvariant(replacement[0]).ToString();
         }
 
         return char.IsUpper(matchedText[0])
