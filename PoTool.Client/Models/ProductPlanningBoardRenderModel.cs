@@ -23,7 +23,9 @@ public sealed record ProductPlanningBoardRenderModel(
     bool HasBlockingDiagnostics,
     int RecoveredEpicCount,
     int DriftedEpicCount,
-    int BlockingDiagnosticCount);
+    int BlockingDiagnosticCount,
+    string? LatestChangeTitle,
+    string? LatestChangeDetail);
 
 public sealed record ProductPlanningSprintColumn(int SprintIndex, string Label);
 
@@ -85,6 +87,7 @@ public static class ProductPlanningBoardRenderModelFactory
             recoveredEpicCount,
             driftedEpicCount,
             blockingDiagnosticCount);
+        var (latestChangeTitle, latestChangeDetail) = ResolveLatestChangeSummary(board, hasRecentChanges);
 
         return new ProductPlanningBoardRenderModel(
             board,
@@ -100,7 +103,9 @@ public static class ProductPlanningBoardRenderModelFactory
             hasBlockingDiagnostics,
             recoveredEpicCount,
             driftedEpicCount,
-            blockingDiagnosticCount);
+            blockingDiagnosticCount,
+            latestChangeTitle,
+            latestChangeDetail);
     }
 
     private static (ProductPlanningBoardStatusKind Kind, string Label, string Detail) ResolveStatus(
@@ -142,12 +147,44 @@ public static class ProductPlanningBoardRenderModelFactory
             return (
                 ProductPlanningBoardStatusKind.Changed,
                 "Plan updated",
-                $"{board.ChangedEpicIds.Count} changed epic(s) and {board.AffectedEpicIds.Count} affected epic(s) are highlighted from your latest action.");
+                $"{board.ChangedEpicIds.Count} epic(s) changed directly and {board.AffectedEpicIds.Count} more shifted from your latest action.");
         }
 
         return (
             ProductPlanningBoardStatusKind.Stable,
             "Saved plan loaded",
             "This board defines the plan, and no recent changes are highlighted.");
+    }
+
+    private static (string? Title, string? Detail) ResolveLatestChangeSummary(ProductPlanningBoardDto board, bool hasRecentChanges)
+    {
+        if (!hasRecentChanges)
+        {
+            return (null, null);
+        }
+
+        var changedCount = board.ChangedEpicIds.Count;
+        var affectedCount = board.AffectedEpicIds.Count;
+        var untouchedCount = Math.Max(0, board.EpicItems.Count - changedCount - affectedCount);
+
+        var title = changedCount == 1
+            ? "Latest action changed 1 Epic directly"
+            : $"Latest action changed {changedCount} Epics directly";
+
+        var affectedText = affectedCount switch
+        {
+            <= 0 => "No additional Epics shifted after it.",
+            1 => "1 more Epic shifted after it.",
+            _ => $"{affectedCount} more Epics shifted after it."
+        };
+
+        var untouchedText = untouchedCount switch
+        {
+            <= 0 => "Everything visible on the board was part of the latest change.",
+            1 => "1 visible Epic stayed in place.",
+            _ => $"{untouchedCount} visible Epics stayed in place."
+        };
+
+        return (title, $"{affectedText} {untouchedText}");
     }
 }

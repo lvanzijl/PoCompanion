@@ -210,6 +210,16 @@
                             </MudAlert>
                         }
 
+                        @if (!string.IsNullOrWhiteSpace(renderModel.LatestChangeTitle) && !string.IsNullOrWhiteSpace(renderModel.LatestChangeDetail))
+                        {
+                            <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Dense="true" Class="planning-board-change-alert">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.subtitle2">@renderModel.LatestChangeTitle</MudText>
+                                    <MudText Typo="Typo.body2">@renderModel.LatestChangeDetail</MudText>
+                                </MudStack>
+                            </MudAlert>
+                        }
+
                         @if (renderModel.Board.Issues.Count > 0)
                         {
                             <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined">
@@ -296,11 +306,11 @@
                                                             <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
                                                                 @if (epic.IsChanged)
                                                                 {
-                                                                    <MudChip T="string" Variant="Variant.Filled" Color="Color.Primary">Changed</MudChip>
+                                                                    <MudChip T="string" Variant="Variant.Filled" Color="Color.Primary">Updated</MudChip>
                                                                 }
                                                                 @if (epic.IsAffected)
                                                                 {
-                                                                    <MudChip T="string" Variant="Variant.Text" Color="Color.Info" Class="planning-board-chip--secondary">Affected</MudChip>
+                                                                    <MudChip T="string" Variant="Variant.Text" Color="Color.Info" Class="planning-board-chip--secondary">Shifted</MudChip>
                                                                 }
                                                                 @if (epic.Issues.Count > 0)
                                                                 {
@@ -329,31 +339,43 @@
                                                     </MudStack>
 
                                                     <MudGrid Spacing="1">
-                                                        <MudItem xs="6" md="3">
-                                                            <MudPaper Outlined="true" Class="pa-2 planning-board-metric">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Chosen start</MudText>
+                                                        <MudItem xs="12" md="4">
+                                                            <MudPaper Outlined="true" Class="pa-3 planning-board-metric planning-board-time-group planning-board-time-group--planned">
+                                                                <MudText Typo="Typo.overline" Color="Color.Primary">Your plan</MudText>
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Start you picked</MudText>
                                                                 <MudText Typo="Typo.body2">Sprint @(epic.PlannedStartSprintIndex + 1)</MudText>
                                                             </MudPaper>
                                                         </MudItem>
-                                                        <MudItem xs="6" md="3">
-                                                            <MudPaper Outlined="true" Class="pa-2 planning-board-metric">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Scheduled start</MudText>
-                                                                <MudText Typo="Typo.body2">Sprint @(epic.ComputedStartSprintIndex + 1)</MudText>
+                                                        <MudItem xs="12" md="4">
+                                                            <MudPaper Outlined="true" Class="pa-3 planning-board-metric planning-board-time-group planning-board-time-group--calculated">
+                                                                <MudText Typo="Typo.overline" Color="Color.Info">Calculated schedule</MudText>
+                                                                <MudStack Spacing="1">
+                                                                    <div>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Scheduled start</MudText>
+                                                                        <MudText Typo="Typo.body2">Sprint @(epic.ComputedStartSprintIndex + 1)</MudText>
+                                                                    </div>
+                                                                    <div>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Planned finish</MudText>
+                                                                        <MudText Typo="Typo.body2">Sprint @epic.EndSprintIndexExclusive</MudText>
+                                                                    </div>
+                                                                </MudStack>
                                                             </MudPaper>
                                                         </MudItem>
-                                                        <MudItem xs="6" md="3">
-                                                            <MudPaper Outlined="true" Class="pa-2 planning-board-metric">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Planned finish</MudText>
-                                                                <MudText Typo="Typo.body2">Sprint @epic.EndSprintIndexExclusive</MudText>
-                                                            </MudPaper>
-                                                        </MudItem>
-                                                        <MudItem xs="6" md="3">
-                                                            <MudPaper Outlined="true" Class="pa-2 planning-board-metric">
+                                                        <MudItem xs="12" md="4">
+                                                            <MudPaper Outlined="true" Class="pa-3 planning-board-metric">
+                                                                <MudText Typo="Typo.overline" Color="Color.Secondary">Placement</MudText>
                                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Work lane</MudText>
                                                                 <MudText Typo="Typo.body2">@(epic.TrackIndex == 0 ? "Main plan" : $"Parallel {epic.TrackIndex}")</MudText>
                                                             </MudPaper>
                                                         </MudItem>
                                                     </MudGrid>
+
+                                                    @if (epic.IsChanged || epic.IsAffected)
+                                                    {
+                                                        <MudAlert Severity="@(epic.IsChanged ? Severity.Success : Severity.Info)" Variant="Variant.Outlined" Dense="true" Class="planning-board-change-alert">
+                                                            @GetEpicChangeSummary(epic)
+                                                        </MudAlert>
+                                                    }
 
                                                     @if (epic.Issues.Count > 0)
                                                     {
@@ -393,92 +415,106 @@
                                                     <MudDivider />
 
                                                     <MudText Typo="Typo.subtitle2">Planning actions</MudText>
+                                                    <MudPaper Outlined="true" Class="pa-3 planning-board-primary-action">
+                                                        <MudStack Spacing="1">
+                                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                                                <MudText Typo="Typo.subtitle2">Move Epic</MudText>
+                                                                <MudChip T="string" Variant="Variant.Filled" Color="Color.Primary">Default</MudChip>
+                                                            </MudStack>
+                                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                                Default move: this Epic changes first, and following work shifts with it automatically.
+                                                            </MudText>
+                                                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End" Wrap="Wrap.Wrap">
+                                                                <MudNumericField T="int"
+                                                                                 Label="Sprint change"
+                                                                                 Variant="Variant.Outlined"
+                                                                                 Margin="Margin.Dense"
+                                                                                 Value="@GetActionState(epic.EpicId).SpacingDelta"
+                                                                                 ValueChanged="@(value => SetSpacingDelta(epic.EpicId, value))"
+                                                                                 Class="planning-board-number-field" />
+                                                                <CompactButton ButtonRole="ButtonRole.Action"
+                                                                               Icon="@Icons.Material.Filled.SpaceBar"
+                                                                               Disabled="@_isBusy"
+                                                                               OnClick="@(_ => ExecuteAdjustSpacingAsync(epic.EpicId))">
+                                                                    Move Epic
+                                                                </CompactButton>
+                                                            </MudStack>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">Use a positive or negative sprint change. A change of zero has no effect and is not allowed.</MudText>
+                                                        </MudStack>
+                                                    </MudPaper>
+
+                                                    <MudExpansionPanels Elevation="0" Class="planning-board-advanced-options">
+                                                        <MudExpansionPanel Text="Advanced options" Dense="true" Icon="@Icons.Material.Filled.Tune">
+                                                            <MudGrid Spacing="1" Class="mt-1">
+                                                                <MudItem xs="12" md="6">
+                                                                    <MudStack Spacing="1" Class="planning-board-action-group">
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Move only this Epic</MudText>
+                                                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End" Wrap="Wrap.Wrap">
+                                                                            <MudNumericField T="int"
+                                                                                             Label="Sprint change"
+                                                                                             Variant="Variant.Outlined"
+                                                                                             Margin="Margin.Dense"
+                                                                                             Value="@GetActionState(epic.EpicId).MoveDelta"
+                                                                                             ValueChanged="@(value => SetMoveDelta(epic.EpicId, value))"
+                                                                                             Class="planning-board-number-field" />
+                                                                            <CompactButton ButtonRole="ButtonRole.Utility"
+                                                                                           Icon="@Icons.Material.Filled.SwapHoriz"
+                                                                                           Disabled="@_isBusy"
+                                                                                           OnClick="@(_ => ExecuteMoveAsync(epic.EpicId))">
+                                                                                Move only this Epic
+                                                                            </CompactButton>
+                                                                        </MudStack>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Override the default when you need this Epic to move without shifting the work after it.</MudText>
+                                                                    </MudStack>
+                                                                </MudItem>
+                                                                <MudItem xs="12" md="6">
+                                                                    <MudStack Spacing="1" Class="planning-board-action-group">
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Move everything after this</MudText>
+                                                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End" Wrap="Wrap.Wrap">
+                                                                            <MudNumericField T="int"
+                                                                                             Label="Sprint change"
+                                                                                             Variant="Variant.Outlined"
+                                                                                             Margin="Margin.Dense"
+                                                                                             Value="@GetActionState(epic.EpicId).ShiftDelta"
+                                                                                             ValueChanged="@(value => SetShiftDelta(epic.EpicId, value))"
+                                                                                             Class="planning-board-number-field" />
+                                                                            <CompactButton ButtonRole="ButtonRole.Utility"
+                                                                                           Icon="@Icons.Material.Filled.TrendingFlat"
+                                                                                           Disabled="@_isBusy"
+                                                                                           OnClick="@(_ => ExecuteShiftPlanAsync(epic.EpicId))">
+                                                                                Shift following work
+                                                                            </CompactButton>
+                                                                        </MudStack>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Use this when the current Epic should stay where it is and only the following work needs to move.</MudText>
+                                                                    </MudStack>
+                                                                </MudItem>
+                                                                <MudItem xs="12" md="6">
+                                                                    <MudStack Spacing="1" Class="planning-board-action-group">
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Change priority order</MudText>
+                                                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End" Wrap="Wrap.Wrap">
+                                                                            <MudNumericField T="int"
+                                                                                             Label="New priority"
+                                                                                             Variant="Variant.Outlined"
+                                                                                             Margin="Margin.Dense"
+                                                                                             Min="1"
+                                                                                             Value="@GetActionState(epic.EpicId).ReorderTarget"
+                                                                                             ValueChanged="@(value => SetReorderTarget(epic.EpicId, value))"
+                                                                                             Class="planning-board-number-field" />
+                                                                            <CompactButton ButtonRole="ButtonRole.Utility"
+                                                                                           Icon="@Icons.Material.Filled.FormatListNumbered"
+                                                                                           Disabled="@_isBusy"
+                                                                                           OnClick="@(_ => ExecuteReorderAsync(epic.EpicId))">
+                                                                                Update order
+                                                                            </CompactButton>
+                                                                        </MudStack>
+                                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Use this when the priority should change and you want the board to recalculate the sequence for you.</MudText>
+                                                                    </MudStack>
+                                                                </MudItem>
+                                                            </MudGrid>
+                                                        </MudExpansionPanel>
+                                                    </MudExpansionPanels>
+
                                                     <MudGrid Spacing="1">
-                                                        <MudItem xs="12" md="6">
-                                                            <MudStack Spacing="1" Class="planning-board-action-group">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Move only this Epic</MudText>
-                                                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End">
-                                                                    <MudNumericField T="int"
-                                                                                     Label="Sprint change"
-                                                                                     Variant="Variant.Outlined"
-                                                                                     Margin="Margin.Dense"
-                                                                                     Value="@GetActionState(epic.EpicId).MoveDelta"
-                                                                                     ValueChanged="@(value => SetMoveDelta(epic.EpicId, value))"
-                                                                                     Class="planning-board-number-field" />
-                                                                    <CompactButton ButtonRole="ButtonRole.Action"
-                                                                                   Icon="@Icons.Material.Filled.SwapHoriz"
-                                                                                   Disabled="@_isBusy"
-                                                                                   OnClick="@(_ => ExecuteMoveAsync(epic.EpicId))">
-                                                                        Move Epic
-                                                                    </CompactButton>
-                                                                </MudStack>
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">This will only move this Epic. Use a positive or negative sprint change; a change of zero has no effect and is not allowed.</MudText>
-                                                            </MudStack>
-                                                        </MudItem>
-                                                        <MudItem xs="12" md="6">
-                                                            <MudStack Spacing="1" Class="planning-board-action-group">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Move this and shift following work</MudText>
-                                                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End">
-                                                                    <MudNumericField T="int"
-                                                                                     Label="Sprint change"
-                                                                                     Variant="Variant.Outlined"
-                                                                                     Margin="Margin.Dense"
-                                                                                     Value="@GetActionState(epic.EpicId).SpacingDelta"
-                                                                                     ValueChanged="@(value => SetSpacingDelta(epic.EpicId, value))"
-                                                                                     Class="planning-board-number-field" />
-                                                                    <CompactButton ButtonRole="ButtonRole.Action"
-                                                                                   Icon="@Icons.Material.Filled.SpaceBar"
-                                                                                   Disabled="@_isBusy"
-                                                                                   OnClick="@(_ => ExecuteAdjustSpacingAsync(epic.EpicId))">
-                                                                        Move + shift
-                                                                    </CompactButton>
-                                                                </MudStack>
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">This will move this Epic and the work after it.</MudText>
-                                                            </MudStack>
-                                                        </MudItem>
-                                                        <MudItem xs="12" md="6">
-                                                            <MudStack Spacing="1" Class="planning-board-action-group">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Move everything after this</MudText>
-                                                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End">
-                                                                    <MudNumericField T="int"
-                                                                                     Label="Sprint change"
-                                                                                     Variant="Variant.Outlined"
-                                                                                     Margin="Margin.Dense"
-                                                                                     Value="@GetActionState(epic.EpicId).ShiftDelta"
-                                                                                     ValueChanged="@(value => SetShiftDelta(epic.EpicId, value))"
-                                                                                     Class="planning-board-number-field" />
-                                                                    <CompactButton ButtonRole="ButtonRole.Action"
-                                                                                   Icon="@Icons.Material.Filled.TrendingFlat"
-                                                                                   Disabled="@_isBusy"
-                                                                                   OnClick="@(_ => ExecuteShiftPlanAsync(epic.EpicId))">
-                                                                        Shift following work
-                                                                    </CompactButton>
-                                                                </MudStack>
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">This will move only the Epics after this one.</MudText>
-                                                            </MudStack>
-                                                        </MudItem>
-                                                        <MudItem xs="12" md="6">
-                                                            <MudStack Spacing="1" Class="planning-board-action-group">
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Change priority order</MudText>
-                                                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.End">
-                                                                    <MudNumericField T="int"
-                                                                                     Label="New priority"
-                                                                                     Variant="Variant.Outlined"
-                                                                                     Margin="Margin.Dense"
-                                                                                     Min="1"
-                                                                                     Value="@GetActionState(epic.EpicId).ReorderTarget"
-                                                                                     ValueChanged="@(value => SetReorderTarget(epic.EpicId, value))"
-                                                                                     Class="planning-board-number-field" />
-                                                                    <CompactButton ButtonRole="ButtonRole.Action"
-                                                                                   Icon="@Icons.Material.Filled.FormatListNumbered"
-                                                                                   Disabled="@_isBusy"
-                                                                                   OnClick="@(_ => ExecuteReorderAsync(epic.EpicId))">
-                                                                        Update order
-                                                                    </CompactButton>
-                                                                </MudStack>
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">This changes roadmap priority without asking you to manage tracks.</MudText>
-                                                            </MudStack>
-                                                        </MudItem>
                                                         <MudItem xs="12" md="6">
                                                             <MudStack Spacing="1" Class="planning-board-action-group">
                                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Parallel work</MudText>
@@ -696,12 +732,16 @@
     private async Task ExecuteAdjustSpacingAsync(int epicId)
     {
         var state = GetActionState(epicId);
-        if (!ValidateDelta(epicId, state.SpacingDelta, "Move this and shift following work requires a non-zero sprint change."))
+        if (!ValidateDelta(epicId, state.SpacingDelta, "Move Epic requires a non-zero sprint change."))
         {
             return;
         }
 
-        await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.AdjustSpacingBeforeAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, state.SpacingDelta)), "Move + shift");
+        await ExecuteEpicOperationAsync(
+            epicId,
+            () => ProductPlanningBoardClientService.AdjustSpacingBeforeAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, state.SpacingDelta)),
+            "Move Epic",
+            new BoardFeedback("Epic moved. Following work shifted automatically where needed.", Severity.Success));
     }
 
     private async Task ExecuteShiftPlanAsync(int epicId)
@@ -946,6 +986,21 @@
 
     private static string FormatDriftStatus(PlanningBoardDriftStatus driftStatus)
         => ProductPlanningBoardUxText.GetDriftLabel(driftStatus);
+
+    private static string GetEpicChangeSummary(PlanningBoardEpicItemDto epic)
+    {
+        if (epic.IsChanged && epic.IsAffected)
+        {
+            return "This Epic changed directly and was also affected by related schedule changes.";
+        }
+
+        if (epic.IsChanged)
+        {
+            return "This Epic changed directly in your latest action.";
+        }
+
+        return "This Epic shifted because of your latest action.";
+    }
 
     private static Severity GetDiagnosticSeverity(IReadOnlyList<PlanningBoardDiagnosticDto> diagnostics)
     {

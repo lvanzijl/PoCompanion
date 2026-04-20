@@ -2,6 +2,14 @@
   {
     "date": "2026-04-20",
     "type": "Changed",
+    "title": "Plan Board now uses one default move action and hides precision overrides until needed",
+    "impact": "The /planning/plan-board workspace now promotes one primary \"Move Epic\" action that moves the selected Epic and shifts following work by default, moves one-off scheduling overrides into collapsed advanced options, summarizes what changed after each move, and separates \"Your plan\" from the calculated schedule so planning stays precise without forcing as many upfront interaction choices.",
+    "area": "Planning / Plan Board / Interaction Speed",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-20",
+    "type": "Changed",
     "title": "Plan Board now explains the plan in plain language and clearer action labels",
     "impact": "The /planning/plan-board workspace now explains that the board is the real plan and TFS only receives reported dates, replaces technical labels such as drift, reconciliation, recovery, and durable-session wording with planning language, simplifies action labels so each action explains what will move, and reduces visual noise by keeping changed and blocking issues primary while leaving affected, sync, and imported-state details visible but less dominant.",
     "area": "Planning / Plan Board / UX Clarity",

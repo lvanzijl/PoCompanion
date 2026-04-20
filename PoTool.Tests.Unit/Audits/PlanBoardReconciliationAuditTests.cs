@@ -12,8 +12,26 @@ public sealed class PlanBoardReconciliationAuditTests
         var content = File.ReadAllText(pagePath);
 
         StringAssert.Contains(content, "@if (epic.CanReconcileProjection)");
-        StringAssert.Contains(content, "Reconcile TFS projection");
+        StringAssert.Contains(content, "Update TFS reported dates");
+        StringAssert.Contains(content, "Update TFS dates");
         StringAssert.Contains(content, "ProductPlanningBoardClientService.ReconcileProjectionAsync");
+    }
+
+    [TestMethod]
+    public void PlanBoard_ActionHierarchy_PromotesDefaultMoveAndKeepsAdvancedOverrides()
+    {
+        var repositoryRoot = GetRepositoryRoot();
+        var pagePath = Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "PlanBoard.razor");
+        var content = File.ReadAllText(pagePath);
+
+        StringAssert.Contains(content, "Default move: this Epic changes first, and following work shifts with it automatically.");
+        StringAssert.Contains(content, "OnClick=\"@(_ => ExecuteAdjustSpacingAsync(epic.EpicId))\"");
+        StringAssert.Contains(content, "Advanced options");
+        StringAssert.Contains(content, "Move only this Epic");
+        StringAssert.Contains(content, "Move everything after this");
+        StringAssert.Contains(content, "Change priority order");
+        StringAssert.Contains(content, "Your plan");
+        StringAssert.Contains(content, "Calculated schedule");
     }
 
     private static string GetRepositoryRoot()

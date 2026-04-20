@@ -168,6 +168,8 @@ public sealed class ProductPlanningBoardClientUiTests
         Assert.IsTrue(renderModel.HasRecentChanges);
         Assert.AreEqual(ProductPlanningBoardStatusKind.Changed, renderModel.StatusKind);
         Assert.AreEqual("Plan updated", renderModel.StatusLabel);
+        Assert.AreEqual("Latest action changed 1 Epic directly", renderModel.LatestChangeTitle);
+        Assert.AreEqual("1 more Epic shifted after it. Everything visible on the board was part of the latest change.", renderModel.LatestChangeDetail);
     }
 
     [TestMethod]
@@ -228,6 +230,8 @@ public sealed class ProductPlanningBoardClientUiTests
         Assert.AreEqual(ProductPlanningBoardStatusKind.Warning, renderModel.StatusKind);
         Assert.AreEqual("Plan needs attention", renderModel.StatusLabel);
         StringAssert.Contains(renderModel.StatusDetail, "reported to TFS");
+        Assert.IsNull(renderModel.LatestChangeTitle);
+        Assert.IsNull(renderModel.LatestChangeDetail);
     }
 
     [TestMethod]

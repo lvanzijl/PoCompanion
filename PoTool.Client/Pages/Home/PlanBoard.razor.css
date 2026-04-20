@@ -21,6 +21,10 @@
     border-left: 4px solid var(--mud-palette-info);
 }
 
+.planning-board-change-alert {
+    border-left: 4px solid var(--mud-palette-primary);
+}
+
 .planning-board-epic {
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 10px;
@@ -49,12 +53,29 @@
     height: 100%;
 }
 
+.planning-board-time-group--planned {
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface) 95%);
+}
+
+.planning-board-time-group--calculated {
+    background: color-mix(in srgb, var(--mud-palette-info) 6%, var(--mud-palette-surface) 94%);
+}
+
 .planning-board-number-field {
     min-width: 8rem;
 }
 
 .planning-board-action-group {
     min-height: 100%;
+}
+
+.planning-board-primary-action {
+    border: 2px solid color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-lines-default) 65%);
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface) 96%);
+}
+
+.planning-board-advanced-options {
+    margin-top: 0.25rem;
 }
 
 .planning-board-issue-list {
