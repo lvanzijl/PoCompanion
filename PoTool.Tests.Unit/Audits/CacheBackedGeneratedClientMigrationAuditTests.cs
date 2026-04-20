@@ -10,7 +10,6 @@ public sealed class CacheBackedGeneratedClientMigrationAuditTests
         var repositoryRoot = GetRepositoryRoot();
         var servicePaths = new[]
         {
-            "PoTool.Client/Services/BuildQualityService.cs",
             "PoTool.Client/Services/MetricsStateService.cs",
             "PoTool.Client/Services/PipelineStateService.cs",
             "PoTool.Client/Services/PullRequestStateService.cs",

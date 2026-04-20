@@ -454,6 +454,27 @@ internal class MockTfsClient : ITfsClient
         return Task.FromResult(true);
     }
 
+    public Task<bool> UpdateWorkItemPlanningDatesAsync(int workItemId, DateOnly startDate, DateOnly targetDate, CancellationToken cancellationToken = default)
+    {
+        _logger.LogInformation(
+            "Mock TFS client: UpdateWorkItemPlanningDatesAsync called for workItemId={WorkItemId}, startDate={StartDate}, targetDate={TargetDate}",
+            workItemId,
+            startDate,
+            targetDate);
+
+        if (targetDate < startDate)
+        {
+            _logger.LogWarning(
+                "Mock TFS client: Invalid planning-date pair for workItemId={WorkItemId}, startDate={StartDate}, targetDate={TargetDate}",
+                workItemId,
+                startDate,
+                targetDate);
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(true);
+    }
+
     public Task<bool> UpdateWorkItemSeverityAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Mock TFS client: UpdateWorkItemSeverityAsync called for workItemId={WorkItemId}, severity='{Severity}'",

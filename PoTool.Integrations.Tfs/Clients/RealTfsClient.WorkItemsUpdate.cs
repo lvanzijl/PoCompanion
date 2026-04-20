@@ -147,6 +147,87 @@ internal partial class RealTfsClient
         }
     }
 
+    public async Task<bool> UpdateWorkItemPlanningDatesAsync(int workItemId, DateOnly startDate, DateOnly targetDate, CancellationToken cancellationToken = default)
+    {
+        if (targetDate < startDate)
+        {
+            throw new ArgumentOutOfRangeException(nameof(targetDate), "Target date must be on or after the start date.");
+        }
+
+        try
+        {
+            _logger.LogInformation(
+                "Updating work item {WorkItemId} planning dates to start={StartDate} target={TargetDate}",
+                workItemId,
+                startDate,
+                targetDate);
+
+            var entity = await _configService.GetConfigEntityAsync(cancellationToken);
+            if (entity == null)
+            {
+                _logger.LogWarning("No TFS configuration found for updating work item planning dates");
+                return false;
+            }
+
+            var httpClient = GetAuthenticatedHttpClient();
+
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(entity.TimeoutSeconds));
+
+            var patchDocument = new[]
+            {
+                new
+                {
+                    op = "add",
+                    path = $"/fields/{TfsFieldStartDate}",
+                    value = startDate
+                },
+                new
+                {
+                    op = "add",
+                    path = $"/fields/{TfsFieldTargetDate}",
+                    value = targetDate
+                }
+            };
+
+            var updateUrl = CollectionUrl(entity, $"_apis/wit/workitems/{workItemId}");
+            using var content = new StringContent(
+                JsonSerializer.Serialize(patchDocument),
+                System.Text.Encoding.UTF8,
+                "application/json-patch+json");
+
+            var response = await httpClient.PatchAsync(updateUrl, content, timeoutCts.Token);
+
+            if (response.IsSuccessStatusCode)
+            {
+                _logger.LogInformation(
+                    "Successfully updated work item {WorkItemId} planning dates to start={StartDate} target={TargetDate}",
+                    workItemId,
+                    startDate,
+                    targetDate);
+                return true;
+            }
+
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            _logger.LogWarning(
+                "Failed to update work item {WorkItemId} planning dates. Status: {StatusCode}, Response: {Response}",
+                workItemId,
+                response.StatusCode,
+                responseBody);
+            return false;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogError("Update work item {WorkItemId} planning dates timed out", workItemId);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating work item {WorkItemId} planning dates", workItemId);
+            return false;
+        }
+    }
+
     public async Task<bool> UpdateWorkItemSeverityAsync(int workItemId, string severity, CancellationToken cancellationToken = default)
     {
         var result = await UpdateWorkItemSeverityAndReturnAsync(workItemId, severity, cancellationToken);
@@ -706,6 +787,8 @@ internal partial class RealTfsClient
         DateTimeOffset? createdDate = ParseDateTimeField(fields, "System.CreatedDate");
         DateTimeOffset? changedDate = ParseDateTimeField(fields, "System.ChangedDate");
         DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+        DateTimeOffset? startDate = ParseDateTimeField(fields, TfsFieldStartDate);
+        DateTimeOffset? targetDate = ParseDateTimeField(fields, TfsFieldTargetDate);
         string? severity = ParseSeverityField(fields);
         string? tags = ParseTagsField(fields);
         double? backlogPriority = ParseBacklogPriorityField(fields);
@@ -734,7 +817,9 @@ internal partial class RealTfsClient
             StoryPoints: storyPoints,
             TimeCriticality: timeCriticality,
             ProjectNumber: projectNumber,
-            ProjectElement: projectElement
+            ProjectElement: projectElement,
+            StartDate: startDate,
+            TargetDate: targetDate
         );
     }
 

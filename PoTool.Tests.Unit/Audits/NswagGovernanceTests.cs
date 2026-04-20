@@ -113,7 +113,7 @@ public sealed class NswagGovernanceTests
     }
 
     [TestMethod]
-    public void ApiProject_DoesNotReferenceClientProject()
+    public void ApiProject_HostedClientReferenceIsExplicit()
     {
         var repositoryRoot = GetRepositoryRoot();
         var projectPath = Path.Combine(repositoryRoot, "PoTool.Api", "PoTool.Api.csproj");
@@ -125,7 +125,8 @@ public sealed class NswagGovernanceTests
             .Cast<string>()
             .ToArray();
 
-        CollectionAssert.DoesNotContain(projectReferences, @"..\PoTool.Client\PoTool.Client.csproj");
+        CollectionAssert.Contains(projectReferences, @"..\PoTool.Client\PoTool.Client.csproj");
+        Assert.AreEqual(1, projectReferences.Count(reference => string.Equals(reference, @"..\PoTool.Client\PoTool.Client.csproj", StringComparison.Ordinal)));
     }
 
     private static string GetRepositoryRoot()

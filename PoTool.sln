@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -18,6 +18,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Core.Domain", "PoTool.Core.Domain\PoTool.Core.Domain.csproj", "{D6690720-E0AB-40F1-A17D-5FBF38088B8B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Core.Domain.Tests", "PoTool.Core.Domain.Tests\PoTool.Core.Domain.Tests.csproj", "{04A22563-FC86-4307-84C1-5E9EA8555635}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PoTool.Api.Tests", "PoTool.Api.Tests\PoTool.Api.Tests.csproj", "{EA13DF4C-5616-4BDB-B818-21ED90F254A5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -125,6 +127,18 @@ Global
 		{04A22563-FC86-4307-84C1-5E9EA8555635}.Release|x64.Build.0 = Release|Any CPU
 		{04A22563-FC86-4307-84C1-5E9EA8555635}.Release|x86.ActiveCfg = Release|Any CPU
 		{04A22563-FC86-4307-84C1-5E9EA8555635}.Release|x86.Build.0 = Release|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Debug|x64.Build.0 = Debug|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Debug|x86.Build.0 = Debug|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Release|x64.ActiveCfg = Release|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Release|x64.Build.0 = Release|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Release|x86.ActiveCfg = Release|Any CPU
+		{EA13DF4C-5616-4BDB-B818-21ED90F254A5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

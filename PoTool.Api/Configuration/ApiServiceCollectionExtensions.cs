@@ -22,6 +22,7 @@ using PoTool.Core.WorkItems.Validators;
 using PoTool.Core.WorkItems.Validators.Rules;
 using PoTool.Core.WorkItems.Filtering;
 using PoTool.Core.Health;
+using PoTool.Core.Planning;
 using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.BacklogQuality.Services;
 using PoTool.Core.Domain.DeliveryTrends.Services;
@@ -162,6 +163,7 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<IReleasePlanningRepository, ReleasePlanningRepository>();
         services.AddScoped<IPipelineRepository, Repositories.PipelineRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IProductPlanningIntentStore, ProductPlanningIntentStore>();
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<ISprintRepository, SprintRepository>();
@@ -178,6 +180,8 @@ public static class ApiServiceCollectionExtensions
         services.AddScoped<ExportConfigurationService>();
         services.AddScoped<ImportConfigurationService>();
         services.AddScoped<ProjectPlanningSummaryService>();
+        services.AddSingleton<IProductPlanningSessionStore, InMemoryProductPlanningSessionStore>();
+        services.AddScoped<IProductPlanningBoardService, ProductPlanningBoardService>();
         services.AddScoped<IBuildQualityReadStore, EfBuildQualityReadStore>();
         services.AddScoped<IBuildQualityProvider, BuildQualityProvider>();
         services.AddScoped<ContextResolver>();

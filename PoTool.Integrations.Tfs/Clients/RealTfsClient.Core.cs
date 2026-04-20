@@ -25,6 +25,8 @@ internal partial class RealTfsClient
     // TFS field paths
     private const string TfsFieldEffort = "Microsoft.VSTS.Scheduling.Effort";
     private const string TfsFieldStoryPoints = "Microsoft.VSTS.Scheduling.StoryPoints";
+    private const string TfsFieldStartDate = "Microsoft.VSTS.Scheduling.StartDate";
+    private const string TfsFieldTargetDate = "Microsoft.VSTS.Scheduling.TargetDate";
     private const string TfsFieldBusinessValue = "Microsoft.VSTS.Common.BusinessValue";
     private const string TfsFieldBacklogPriority = "Microsoft.VSTS.Common.BacklogPriority";
     private const string TfsFieldTimeCriticality = "Microsoft.VSTS.Common.TimeCriticality";
@@ -47,6 +49,8 @@ internal partial class RealTfsClient
         "System.CreatedDate",
         "System.ChangedDate",
         "Microsoft.VSTS.Common.ClosedDate",
+        TfsFieldStartDate,
+        TfsFieldTargetDate,
         "Microsoft.VSTS.Common.Severity",
         "System.Tags",
         TfsFieldBusinessValue,

@@ -135,7 +135,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 | `docs/archive/code-quality/non-test-issues-analysis-2026-01-30.md` | `history` | `audits` | Historical folder conflicts with present-tense audit content that still reads as a current check. |
 | `docs/archive/validation/validators-implementation-2026-01-30.md` | `history` | `reports` | Inferred purpose is report or summarized findings; governance expects docs/reports. |
 | `docs/implementation/battleship-cdc-extension-report.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
-| `docs/implementation/cdc-fallback-timestamp-hardening.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
+| `docs/reports/2026-04-18-cdc-fallback-timestamp-hardening.md` | `report` | `reports` | Stored under the canonical reports taxonomy with a dated kebab-case filename. |
 | `docs/implementation/cdc-fix-report-empty-snapshot-snapshotcount.md` | `other` | `reports` | Stored outside the canonical docs taxonomy; inferred purpose is report or summarized findings, so it belongs under docs/reports. |
 | `docs/iteration-path-sorting-audit.md` | `other` | `audits` | Stored outside the canonical docs taxonomy; inferred purpose is structured audit or compliance verification, so it belongs under docs/audits. |
 | `docs/reports/2026-03-30-sprint-attribution-analysis.md` | `reports` | `analysis` | Report folder overstates stability; the file still reads as exploratory/problem-analysis material. |
@@ -545,7 +545,7 @@ _Scan basis: filesystem inventory of all `*.md` files under `/home/runner/work/P
 - `docs/health-workspace-fix-plan.md` — filename `health-workspace-fix-plan.md` — purpose: plan or migration guidance — title: Health Workspace Fix Plan
 - `docs/implementation/battleship-cdc-extension-report.md` — filename `battleship-cdc-extension-report.md` — purpose: report or summarized findings — title: Battleship CDC Extension Report
 - `docs/implementation/cdc-critical-fixes.md` — filename `cdc-critical-fixes.md` — purpose: general markdown documentation — title: CDC Critical Fixes
-- `docs/implementation/cdc-fallback-timestamp-hardening.md` — filename `cdc-fallback-timestamp-hardening.md` — purpose: report or summarized findings — title: CDC Fallback Timestamp Hardening Report
+- `docs/reports/2026-04-18-cdc-fallback-timestamp-hardening.md` — filename `2026-04-18-cdc-fallback-timestamp-hardening.md` — purpose: report or summarized findings — title: CDC Fallback Timestamp Hardening Report
 - `docs/implementation/cdc-fix-report-empty-snapshot-snapshotcount.md` — filename `cdc-fix-report-empty-snapshot-snapshotcount.md` — purpose: report or summarized findings — title: CDC Fix Report — Empty Snapshot & SnapshotCount
 - `docs/implementation/phase-a-corrections.md` — filename `phase-a-corrections.md` — purpose: general markdown documentation — title: Phase A Corrections
 - `docs/implementation/phase-a-foundation.md` — filename `phase-a-foundation.md` — purpose: general markdown documentation — title: Phase A Foundation Implementation

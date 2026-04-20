@@ -468,4 +468,34 @@ public sealed class WorkItemRepositoryTests
         Assert.IsNotNull(result);
         Assert.IsNull(result.BacklogPriority, "UpsertManyAsync must clear BacklogPriority when updated to null");
     }
+
+    [TestMethod]
+    public async Task ReplaceAllAsync_PreservesPlanningDates()
+    {
+        using var context = CreateInMemoryContext();
+        var repository = new WorkItemRepository(context);
+        var startDate = new DateTimeOffset(2026, 1, 5, 0, 0, 0, TimeSpan.Zero);
+        var targetDate = new DateTimeOffset(2026, 1, 18, 0, 0, 0, TimeSpan.Zero);
+
+        var workItem = new WorkItemDto(
+            TfsId: 500,
+            Type: "Epic",
+            Title: "Epic with Planning Dates",
+            ParentTfsId: null,
+            AreaPath: "Project\\Team",
+            IterationPath: "Sprint 1",
+            State: "Active",
+            RetrievedAt: DateTimeOffset.UtcNow,
+            Effort: null,
+            Description: null,
+            StartDate: startDate,
+            TargetDate: targetDate);
+
+        await repository.ReplaceAllAsync([workItem]);
+        var result = await repository.GetByTfsIdAsync(500);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(startDate, result.StartDate);
+        Assert.AreEqual(targetDate, result.TargetDate);
+    }
 }

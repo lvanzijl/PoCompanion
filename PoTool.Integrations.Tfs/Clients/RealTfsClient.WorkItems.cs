@@ -315,6 +315,8 @@ internal partial class RealTfsClient
 
             // Extract closed date from TFS (Microsoft.VSTS.Common.ClosedDate)
             DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+            DateTimeOffset? startDate = ParseDateTimeField(fields, TfsFieldStartDate);
+            DateTimeOffset? targetDate = ParseDateTimeField(fields, TfsFieldTargetDate);
 
             // Extract severity from TFS (Microsoft.VSTS.Common.Severity)
             string? severity = ParseSeverityField(fields);
@@ -354,7 +356,9 @@ internal partial class RealTfsClient
                 StoryPoints: storyPoints,
                 TimeCriticality: timeCriticality,
                 ProjectNumber: projectNumber,
-                ProjectElement: projectElement
+                ProjectElement: projectElement,
+                StartDate: startDate,
+                TargetDate: targetDate
             );
 
             _logger.LogInformation("Retrieved work item {WorkItemId} from TFS: {Title}", id, title);
@@ -697,6 +701,8 @@ internal partial class RealTfsClient
 
                     // Extract closed date from TFS (Microsoft.VSTS.Common.ClosedDate)
                     DateTimeOffset? closedDate = ParseDateTimeField(fields, "Microsoft.VSTS.Common.ClosedDate");
+                    DateTimeOffset? startDate = ParseDateTimeField(fields, TfsFieldStartDate);
+                    DateTimeOffset? targetDate = ParseDateTimeField(fields, TfsFieldTargetDate);
 
                     // Extract severity from TFS (Microsoft.VSTS.Common.Severity)
                     string? severity = ParseSeverityField(fields);
@@ -733,7 +739,9 @@ internal partial class RealTfsClient
                         StoryPoints: storyPoints,
                         TimeCriticality: timeCriticality,
                         ProjectNumber: projectNumber,
-                        ProjectElement: projectElement
+                        ProjectElement: projectElement,
+                        StartDate: startDate,
+                        TargetDate: targetDate
                     ));
                 }
 

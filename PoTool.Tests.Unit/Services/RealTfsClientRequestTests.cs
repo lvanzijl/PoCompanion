@@ -105,6 +105,80 @@ public class RealTfsClientRequestTests
     }
 
     [TestMethod]
+    public async Task GetWorkItemByIdAsync_MapsPlanningDatesFromFields()
+    {
+        var config = CreateConfig();
+
+        var handler = new CaptureHttpMessageHandler((request, _) =>
+        {
+            if (request.RequestUri!.AbsoluteUri.Contains("_apis/wit/workitemsbatch", StringComparison.OrdinalIgnoreCase))
+            {
+                var payload = request.Content!.ReadAsStringAsync().Result;
+                if (payload.Contains("\"expand\":\"relations\"", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("{\"value\":[{\"id\":321,\"relations\":[]}]}")
+                    });
+                }
+
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"value\":[{\"id\":321,\"fields\":{" +
+                        "\"System.WorkItemType\":\"Epic\"," +
+                        "\"System.Title\":\"Recovered Epic\"," +
+                        "\"System.State\":\"Active\"," +
+                        "\"System.AreaPath\":\"TestProject\\\\Area\"," +
+                        "\"System.IterationPath\":\"Sprint 1\"," +
+                        "\"Microsoft.VSTS.Scheduling.StartDate\":\"2026-01-05\"," +
+                        "\"Microsoft.VSTS.Scheduling.TargetDate\":\"2026-01-18\"" +
+                        "}}]}")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound)
+            {
+                Content = new StringContent("{}")
+            });
+        });
+
+        var client = CreateClient(config, handler);
+        var result = await client.GetWorkItemByIdAsync(321);
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(new DateTimeOffset(2026, 1, 5, 0, 0, 0, TimeSpan.Zero), result.StartDate);
+        Assert.AreEqual(new DateTimeOffset(2026, 1, 18, 0, 0, 0, TimeSpan.Zero), result.TargetDate);
+    }
+
+    [TestMethod]
+    public async Task UpdateWorkItemPlanningDatesAsync_WritesBothFieldsTogether_AsDateOnlyValues()
+    {
+        var config = CreateConfig();
+        string? requestBody = null;
+
+        var handler = new CaptureHttpMessageHandler(async (request, ct) =>
+        {
+            requestBody = request.Content == null ? null : await request.Content.ReadAsStringAsync(ct);
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"id\":321,\"fields\":{}}")
+            };
+        });
+
+        var client = CreateClient(config, handler);
+        var success = await client.UpdateWorkItemPlanningDatesAsync(321, new DateOnly(2026, 1, 5), new DateOnly(2026, 1, 18));
+
+        Assert.IsTrue(success);
+        Assert.IsNotNull(requestBody);
+        using var doc = JsonDocument.Parse(requestBody);
+        Assert.AreEqual(2, doc.RootElement.GetArrayLength());
+        Assert.AreEqual("/fields/Microsoft.VSTS.Scheduling.StartDate", doc.RootElement[0].GetProperty("path").GetString());
+        Assert.AreEqual("2026-01-05", doc.RootElement[0].GetProperty("value").GetString());
+        Assert.AreEqual("/fields/Microsoft.VSTS.Scheduling.TargetDate", doc.RootElement[1].GetProperty("path").GetString());
+        Assert.AreEqual("2026-01-18", doc.RootElement[1].GetProperty("value").GetString());
+    }
+
+    [TestMethod]
     public async Task GetWorkItemsAsync_RejectsEmptyAreaPathBeforeSendingWiql()
     {
         var config = CreateConfig();
@@ -176,6 +250,8 @@ public class RealTfsClientRequestTests
                         "{\"referenceName\":\"System.CreatedDate\"}," +
                         "{\"referenceName\":\"System.ChangedDate\"}," +
                         "{\"referenceName\":\"Microsoft.VSTS.Common.ClosedDate\"}," +
+                        "{\"referenceName\":\"Microsoft.VSTS.Scheduling.StartDate\"}," +
+                        "{\"referenceName\":\"Microsoft.VSTS.Scheduling.TargetDate\"}," +
                         "{\"referenceName\":\"Microsoft.VSTS.Common.Severity\"}," +
                         "{\"referenceName\":\"System.Tags\"}," +
                         "{\"referenceName\":\"Microsoft.VSTS.Common.BusinessValue\"}," +

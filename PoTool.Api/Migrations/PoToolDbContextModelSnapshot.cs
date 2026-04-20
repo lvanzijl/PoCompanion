@@ -1375,6 +1375,41 @@ namespace PoTool.Api.Migrations
                     b.ToTable("ProductOwnerCacheStates");
                 });
 
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductPlanningIntentEntity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("DurationInSprints")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("EpicId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RecoveryStatus")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("StartSprintStartDateUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "EpicId")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId", "StartSprintStartDateUtc");
+
+                    b.ToTable("ProductPlanningIntents");
+                });
+
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductTeamLinkEntity", b =>
                 {
                     b.Property<int>("ProductId")
@@ -2165,6 +2200,12 @@ namespace PoTool.Api.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset?>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartDateUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("State")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -2175,6 +2216,12 @@ namespace PoTool.Api.Migrations
 
                     b.Property<string>("Tags")
                         .HasMaxLength(1000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("TargetDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("TargetDateUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("TfsChangedDate")
@@ -3211,6 +3258,17 @@ namespace PoTool.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("ProductOwner");
+                });
+
+            modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductPlanningIntentEntity", b =>
+                {
+                    b.HasOne("PoTool.Api.Persistence.Entities.ProductEntity", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("PoTool.Api.Persistence.Entities.ProductTeamLinkEntity", b =>

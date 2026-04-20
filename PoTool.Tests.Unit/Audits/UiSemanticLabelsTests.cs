@@ -41,10 +41,10 @@ public sealed class UiSemanticLabelsTests
         StringAssert.Contains(sprintExecution, "Added Story Points");
         StringAssert.Contains(sprintExecution, "Delivered Story Points");
         StringAssert.Contains(sprintExecution, "Spillover Story Points");
-        StringAssert.Contains(sprintExecution, "_data.Summary.CommittedSP");
-        StringAssert.Contains(sprintExecution, "_data.Summary.AddedSP");
-        StringAssert.Contains(sprintExecution, "_data.Summary.DeliveredSP");
-        StringAssert.Contains(sprintExecution, "_data.Summary.SpilloverSP");
+        StringAssert.Contains(sprintExecution, "data.Summary.CommittedSP");
+        StringAssert.Contains(sprintExecution, "data.Summary.AddedSP");
+        StringAssert.Contains(sprintExecution, "data.Summary.DeliveredSP");
+        StringAssert.Contains(sprintExecution, "data.Summary.SpilloverSP");
 
         var sprintTrend = File.ReadAllText(Path.Combine(repositoryRoot, "PoTool.Client", "Pages", "Home", "SprintTrend.razor"));
         StringAssert.Contains(sprintTrend, "Delivered Story Points");

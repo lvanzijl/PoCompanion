@@ -295,6 +295,7 @@ builder.Services.AddScoped<RoadmapReportingService>();
 builder.Services.AddScoped<RoadmapSnapshotService>();
 builder.Services.AddScoped<RoadmapAnalyticsService>();
 builder.Services.AddScoped<BrowserNavigationService>();
+builder.Services.AddScoped<ProductPlanningBoardClientService>();
 
 // Home navigation services
 builder.Services.AddScoped<IEpicOrderingService, EpicOrderingService>();
