@@ -2,10 +2,10 @@
 
 ## Summary
 
-- VERIFIED: current Plan Board signal language could still be misread as certainty, safety, or delivery probability in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductPlanningSprintSignals.cs` and `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PlanBoard.razor`.
+- VERIFIED: current Plan Board signal language could still be misread as certainty, safety, or delivery probability in `PoTool.Client/Models/ProductPlanningSprintSignals.cs` and `PoTool.Client/Pages/Home/PlanBoard.razor`.
 - IMPLEMENTED: wording-only guardrails for labels, chips, tooltips, page hint text, and signal delta summaries.
-- IMPLEMENTED: regression coverage in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs` and `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Services/PlanningBoardImpactSummaryBuilderTests.cs`.
-- IMPLEMENTED: release note update in `/home/runner/work/PoCompanion/PoCompanion/docs/release-notes.json`.
+- IMPLEMENTED: regression coverage in `PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs` and `PoTool.Tests.Unit/Services/PlanningBoardImpactSummaryBuilderTests.cs`.
+- IMPLEMENTED: release note update in `docs/release-notes.json`.
 - NOT IMPLEMENTED: no signal calculations, planning logic, persistence model, API contracts, new signals, or new UI elements were changed.
 - BLOCKER: none.
 
@@ -13,7 +13,7 @@
 
 ### Relevant code locations
 
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductPlanningSprintSignals.cs`
+- `PoTool.Client/Models/ProductPlanningSprintSignals.cs`
   - `BuildRiskLabel`
   - `BuildConfidenceLabel`
   - `BuildChips`
@@ -22,9 +22,9 @@
   - `BuildConfidenceFactors`
   - `TryBuildRiskDeltaSummary`
   - `TryBuildConfidenceDeltaSummary`
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PlanBoard.razor`
+- `PoTool.Client/Pages/Home/PlanBoard.razor`
   - Sprint heat hint above the cards
-- `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/PlanningBoardImpactSummary.cs`
+- `PoTool.Client/Models/PlanningBoardImpactSummary.cs`
   - latest-impact summary path through `ProductPlanningSprintSignalFactory.BuildDeltaSummaries`
 
 ### Current phrases reviewed
@@ -91,7 +91,7 @@
   - delta summaries from `TryBuildConfidenceDeltaSummary`
 - Evidence:
   - direct `Confidence high` / `Confidence decreased` phrasing in `ProductPlanningSprintSignals.cs`
-  - tests before this phase asserted `Confidence high` in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
+  - tests before this phase asserted `Confidence high` in `PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
 
 ### 2. “Low risk” read as “safe plan”
 
@@ -129,7 +129,7 @@
 
 #### Labels
 
-- IMPLEMENTED in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductPlanningSprintSignals.cs`
+- IMPLEMENTED in `PoTool.Client/Models/ProductPlanningSprintSignals.cs`
   - `Risk high` → `Strain elevated`
   - `Risk medium` → `Needs attention`
   - `Risk low` → `Within typical range`
@@ -157,7 +157,7 @@
 
 #### Page hint
 
-- IMPLEMENTED in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PlanBoard.razor`
+- IMPLEMENTED in `PoTool.Client/Pages/Home/PlanBoard.razor`
   - previous: `Background color shows sprint risk. Color strength shows how confident the current plan still is.`
   - new: `Background color suggests sprint planning strain in the current plan. Color strength suggests how settled that sprint still looks, not delivery certainty.`
 
@@ -179,7 +179,7 @@
 
 ## Changes implemented (with file references)
 
-### `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductPlanningSprintSignals.cs`
+### `PoTool.Client/Models/ProductPlanningSprintSignals.cs`
 
 - IMPLEMENTED:
   - updated user-facing risk labels
@@ -188,24 +188,24 @@
   - updated all tooltip sentences to current-plan interpretive wording
   - updated impact summary wording to stability/strain language instead of raw confidence language
 
-### `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PlanBoard.razor`
+### `PoTool.Client/Pages/Home/PlanBoard.razor`
 
 - IMPLEMENTED:
   - updated the sprint-heat hint to define the UI as interpretive and explicitly not delivery certainty
 
-### `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
+### `PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
 
 - IMPLEMENTED:
   - updated existing assertions for new labels/chips/tooltips
   - added a regression test that forbids `guarantee`, `will deliver`, `safe plan`, `Confidence high`, and `Risk low`
 
-### `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Services/PlanningBoardImpactSummaryBuilderTests.cs`
+### `PoTool.Tests.Unit/Services/PlanningBoardImpactSummaryBuilderTests.cs`
 
 - IMPLEMENTED:
   - updated summary assertions to new interpretive phrasing
   - added assertions that summary items do not drift back to `Confidence` wording or delivery-certainty language
 
-### `/home/runner/work/PoCompanion/PoCompanion/docs/release-notes.json`
+### `docs/release-notes.json`
 
 - IMPLEMENTED:
   - added a release note for the wording-only interpretation guardrails
@@ -227,19 +227,19 @@
 ## Tests added/updated
 
 - IMPLEMENTED:
-  - updated `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
+  - updated `PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
     - `BuildColumns_UsesPlanningLanguageForStableNearTermSprint`
     - `BuildColumns_DecaysConfidenceGraduallyAcrossStablePlanningHorizon`
     - `BuildColumns_ClassifiesHighRiskLowConfidenceSprintAndBuildsHeatStyle`
     - added `BuildColumns_UsesInterpretiveLanguageInsteadOfDeliveryCertainty`
-  - updated `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Services/PlanningBoardImpactSummaryBuilderTests.cs`
+  - updated `PoTool.Tests.Unit/Services/PlanningBoardImpactSummaryBuilderTests.cs`
     - `Build_PlanningAction_ReportsRiskAndConfidenceShiftBySprint`
 
 ### Test evidence
 
 - VERIFIED:
-  - `dotnet test /home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProductPlanningSprintSignalFactoryTests|FullyQualifiedName~PlanningBoardImpactSummaryBuilderTests" --no-restore`
-  - `dotnet test /home/runner/work/PoCompanion/PoCompanion/PoTool.Api.Tests/PoTool.Api.Tests.csproj --configuration Release --filter "FullyQualifiedName~ProductPlanningBoardClientUiTests" --no-restore`
+  - `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProductPlanningSprintSignalFactoryTests|FullyQualifiedName~PlanningBoardImpactSummaryBuilderTests" --no-restore`
+  - `dotnet test PoTool.Api.Tests/PoTool.Api.Tests.csproj --configuration Release --filter "FullyQualifiedName~ProductPlanningBoardClientUiTests" --no-restore`
 
 ## Remaining risks
 
@@ -276,12 +276,12 @@
 ### Evidence (files/tests)
 
 - Files:
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductPlanningSprintSignals.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Pages/Home/PlanBoard.razor`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/PlanningBoardImpactSummary.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Services/PlanningBoardImpactSummaryBuilderTests.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/docs/release-notes.json`
+  - `PoTool.Client/Models/ProductPlanningSprintSignals.cs`
+  - `PoTool.Client/Pages/Home/PlanBoard.razor`
+  - `PoTool.Client/Models/PlanningBoardImpactSummary.cs`
+  - `PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
+  - `PoTool.Tests.Unit/Services/PlanningBoardImpactSummaryBuilderTests.cs`
+  - `docs/release-notes.json`
 - Tests:
   - targeted signal wording tests passed
   - targeted Plan Board UI tests passed
