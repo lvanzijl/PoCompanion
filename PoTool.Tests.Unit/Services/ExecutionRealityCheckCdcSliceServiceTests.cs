@@ -15,6 +15,8 @@ namespace PoTool.Tests.Unit.Services;
 [TestClass]
 public sealed class ExecutionRealityCheckCdcSliceServiceTests
 {
+    private const double Tolerance = 0.0001d;
+
     private SqliteConnection _connection = null!;
     private ServiceProvider _serviceProvider = null!;
 
@@ -83,16 +85,22 @@ public sealed class ExecutionRealityCheckCdcSliceServiceTests
         Assert.IsTrue(result.HasSufficientEvidence);
         Assert.IsNotNull(result.Slice);
         Assert.HasCount(8, result.Slice.WindowRows);
-        Assert.IsTrue(result.Slice.WindowRows.All(row => Math.Abs(row.CommitmentCompletion - 0.8d) < 0.0001d));
-        Assert.IsTrue(result.Slice.WindowRows.All(row => Math.Abs(row.SpilloverRate - 0.2d) < 0.0001d));
+        CollectionAssert.AreEqual(
+            Enumerable.Repeat(0.8d, 8).ToList(),
+            result.Slice.WindowRows.Select(row => row.CommitmentCompletion).ToList(),
+            new DoubleComparer(Tolerance));
+        CollectionAssert.AreEqual(
+            Enumerable.Repeat(0.2d, 8).ToList(),
+            result.Slice.WindowRows.Select(row => row.SpilloverRate).ToList(),
+            new DoubleComparer(Tolerance));
 
         var completionBaseline = result.Slice.Baselines.Single(baseline =>
             baseline.MetricKey == ExecutionRealityCheckCdcKeys.CommitmentCompletionMetricKey);
         var spilloverBaseline = result.Slice.Baselines.Single(baseline =>
             baseline.MetricKey == ExecutionRealityCheckCdcKeys.SpilloverRateMetricKey);
 
-        Assert.AreEqual(0.8d, completionBaseline.Median, 0.0001d);
-        Assert.AreEqual(0.2d, spilloverBaseline.Median, 0.0001d);
+        Assert.AreEqual(0.8d, completionBaseline.Median, Tolerance);
+        Assert.AreEqual(0.2d, spilloverBaseline.Median, Tolerance);
         Assert.AreEqual(scenario.WindowSprintIds[^1], result.Slice.AnomalyInputs[0].CurrentSprintId);
         CollectionAssert.AreEquivalent(
             new[]
@@ -392,4 +400,21 @@ public sealed class ExecutionRealityCheckCdcSliceServiceTests
         int ProductId,
         int AnchorSprintId,
         IReadOnlyList<int> WindowSprintIds);
+
+    private sealed class DoubleComparer : System.Collections.IComparer
+    {
+        private readonly double _tolerance;
+
+        public DoubleComparer(double tolerance)
+        {
+            _tolerance = tolerance;
+        }
+
+        public int Compare(object? x, object? y)
+        {
+            var left = Convert.ToDouble(x);
+            var right = Convert.ToDouble(y);
+            return Math.Abs(left - right) <= _tolerance ? 0 : left.CompareTo(right);
+        }
+    }
 }

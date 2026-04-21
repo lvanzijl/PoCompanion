@@ -104,8 +104,11 @@ public sealed class ExecutionRealityCheckCdcSliceProjector : IExecutionRealityCh
     {
         ArgumentNullException.ThrowIfNull(orderedWindowRows);
 
-        if (orderedWindowRows.Count != RequiredWindowSize
-            || orderedWindowRows.Any(row => !row.HasAuthoritativeDenominator || !row.HasContinuousOrdering))
+        var hasExpectedDepth = orderedWindowRows.Count == RequiredWindowSize;
+        var hasInvalidDenominator = orderedWindowRows.Any(static row => !row.HasAuthoritativeDenominator);
+        var hasInvalidOrdering = orderedWindowRows.Any(static row => !row.HasContinuousOrdering);
+
+        if (!hasExpectedDepth || hasInvalidDenominator || hasInvalidOrdering)
         {
             return ExecutionRealityCheckCdcSliceResult.InsufficientEvidence();
         }

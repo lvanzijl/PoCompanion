@@ -88,20 +88,17 @@ public sealed class ExecutionRealityCheckCdcSliceService
         {
             return ExecutionRealityCheckCdcSliceResult.InsufficientEvidence();
         }
-
-        var sprintDefinitionsById = orderedWindow
-            .Select(CreateSprintDefinition)
-            .Where(definition => definition != null)
-            .ToDictionary(definition => definition!.SprintId, definition => definition!);
-        if (sprintDefinitionsById.Count != orderedWindow.Count)
+        if (orderedWindow.Any(static sprint => !HasCompleteSprintWindow(sprint)))
         {
             return ExecutionRealityCheckCdcSliceResult.InsufficientEvidence();
         }
 
+        var sprintDefinitionsById = orderedWindow
+            .ToDictionary(sprint => sprint.Id, CreateSprintDefinition);
+
         var teamSprintDefinitions = teamSprints
+            .Where(HasCompleteSprintWindow)
             .Select(CreateSprintDefinition)
-            .Where(definition => definition != null)
-            .Select(definition => definition!)
             .ToList();
         if (!HasContinuousOrdering(orderedWindow, sprintDefinitionsById, teamSprintDefinitions))
         {
@@ -198,9 +195,8 @@ public sealed class ExecutionRealityCheckCdcSliceService
         var nowUtc = DateTime.UtcNow;
 
         return teamSprints
-            .Where(sprint => sprint.StartDateUtc.HasValue
-                && sprint.EndDateUtc.HasValue
-                && DateTime.SpecifyKind(sprint.EndDateUtc.Value, DateTimeKind.Utc) < nowUtc)
+            .Where(HasCompleteSprintWindow)
+            .Where(sprint => sprint.EndDateUtc!.Value < nowUtc)
             .OrderBy(sprint => sprint.StartDateUtc)
             .ThenBy(sprint => sprint.Id)
             .TakeLast(ExecutionRealityCheckCdcSliceProjector.RequiredWindowSize)
@@ -237,17 +233,26 @@ public sealed class ExecutionRealityCheckCdcSliceService
         return true;
     }
 
-    private static SprintDefinition? CreateSprintDefinition(SprintEntity sprint)
+    private static bool HasCompleteSprintWindow(SprintEntity sprint)
     {
-        if (!sprint.StartDateUtc.HasValue || !sprint.EndDateUtc.HasValue)
+        return sprint.StartDateUtc.HasValue && sprint.EndDateUtc.HasValue;
+    }
+
+    private static SprintDefinition CreateSprintDefinition(SprintEntity sprint)
+    {
+        ArgumentNullException.ThrowIfNull(sprint);
+
+        if (!HasCompleteSprintWindow(sprint))
         {
-            return null;
+            throw new InvalidOperationException("Execution reality-check slice requires sprints with both start and end dates.");
         }
 
+        var startDateUtc = sprint.StartDateUtc ?? throw new InvalidOperationException("Sprint start date is required.");
+        var endDateUtc = sprint.EndDateUtc ?? throw new InvalidOperationException("Sprint end date is required.");
         var startUtc = sprint.StartUtc
-            ?? new DateTimeOffset(DateTime.SpecifyKind(sprint.StartDateUtc.Value, DateTimeKind.Utc), TimeSpan.Zero);
+            ?? new DateTimeOffset(DateTime.SpecifyKind(startDateUtc, DateTimeKind.Utc), TimeSpan.Zero);
         var endUtc = sprint.EndUtc
-            ?? new DateTimeOffset(DateTime.SpecifyKind(sprint.EndDateUtc.Value, DateTimeKind.Utc), TimeSpan.Zero);
+            ?? new DateTimeOffset(DateTime.SpecifyKind(endDateUtc, DateTimeKind.Utc), TimeSpan.Zero);
 
         return new SprintDefinition(
             sprint.Id,
