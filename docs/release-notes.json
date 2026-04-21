@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-21",
+    "type": "Changed",
+    "title": "Plan Board now adds per-sprint risk and confidence planning signals",
+    "impact": "The /planning/plan-board workspace now colors each sprint by interpreted planning risk, fades that heat by how trustworthy the sprint still is, adds plain-language sprint chips and tooltips that explain why a sprint looks strained or uncertain, and extends latest-impact feedback so planning actions call out when a sprint moved above normal load or when confidence dropped after recent reshaping without changing backend planning logic or TFS reporting behavior.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
     "date": "2026-04-20",
     "type": "Changed",
     "title": "Plan Board now explains latest impact and separates reporting maintenance from planning actions",
