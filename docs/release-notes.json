@@ -2,6 +2,14 @@
   {
     "date": "2026-04-21",
     "type": "Changed",
+    "title": "Plan Board sprint signals now use more interpretive wording and avoid delivery-certainty language",
+    "impact": "Later on 2026-04-21, the /planning/plan-board workspace now describes sprint heat as a current-plan interpretation instead of a guarantee, renames low-risk and high-confidence labels so they read as typical-range or near-term stability rather than safety or delivery probability, and updates sprint chips, tooltips, and latest-impact summaries to use short advisory wording such as 'based on the current plan' and 'suggests' without changing any signal calculations or backend behavior.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-21",
+    "type": "Changed",
     "title": "Plan Board sprint signals now show board-wide overload more explicitly and keep far-horizon confidence provisional",
     "impact": "Later on 2026-04-21, as a follow-up refinement to the sprint risk and confidence rollout, the /planning/plan-board workspace now keeps chronically overloaded boards visibly elevated instead of treating that pressure as fully normal, prevents mid-to-far horizon steady sprints from staying fully high-confidence, and makes sprint chips and tooltips lead with the strongest risk or confidence driver so overlap, reshaping, and board-relative context read more credibly without changing backend planning logic, persistence, or TFS/API contracts.",
     "area": "Planning / Plan Board / Planning Intelligence",
