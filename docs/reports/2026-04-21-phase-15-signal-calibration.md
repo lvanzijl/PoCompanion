@@ -1,8 +1,8 @@
 # Summary
 
-- VERIFIED: the original Phase 15 signal implementation in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductPlanningSprintSignals.cs` behaved more like a colored metric system than a judgment system because it mapped raw counts directly into risk and confidence buckets without board-relative normalization.
-- IMPLEMENTED: calibrated the existing heuristics in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductPlanningSprintSignals.cs` so risk now uses board-relative baselines plus weighted structural guardrails, and confidence now uses gradual horizon decay with smaller change penalties.
-- IMPLEMENTED: hardened `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs` to cover stability, gradual confidence decay, risk/confidence separation, and non-regression away from raw metric exposure/global-score language.
+- VERIFIED: the original Phase 15 signal implementation in `PoTool.Client/Models/ProductPlanningSprintSignals.cs` behaved more like a colored metric system than a judgment system because it mapped raw counts directly into risk and confidence buckets without board-relative normalization.
+- IMPLEMENTED: calibrated the existing heuristics in `PoTool.Client/Models/ProductPlanningSprintSignals.cs` so risk now uses board-relative baselines plus weighted structural guardrails, and confidence now uses gradual horizon decay with smaller change penalties.
+- IMPLEMENTED: hardened `PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs` to cover stability, gradual confidence decay, risk/confidence separation, and non-regression away from raw metric exposure/global-score language.
 - VERIFIED: targeted regression commands passed after calibration.
 
 # Current signal formulas
@@ -32,7 +32,7 @@
 
 ### Post-calibration evidence
 
-- VERIFIED: calibrated logic lives in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductPlanningSprintSignals.cs` lines 72-223.
+- VERIFIED: calibrated logic lives in `PoTool.Client/Models/ProductPlanningSprintSignals.cs` lines 72-223.
 - IMPLEMENTED: current risk logic now has two stages:
   1. collect raw per-sprint counts
      - active Epic count
@@ -92,7 +92,7 @@
 - VERIFIED: the old implementation could flip far-future confidence too aggressively because a single changed Epic on a distant sprint stacked a large raw distance bucket and a full raw change point.
 - VERIFIED: the old implementation treated raw crowding counts as universally meaningful even when the same density was normal for the whole board.
 - VERIFIED: the old implementation used stepped distance buckets (`0/1/2/3`) instead of gradual decay, which made confidence more binary than intended.
-- VERIFIED: the calibration tests added in `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs` now exercise those exact stability risks.
+- VERIFIED: the calibration tests added in `PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs` now exercise those exact stability risks.
 
 # Calibration changes
 
@@ -110,7 +110,7 @@
 # Before/after behavior
 
 - VERIFIED: before calibration, the inspected implementation from `git show HEAD^:PoTool.Client/Models/ProductPlanningSprintSignals.cs` was a raw-threshold color system.
-- VERIFIED: after calibration, `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs` now proves:
+- VERIFIED: after calibration, `PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs` now proves:
   - typical dense boards can remain `Risk low` when that density is normal for the board
   - a minor far-future change stays `Confidence medium` instead of dropping straight to `Low`
   - stable horizons decay confidence gradually instead of oscillating
@@ -165,9 +165,9 @@
 ## Evidence (files/tests/commands)
 
 - Files:
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Client/Models/ProductPlanningSprintSignals.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
-  - `/home/runner/work/PoCompanion/PoCompanion/docs/release-notes.json`
+  - `PoTool.Client/Models/ProductPlanningSprintSignals.cs`
+  - `PoTool.Tests.Unit/Models/ProductPlanningSprintSignalFactoryTests.cs`
+  - `docs/release-notes.json`
 - Commands:
   - `git --no-pager show HEAD^:PoTool.Client/Models/ProductPlanningSprintSignals.cs | sed -n '72,185p'`
   - `dotnet test PoTool.Tests.Unit/PoTool.Tests.Unit.csproj --configuration Release --filter "FullyQualifiedName~ProductPlanningSprintSignalFactoryTests|FullyQualifiedName~PlanningBoardImpactSummaryBuilderTests" --no-restore`

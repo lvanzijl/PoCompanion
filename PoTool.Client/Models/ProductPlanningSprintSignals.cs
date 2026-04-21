@@ -150,43 +150,10 @@ public static class ProductPlanningSprintSignalFactory
             return PlanningBoardSprintRiskLevel.Low;
         }
 
-        var score = 0d;
-        var elevatedLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + ElevatedLoadBaselineOffset);
-        var highLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + HighLoadBaselineOffset);
-        var elevatedOverlapThreshold = Math.Max(1, (int)Math.Ceiling(metric.OverlapBaseline + 1d));
-        var highForwardShiftThreshold = Math.Max(2, (int)Math.Ceiling(metric.ActiveEpicCount * HighForwardShiftShare));
-
-        score += metric.ActiveEpicCount >= Math.Max(5, highLoadThreshold)
-            ? 1.55d
-            : metric.ActiveEpicCount >= 4
-                ? 1.10d
-            : metric.ActiveEpicCount >= Math.Max(2, elevatedLoadThreshold)
-                ? 0.80d
-                : 0d;
-
-        score += metric.ActiveTrackCount >= 3
-            ? 1.10d
-            : metric.ActiveTrackCount >= 2 && metric.TrackBaseline < 1.5d
-                ? 0.55d
-                : metric.ActiveTrackCount >= 2 &&
-                  metric.ActiveEpicCount >= 3 &&
-                  metric.ActiveTrackCount > metric.TrackBaseline
-                    ? 0.65d
-                    : 0d;
-
-        score += metric.ForwardShiftCount >= highForwardShiftThreshold
-            ? 0.95d
-            : metric.ForwardShiftCount > 0
-                ? 0.40d
-                : 0d;
-
-        score += metric.OverlapPairCount >= 3 || metric.OverlapPairCount >= elevatedOverlapThreshold + 1
-            ? 0.95d
-            : metric.OverlapPairCount >= elevatedOverlapThreshold
-                ? 0.45d
-                : metric.OverlapPairCount > 0 && metric.ActiveTrackCount >= 3
-                    ? 0.30d
-                    : 0d;
+        var score = GetLoadRiskContribution(metric) +
+                    GetTrackRiskContribution(metric) +
+                    GetForwardShiftRiskContribution(metric) +
+                    GetOverlapRiskContribution(metric);
 
         return score switch
         {
@@ -194,6 +161,78 @@ public static class ProductPlanningSprintSignalFactory
             >= 1.25d => PlanningBoardSprintRiskLevel.Medium,
             _ => PlanningBoardSprintRiskLevel.Low
         };
+    }
+
+    private static double GetLoadRiskContribution(SprintSignalMetrics metric)
+    {
+        var elevatedLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + ElevatedLoadBaselineOffset);
+        var highLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + HighLoadBaselineOffset);
+
+        if (metric.ActiveEpicCount >= Math.Max(5, highLoadThreshold))
+        {
+            return 1.55d;
+        }
+
+        if (metric.ActiveEpicCount >= 4)
+        {
+            return 1.10d;
+        }
+
+        return metric.ActiveEpicCount >= Math.Max(2, elevatedLoadThreshold)
+            ? 0.80d
+            : 0d;
+    }
+
+    private static double GetTrackRiskContribution(SprintSignalMetrics metric)
+    {
+        if (metric.ActiveTrackCount >= 3)
+        {
+            return 1.10d;
+        }
+
+        if (metric.ActiveTrackCount >= 2 && metric.TrackBaseline < 1.5d)
+        {
+            return 0.55d;
+        }
+
+        return metric.ActiveTrackCount >= 2 &&
+               metric.ActiveEpicCount >= 3 &&
+               metric.ActiveTrackCount > metric.TrackBaseline
+            ? 0.65d
+            : 0d;
+    }
+
+    private static double GetForwardShiftRiskContribution(SprintSignalMetrics metric)
+    {
+        var highForwardShiftThreshold = Math.Max(2, (int)Math.Ceiling(metric.ActiveEpicCount * HighForwardShiftShare));
+
+        if (metric.ForwardShiftCount >= highForwardShiftThreshold)
+        {
+            return 0.95d;
+        }
+
+        return metric.ForwardShiftCount > 0
+            ? 0.40d
+            : 0d;
+    }
+
+    private static double GetOverlapRiskContribution(SprintSignalMetrics metric)
+    {
+        var elevatedOverlapThreshold = Math.Max(1, (int)Math.Ceiling(metric.OverlapBaseline + 1d));
+
+        if (metric.OverlapPairCount >= 3 || metric.OverlapPairCount >= elevatedOverlapThreshold + 1)
+        {
+            return 0.95d;
+        }
+
+        if (metric.OverlapPairCount >= elevatedOverlapThreshold)
+        {
+            return 0.45d;
+        }
+
+        return metric.OverlapPairCount > 0 && metric.ActiveTrackCount >= 3
+            ? 0.30d
+            : 0d;
     }
 
     private static PlanningBoardSprintConfidenceLevel ClassifyConfidence(SprintSignalMetrics metric)
