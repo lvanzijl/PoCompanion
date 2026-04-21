@@ -27,7 +27,16 @@ public sealed record ProductPlanningBoardRenderModel(
     string? LatestChangeTitle,
     string? LatestChangeDetail);
 
-public sealed record ProductPlanningSprintColumn(int SprintIndex, string Label);
+public sealed record ProductPlanningSprintColumn(
+    int SprintIndex,
+    string Label,
+    PlanningBoardSprintRiskLevel RiskLevel,
+    PlanningBoardSprintConfidenceLevel ConfidenceLevel,
+    string RiskLabel,
+    string ConfidenceLabel,
+    string HeatStyle,
+    IReadOnlyList<string> ExplanationChips,
+    string Tooltip);
 
 public sealed record ProductPlanningTrackRow(
     int TrackIndex,
@@ -38,7 +47,7 @@ public sealed record ProductPlanningTrackRow(
 
 public static class ProductPlanningBoardRenderModelFactory
 {
-    public static ProductPlanningBoardRenderModel Create(ProductPlanningBoardDto board)
+    public static ProductPlanningBoardRenderModel Create(ProductPlanningBoardDto board, ProductPlanningBoardDto? previousBoard = null)
     {
         ArgumentNullException.ThrowIfNull(board);
 
@@ -65,9 +74,7 @@ public static class ProductPlanningBoardRenderModelFactory
             .ToArray();
 
         var maxSprintCount = Math.Max(1, board.EpicItems.Count == 0 ? 0 : board.EpicItems.Max(static epic => epic.EndSprintIndexExclusive));
-        var sprintColumns = Enumerable.Range(0, maxSprintCount)
-            .Select(index => new ProductPlanningSprintColumn(index, $"Sprint {index + 1}"))
-            .ToArray();
+        var sprintColumns = ProductPlanningSprintSignalFactory.BuildColumns(board, maxSprintCount, previousBoard);
 
         var hasValidationIssues = board.Issues.Count > 0;
         var hasRecentChanges = board.ChangedEpicIds.Count > 0 || board.AffectedEpicIds.Count > 0;

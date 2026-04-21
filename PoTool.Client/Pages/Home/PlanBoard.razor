@@ -279,13 +279,39 @@
                 </MudPaper>
 
                 <MudPaper Elevation="1" Class="pa-3">
-                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                        @foreach (var sprint in renderModel.SprintColumns)
-                        {
-                            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Default">
-                                @sprint.Label
-                            </MudChip>
-                        }
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.subtitle2">Sprint heat</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Background color shows sprint risk. Color strength shows how confident the current plan still is.
+                        </MudText>
+                        <div class="planning-board-sprint-signal-grid" style="@GetTrackGridStyle(renderModel.MaxSprintCount)">
+                            @foreach (var sprint in renderModel.SprintColumns)
+                            {
+                                <MudTooltip Text="@sprint.Tooltip" Arrow="true" Placement="Placement.Top">
+                                    <MudPaper Class="pa-3 planning-board-sprint-signal" Style="@sprint.HeatStyle">
+                                        <MudStack Spacing="1">
+                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                                <MudText Typo="Typo.subtitle2">@sprint.Label</MudText>
+                                                <MudChip T="string" Variant="Variant.Filled" Color="@GetSprintRiskColor(sprint.RiskLevel)">
+                                                    @sprint.RiskLabel
+                                                </MudChip>
+                                            </MudStack>
+                                            <MudChip T="string" Variant="Variant.Outlined" Color="@GetSprintConfidenceColor(sprint.ConfidenceLevel)" Class="planning-board-sprint-confidence-chip">
+                                                @sprint.ConfidenceLabel
+                                            </MudChip>
+                                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                                @foreach (var chip in sprint.ExplanationChips)
+                                                {
+                                                    <MudChip T="string" Variant="Variant.Text" Color="Color.Default" Class="planning-board-sprint-chip">
+                                                        @chip
+                                                    </MudChip>
+                                                }
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudTooltip>
+                            }
+                        </div>
                     </MudStack>
                 </MudPaper>
 
@@ -945,7 +971,7 @@
                         operationContext.Value.EpicId,
                         operationContext.Value.IsMaintenance));
 
-            ApplyBoard(result.Board, impactSummary);
+            ApplyBoard(result.Board, impactSummary, operationContext is null ? null : _boardState.Data);
             _boardState = result.Board.EpicItems.Count == 0
                 ? DataStateViewModel<ProductPlanningBoardDto>.Empty("The selected product has no active roadmap epics for the planning board.")
                 : DataStateViewModel<ProductPlanningBoardDto>.Ready(result.Board);
@@ -991,9 +1017,12 @@
         }
     }
 
-    private void ApplyBoard(ProductPlanningBoardDto board, PlanningBoardImpactSummary? impactSummary = null)
+    private void ApplyBoard(
+        ProductPlanningBoardDto board,
+        PlanningBoardImpactSummary? impactSummary = null,
+        ProductPlanningBoardDto? previousBoard = null)
     {
-        _renderModel = ProductPlanningBoardRenderModelFactory.Create(board);
+        _renderModel = ProductPlanningBoardRenderModelFactory.Create(board, previousBoard);
         _latestImpactSummary = impactSummary;
         foreach (var epic in board.EpicItems)
         {
@@ -1147,6 +1176,22 @@
         {
             ProductPlanningBoardStatusKind.Warning => Color.Warning,
             ProductPlanningBoardStatusKind.Changed => Color.Primary,
+            _ => Color.Success
+        };
+
+    private static Color GetSprintRiskColor(PlanningBoardSprintRiskLevel riskLevel)
+        => riskLevel switch
+        {
+            PlanningBoardSprintRiskLevel.High => Color.Error,
+            PlanningBoardSprintRiskLevel.Medium => Color.Warning,
+            _ => Color.Success
+        };
+
+    private static Color GetSprintConfidenceColor(PlanningBoardSprintConfidenceLevel confidenceLevel)
+        => confidenceLevel switch
+        {
+            PlanningBoardSprintConfidenceLevel.Low => Color.Secondary,
+            PlanningBoardSprintConfidenceLevel.Medium => Color.Info,
             _ => Color.Success
         };
 

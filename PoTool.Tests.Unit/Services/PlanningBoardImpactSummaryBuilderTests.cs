@@ -60,6 +60,31 @@ public sealed class PlanningBoardImpactSummaryBuilderTests
     }
 
     [TestMethod]
+    public void Build_PlanningAction_ReportsRiskAndConfidenceShiftBySprint()
+    {
+        var previousBoard = CreateBoard(
+            CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, plannedStart: 0, computedStart: 0, duration: 2, isChanged: false, isAffected: false),
+            CreateEpic(102, "Epic B", roadmapOrder: 2, trackIndex: 1, plannedStart: 2, computedStart: 2, duration: 2, isChanged: false, isAffected: false),
+            CreateEpic(103, "Epic C", roadmapOrder: 3, trackIndex: 2, plannedStart: 3, computedStart: 3, duration: 2, isChanged: false, isAffected: false));
+
+        var currentBoard = CreateBoard(
+            CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, plannedStart: 0, computedStart: 0, duration: 2, isChanged: true, isAffected: false),
+            CreateEpic(102, "Epic B", roadmapOrder: 2, trackIndex: 1, plannedStart: 1, computedStart: 1, duration: 3, isChanged: false, isAffected: true),
+            CreateEpic(103, "Epic C", roadmapOrder: 3, trackIndex: 2, plannedStart: 1, computedStart: 1, duration: 2, isChanged: false, isAffected: true),
+            changedEpicIds: [101],
+            affectedEpicIds: [102, 103]);
+
+        var summary = PlanningBoardImpactSummaryBuilder.Build(
+            previousBoard,
+            currentBoard,
+            new PlanningBoardActionImpactContext("Move Epic", 101));
+
+        Assert.IsNotNull(summary);
+        CollectionAssert.Contains(summary.SummaryItems.ToArray(), "Sprint 2 now above normal load.");
+        CollectionAssert.Contains(summary.SummaryItems.ToArray(), "Confidence decreased for Sprint 2 after recent changes.");
+    }
+
+    [TestMethod]
     public void Build_MaintenanceAction_KeepsPlanningAndReportingSeparate()
     {
         var previousBoard = CreateBoard(
@@ -78,6 +103,7 @@ public sealed class PlanningBoardImpactSummaryBuilderTests
         Assert.AreEqual("Latest reporting update", summary.Title);
         CollectionAssert.Contains(summary.SummaryItems.ToArray(), "Reported dates were refreshed from the saved plan. No Epic timing changed.");
         CollectionAssert.Contains(summary.SummaryItems.ToArray(), "Planning actions stay separate from reporting maintenance.");
+        Assert.IsFalse(summary.SummaryItems.Any(static item => item.Contains("Confidence", StringComparison.Ordinal)));
     }
 
     private static ProductPlanningBoardDto CreateBoard(

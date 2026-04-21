@@ -63,6 +63,14 @@ public static class PlanningBoardImpactSummaryBuilder
             summaryItems.Add(overlapSummary);
         }
 
+        if (!context.IsMaintenance)
+        {
+            foreach (var sprintSignalSummary in ProductPlanningSprintSignalFactory.BuildDeltaSummaries(previousBoard, currentBoard))
+            {
+                summaryItems.Add(sprintSignalSummary);
+            }
+        }
+
         if (context.IsMaintenance)
         {
             summaryItems.Add("Planning actions stay separate from reporting maintenance.");

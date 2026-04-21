@@ -17,6 +17,27 @@
     align-items: start;
 }
 
+.planning-board-sprint-signal-grid {
+    display: grid;
+    gap: 0.75rem;
+    align-items: stretch;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+}
+
+.planning-board-sprint-signal {
+    min-width: 0;
+    min-height: 8.75rem;
+}
+
+.planning-board-sprint-chip {
+    opacity: 0.92;
+}
+
+.planning-board-sprint-confidence-chip {
+    align-self: flex-start;
+}
+
 .planning-board-authority-banner {
     border-left: 4px solid var(--mud-palette-info);
 }

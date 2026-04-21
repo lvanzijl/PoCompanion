@@ -170,6 +170,10 @@ public sealed class ProductPlanningBoardClientUiTests
         Assert.AreEqual("Plan updated", renderModel.StatusLabel);
         Assert.AreEqual("Latest action changed 1 Epic directly", renderModel.LatestChangeTitle);
         Assert.AreEqual("1 more Epic shifted after it. Everything visible on the board was part of the latest change.", renderModel.LatestChangeDetail);
+        Assert.AreEqual(PlanningBoardSprintRiskLevel.Medium, renderModel.SprintColumns[1].RiskLevel);
+        Assert.AreEqual(PlanningBoardSprintConfidenceLevel.Medium, renderModel.SprintColumns[1].ConfidenceLevel);
+        StringAssert.Contains(renderModel.SprintColumns[1].HeatStyle, "245, 124, 0");
+        CollectionAssert.Contains(renderModel.SprintColumns[1].ExplanationChips.ToArray(), "Parallel work active");
     }
 
     [TestMethod]
