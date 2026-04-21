@@ -2,6 +2,14 @@
   {
     "date": "2026-04-21",
     "type": "Changed",
+    "title": "Plan Board sprint risk and confidence signals now stay steadier during minor reshaping",
+    "impact": "The /planning/plan-board workspace now calibrates per-sprint risk and confidence against the board’s typical load and a gradual planning-horizon decay, so small plan edits are less likely to cause abrupt signal swings while larger structural compression and repeated reshaping still surface clearly in sprint heat, chips, tooltips, and latest-impact summaries.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-21",
+    "type": "Changed",
     "title": "Plan Board now adds per-sprint risk and confidence planning signals",
     "impact": "The /planning/plan-board workspace now colors each sprint by interpreted planning risk, fades that heat by how trustworthy the sprint still is, adds plain-language sprint chips and tooltips that explain why a sprint looks strained or uncertain, and extends latest-impact feedback so planning actions call out when a sprint moved above normal load or when confidence dropped after recent reshaping without changing backend planning logic or TFS reporting behavior.",
     "area": "Planning / Plan Board / Planning Intelligence",
