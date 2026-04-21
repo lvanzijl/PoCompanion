@@ -395,6 +395,11 @@ public static class PlanningBoardImpactSummaryBuilder
         {
             for (var comparisonIndex = index + 1; comparisonIndex < epics.Length; comparisonIndex++)
             {
+                if (epics[comparisonIndex].ComputedStartSprintIndex >= epics[index].EndSprintIndexExclusive)
+                {
+                    break;
+                }
+
                 if (!Overlaps(epics[index], epics[comparisonIndex]))
                 {
                     continue;

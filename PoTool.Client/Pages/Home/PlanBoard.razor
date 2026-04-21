@@ -1071,21 +1071,30 @@
 
     private string BuildQuickMoveFeedback(int delta)
     {
-        var latestChangeSummary = _latestImpactSummary is not null
-            ? string.Join(" ", _latestImpactSummary.SummaryItems.Take(QuickMoveFeedbackSummaryCount))
-            : _renderModel is not null
-              && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeTitle)
-              && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeDetail)
-                ? $"{_renderModel.LatestChangeTitle}. {_renderModel.LatestChangeDetail}"
-                : "Review the updated and shifted Epic cards below.";
-
-        return $"Applied {FormatSprintDelta(delta)}. {latestChangeSummary}";
+        return $"Applied {FormatSprintDelta(delta)}. {GetLatestChangeFeedbackSummary()}";
     }
 
     private IReadOnlyList<string> GetEpicImpactMessages(int epicId)
         => _latestImpactSummary is not null && _latestImpactSummary.EpicMessages.TryGetValue(epicId, out var messages)
             ? messages
             : Array.Empty<string>();
+
+    private string GetLatestChangeFeedbackSummary()
+    {
+        if (_latestImpactSummary is not null)
+        {
+            return string.Join(" ", _latestImpactSummary.SummaryItems.Take(QuickMoveFeedbackSummaryCount));
+        }
+
+        if (_renderModel is not null
+            && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeTitle)
+            && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeDetail))
+        {
+            return $"{_renderModel.LatestChangeTitle}. {_renderModel.LatestChangeDetail}";
+        }
+
+        return "Review the updated and shifted Epic cards below.";
+    }
 
     private static string GetRepeatLastMoveLabel(int delta) => $"Repeat {FormatSprintDelta(delta)}";
 
