@@ -210,7 +210,29 @@
                             </MudAlert>
                         }
 
-                        @if (!string.IsNullOrWhiteSpace(renderModel.LatestChangeTitle) && !string.IsNullOrWhiteSpace(renderModel.LatestChangeDetail))
+                        @if (_latestImpactSummary is not null)
+                        {
+                            <MudAlert Severity="@(_latestImpactSummary.IsMaintenance ? Severity.Info : Severity.Success)" Variant="Variant.Outlined" Dense="true" Class="planning-board-change-alert">
+                                <MudStack Spacing="1">
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.subtitle2">@_latestImpactSummary.Title</MudText>
+                                        <MudText Typo="Typo.body2">@_latestImpactSummary.Detail</MudText>
+                                    </MudStack>
+                                    @if (_latestImpactSummary.SummaryItems.Count > 0)
+                                    {
+                                        <MudList T="string" Dense="true" Class="planning-board-issue-list planning-board-impact-list">
+                                            @foreach (var summaryItem in _latestImpactSummary.SummaryItems)
+                                            {
+                                                <MudListItem T="string">
+                                                    <MudText Typo="Typo.body2">@summaryItem</MudText>
+                                                </MudListItem>
+                                            }
+                                        </MudList>
+                                    }
+                                </MudStack>
+                            </MudAlert>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(renderModel.LatestChangeTitle) && !string.IsNullOrWhiteSpace(renderModel.LatestChangeDetail))
                         {
                             <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Dense="true" Class="planning-board-change-alert">
                                 <MudStack Spacing="0">
@@ -370,17 +392,23 @@
                                                         </MudItem>
                                                     </MudGrid>
 
-                                                    @if (epic.IsChanged || epic.IsAffected)
+                                                    @if (GetEpicImpactMessages(epic.EpicId).Count > 0)
+                                                    {
+                                                        <MudAlert Severity="@(epic.IsChanged ? Severity.Success : Severity.Info)" Variant="Variant.Outlined" Dense="true" Class="planning-board-change-alert">
+                                                            <MudList T="string" Dense="true" Class="planning-board-issue-list planning-board-impact-list">
+                                                                @foreach (var impactMessage in GetEpicImpactMessages(epic.EpicId))
+                                                                {
+                                                                    <MudListItem T="string">
+                                                                        <MudText Typo="Typo.body2">@impactMessage</MudText>
+                                                                    </MudListItem>
+                                                                }
+                                                            </MudList>
+                                                        </MudAlert>
+                                                    }
+                                                    else if (epic.IsChanged || epic.IsAffected)
                                                     {
                                                         <MudAlert Severity="@(epic.IsChanged ? Severity.Success : Severity.Info)" Variant="Variant.Outlined" Dense="true" Class="planning-board-change-alert">
                                                             @GetEpicChangeSummary(epic)
-                                                        </MudAlert>
-                                                    }
-
-                                                    @if (epic.IsChanged && !string.IsNullOrWhiteSpace(renderModel.LatestChangeDetail))
-                                                    {
-                                                        <MudAlert Severity="Severity.Success" Variant="Variant.Text" Dense="true" Class="planning-board-change-alert planning-board-change-alert--inline">
-                                                            Latest board change: @renderModel.LatestChangeDetail
                                                         </MudAlert>
                                                     }
 
@@ -581,24 +609,27 @@
                                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">This will create or remove parallel work. Track numbers are always derived automatically.</MudText>
                                                             </MudStack>
                                                         </MudItem>
-                                                        @if (epic.CanReconcileProjection)
-                                                        {
-                                                            <MudItem xs="12" md="6">
-                                                                <MudStack Spacing="1" Class="planning-board-action-group">
-                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Update TFS reported dates</MudText>
-                                                                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                                                                        <CompactButton ButtonRole="ButtonRole.Utility"
-                                                                                       Icon="@Icons.Material.Filled.SyncProblem"
-                                                                                       Disabled="@_isBusy"
-                                                                                       OnClick="@(_ => ExecuteReconcileProjectionAsync(epic.EpicId))">
-                                                                            Update TFS dates
-                                                                        </CompactButton>
-                                                                    </MudStack>
-                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">This refreshes the dates reported to TFS from the plan shown here without changing the plan itself.</MudText>
-                                                                </MudStack>
-                                                            </MudItem>
-                                                        }
                                                     </MudGrid>
+
+                                                    @if (epic.CanReconcileProjection)
+                                                    {
+                                                        <MudDivider />
+                                                        <MudText Typo="Typo.subtitle2">Reporting maintenance</MudText>
+                                                        <MudPaper Outlined="true" Class="pa-3 planning-board-maintenance-action">
+                                                            <MudStack Spacing="1">
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">Update reported dates in TFS</MudText>
+                                                                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                                                    <CompactButton ButtonRole="ButtonRole.Utility"
+                                                                                   Icon="@Icons.Material.Filled.SyncProblem"
+                                                                                   Disabled="@_isBusy"
+                                                                                   OnClick="@(_ => ExecuteReconcileProjectionAsync(epic.EpicId))">
+                                                                        Update reporting data
+                                                                    </CompactButton>
+                                                                </MudStack>
+                                                                <MudText Typo="Typo.caption" Color="Color.Secondary">This refreshes the dates reported to TFS from the plan shown here without changing the plan itself.</MudText>
+                                                            </MudStack>
+                                                        </MudPaper>
+                                                    }
                                                 </MudStack>
                                             </MudCardContent>
                                         </MudCard>
@@ -618,6 +649,11 @@
     public string? RouteProjectAlias { get; set; }
 
     private readonly record struct BoardFeedback(string Message, Severity Severity);
+
+    private readonly record struct BoardOperationContext(
+        string ActionName,
+        int? EpicId,
+        bool IsMaintenance = false);
 
     private sealed class EpicActionState
     {
@@ -645,6 +681,7 @@
     private BoardFeedback? _boardFeedback;
     private readonly Dictionary<int, EpicActionState> _epicActionState = new();
     private readonly Dictionary<int, EpicActionFeedback> _epicActionFeedback = new();
+    private PlanningBoardImpactSummary? _latestImpactSummary;
 
     private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
     private string? _boardFeedbackMessage => _boardFeedback?.Message;
@@ -759,7 +796,11 @@
         try
         {
             var result = await ProductPlanningBoardClientService.ResetAsync(_selectedProductId.Value);
-            HandleBoardResult(result, "Undo all current board changes.", epicId: null, successFeedback: new BoardFeedback("All current board changes were undone.", Severity.Success));
+            HandleBoardResult(
+                result,
+                "Undo all current board changes.",
+                new BoardOperationContext("Undo all changes", EpicId: null),
+                successFeedback: new BoardFeedback("All current board changes were undone.", Severity.Success));
         }
         finally
         {
@@ -817,8 +858,9 @@
         => await ExecuteEpicOperationAsync(
             epicId,
             () => ProductPlanningBoardClientService.ReconcileProjectionAsync(_selectedProductId!.Value, new ProductPlanningEpicRequest(epicId)),
-            "Update TFS dates",
-            new BoardFeedback("TFS dates were updated from the plan shown on this board.", Severity.Success));
+            "Update reporting data",
+            new BoardFeedback("Reporting data in TFS was updated from the plan shown on this board.", Severity.Success),
+            isMaintenance: true);
 
     private async Task ExecuteQuickSpacingAsync(int epicId, int delta)
     {
@@ -864,7 +906,8 @@
         int epicId,
         Func<Task<ProductPlanningBoardClientResult>> operation,
         string actionName,
-        BoardFeedback? successFeedback = null)
+        BoardFeedback? successFeedback = null,
+        bool isMaintenance = false)
     {
         if (!_selectedProductId.HasValue || _isBusy)
         {
@@ -878,7 +921,7 @@
             return HandleBoardResult(
                 result,
                 $"{actionName} failed.",
-                epicId,
+                new BoardOperationContext(actionName, epicId, isMaintenance),
                 successFeedback ?? new BoardFeedback($"{actionName} applied. Review changed and affected highlights below.", Severity.Success));
         }
         finally
@@ -887,18 +930,28 @@
         }
     }
 
-    private bool HandleBoardResult(ProductPlanningBoardClientResult result, string fallbackError, int? epicId, BoardFeedback? successFeedback)
+    private bool HandleBoardResult(ProductPlanningBoardClientResult result, string fallbackError, BoardOperationContext? operationContext, BoardFeedback? successFeedback)
     {
         if (result.IsSuccess && result.Board is not null)
         {
-            ApplyBoard(result.Board);
+            var impactSummary = operationContext is null
+                ? null
+                : PlanningBoardImpactSummaryBuilder.Build(
+                    _boardState.Data,
+                    result.Board,
+                    new PlanningBoardActionImpactContext(
+                        operationContext.Value.ActionName,
+                        operationContext.Value.EpicId,
+                        operationContext.Value.IsMaintenance));
+
+            ApplyBoard(result.Board, impactSummary);
             _boardState = result.Board.EpicItems.Count == 0
                 ? DataStateViewModel<ProductPlanningBoardDto>.Empty("The selected product has no active roadmap epics for the planning board.")
                 : DataStateViewModel<ProductPlanningBoardDto>.Ready(result.Board);
             _boardFeedback = successFeedback;
-            if (epicId.HasValue)
+            if (operationContext?.EpicId is int succeededEpicId)
             {
-                _epicActionFeedback.Remove(epicId.Value);
+                _epicActionFeedback.Remove(succeededEpicId);
             }
 
             return true;
@@ -906,9 +959,9 @@
 
         var message = string.IsNullOrWhiteSpace(result.ErrorMessage) ? fallbackError : result.ErrorMessage;
         _boardFeedback = new BoardFeedback(message!, result.IsNotFound ? Severity.Warning : Severity.Error);
-        if (epicId.HasValue)
+        if (operationContext?.EpicId is int failedEpicId)
         {
-            SetEpicActionFeedback(epicId.Value, message!, result.IsNotFound ? Severity.Warning : Severity.Error);
+            SetEpicActionFeedback(failedEpicId, message!, result.IsNotFound ? Severity.Warning : Severity.Error);
         }
 
         _boardState = result.IsNotFound
@@ -923,12 +976,13 @@
         _boardState = DataStateViewModel<ProductPlanningBoardDto>.Loading();
         _isBusy = true;
         _boardFeedback = null;
+        _latestImpactSummary = null;
         StateHasChanged();
 
         try
         {
             var result = await ProductPlanningBoardClientService.GetBoardAsync(productId);
-            HandleBoardResult(result, "The planning board could not be loaded right now.", epicId: null, successFeedback);
+            HandleBoardResult(result, "The planning board could not be loaded right now.", operationContext: null, successFeedback);
         }
         finally
         {
@@ -936,9 +990,10 @@
         }
     }
 
-    private void ApplyBoard(ProductPlanningBoardDto board)
+    private void ApplyBoard(ProductPlanningBoardDto board, PlanningBoardImpactSummary? impactSummary = null)
     {
         _renderModel = ProductPlanningBoardRenderModelFactory.Create(board);
+        _latestImpactSummary = impactSummary;
         foreach (var epic in board.EpicItems)
         {
             if (!_epicActionState.TryGetValue(epic.EpicId, out var actionState))
@@ -1015,14 +1070,21 @@
 
     private string BuildQuickMoveFeedback(int delta)
     {
-        var latestChangeSummary = _renderModel is not null
-            && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeTitle)
-            && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeDetail)
+        var latestChangeSummary = _latestImpactSummary is not null
+            ? string.Join(" ", _latestImpactSummary.SummaryItems.Take(2))
+            : _renderModel is not null
+              && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeTitle)
+              && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeDetail)
                 ? $"{_renderModel.LatestChangeTitle}. {_renderModel.LatestChangeDetail}"
                 : "Review the updated and shifted Epic cards below.";
 
         return $"Applied {FormatSprintDelta(delta)}. {latestChangeSummary}";
     }
+
+    private IReadOnlyList<string> GetEpicImpactMessages(int epicId)
+        => _latestImpactSummary is not null && _latestImpactSummary.EpicMessages.TryGetValue(epicId, out var messages)
+            ? messages
+            : Array.Empty<string>();
 
     private static string GetRepeatLastMoveLabel(int delta) => $"Repeat {FormatSprintDelta(delta)}";
 
@@ -1261,6 +1323,7 @@
         _boardState = DataStateViewModel<ProductPlanningBoardDto>.NotRequested();
         _renderModel = null;
         _boardFeedback = null;
+        _latestImpactSummary = null;
         _epicActionState.Clear();
         _epicActionFeedback.Clear();
     }

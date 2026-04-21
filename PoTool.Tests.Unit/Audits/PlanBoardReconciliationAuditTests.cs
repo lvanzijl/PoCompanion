@@ -12,8 +12,9 @@ public sealed class PlanBoardReconciliationAuditTests
         var content = File.ReadAllText(pagePath);
 
         StringAssert.Contains(content, "@if (epic.CanReconcileProjection)");
-        StringAssert.Contains(content, "Update TFS reported dates");
-        StringAssert.Contains(content, "Update TFS dates");
+        StringAssert.Contains(content, "Reporting maintenance");
+        StringAssert.Contains(content, "Update reported dates in TFS");
+        StringAssert.Contains(content, "Update reporting data");
         StringAssert.Contains(content, "ProductPlanningBoardClientService.ReconcileProjectionAsync");
     }
 
@@ -51,7 +52,9 @@ public sealed class PlanBoardReconciliationAuditTests
         StringAssert.Contains(content, "RepeatLastSpacingAsync(epic.EpicId)");
         StringAssert.Contains(content, "GetRepeatLastMoveLabel(lastSpacingDelta)");
         StringAssert.Contains(content, "ProductPlanningBoardClientService.AdjustSpacingBeforeAsync");
-        StringAssert.Contains(content, "Latest board change:");
+        StringAssert.Contains(content, "_latestImpactSummary");
+        StringAssert.Contains(content, "GetEpicImpactMessages(epic.EpicId)");
+        StringAssert.Contains(content, "_latestImpactSummary.Title");
     }
 
     private static string GetRepositoryRoot()

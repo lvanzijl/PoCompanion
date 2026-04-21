@@ -29,6 +29,10 @@
     margin-top: -0.25rem;
 }
 
+.planning-board-impact-list {
+    margin-top: -0.25rem;
+}
+
 .planning-board-epic {
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 10px;
@@ -80,6 +84,11 @@
 .planning-board-primary-action {
     border: 2px solid color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-lines-default) 65%);
     background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface) 96%);
+}
+
+.planning-board-maintenance-action {
+    border: 1px solid color-mix(in srgb, var(--mud-palette-warning) 35%, var(--mud-palette-lines-default) 65%);
+    background: color-mix(in srgb, var(--mud-palette-warning) 5%, var(--mud-palette-surface) 95%);
 }
 
 .planning-board-advanced-options {
