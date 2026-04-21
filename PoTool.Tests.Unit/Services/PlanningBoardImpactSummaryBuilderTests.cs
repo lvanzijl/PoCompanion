@@ -85,11 +85,12 @@ public sealed class PlanningBoardImpactSummaryBuilderTests
         Assert.IsFalse(summary.SummaryItems.Any(static item => item.Contains("will deliver", StringComparison.OrdinalIgnoreCase)));
         Assert.IsFalse(summary.SummaryItems.Any(static item => item.Contains("Confidence", StringComparison.Ordinal)));
         CollectionAssert.AreEqual(
-            [
+            new[]
+            {
                 "1 Epic changed directly; 2 more Epics shifted.",
                 "Sprint 2 now suggests higher planning strain than usual.",
                 "Sprint 2 now looks more provisional after recent changes."
-            ],
+            },
             summary.SummaryItems.Take(3).ToArray());
     }
 

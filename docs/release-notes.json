@@ -2,6 +2,14 @@
   {
     "date": "2026-04-21",
     "type": "Changed",
+    "title": "Plan Board now makes recent sprint-signal changes more visible without overstating calm states",
+    "impact": "Later on 2026-04-21, the /planning/plan-board workspace now pulls the latest sprint signal shifts to the top of the latest-impact banner, repeats the matching delta directly on the affected sprint card, keeps the strongest signal chip first, and tones down calm low-risk/high-confidence styling so recent strain or plan-settling changes are easier to notice while typical-range states stay visually neutral.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-21",
+    "type": "Changed",
     "title": "Plan Board sprint signals now use more interpretive wording and avoid delivery-certainty language",
     "impact": "Later on 2026-04-21, the /planning/plan-board workspace now describes sprint heat as a current-plan interpretation instead of a guarantee, renames low-risk and high-confidence labels so they read as typical-range or near-term stability rather than safety or delivery probability, and updates sprint chips, tooltips, and latest-impact summaries to use short advisory wording such as 'based on the current plan' and 'suggests' without changing any signal calculations or backend behavior.",
     "area": "Planning / Plan Board / Planning Intelligence",

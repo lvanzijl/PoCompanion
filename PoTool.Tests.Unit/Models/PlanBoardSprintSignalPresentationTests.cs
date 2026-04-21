@@ -49,13 +49,14 @@ public sealed class PlanBoardSprintSignalPresentationTests
             "Sprint 2 now suggests higher planning strain than usual.",
             PlanBoardSprintSignalPresentation.GetDeltaSummaryForSprint(impactSummary, sprint));
         CollectionAssert.AreEqual(
-            [
+            new[]
+            {
                 "Sprint 2 now suggests higher planning strain than usual.",
                 "Sprint 2 now looks more provisional after recent changes."
-            ],
+            },
             PlanBoardSprintSignalPresentation.GetSignalDeltaSummaries(impactSummary).ToArray());
         CollectionAssert.AreEqual(
-            ["1 Epic changed directly; 2 more Epics shifted."],
+            new[] { "1 Epic changed directly; 2 more Epics shifted." },
             PlanBoardSprintSignalPresentation.GetNonSignalSummaries(impactSummary).ToArray());
     }
 
