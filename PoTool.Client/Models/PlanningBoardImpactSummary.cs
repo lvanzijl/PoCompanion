@@ -16,6 +16,8 @@ public sealed record PlanningBoardImpactSummary(
 
 public static class PlanningBoardImpactSummaryBuilder
 {
+    private const int MaxEpicImpactMessages = 3;
+
     public static PlanningBoardImpactSummary? Build(
         ProductPlanningBoardDto? previousBoard,
         ProductPlanningBoardDto currentBoard,
@@ -159,7 +161,7 @@ public static class PlanningBoardImpactSummaryBuilder
                     : "Affected by an upstream planning change.");
             }
 
-            messages[epic.EpicId] = epicMessages.Distinct(StringComparer.Ordinal).Take(3).ToArray();
+            messages[epic.EpicId] = epicMessages.Distinct(StringComparer.Ordinal).Take(MaxEpicImpactMessages).ToArray();
         }
 
         return messages;
@@ -406,6 +408,7 @@ public static class PlanningBoardImpactSummaryBuilder
     }
 
     private static bool Overlaps(PlanningBoardEpicItemDto left, PlanningBoardEpicItemDto right)
+        // EndSprintIndexExclusive is the first sprint outside the Epic range, so overlap uses half-open intervals.
         => left.ComputedStartSprintIndex < right.EndSprintIndexExclusive
            && right.ComputedStartSprintIndex < left.EndSprintIndexExclusive;
 

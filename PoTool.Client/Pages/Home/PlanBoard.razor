@@ -649,6 +649,7 @@
     public string? RouteProjectAlias { get; set; }
 
     private readonly record struct BoardFeedback(string Message, Severity Severity);
+    private const int QuickMoveFeedbackSummaryCount = 2;
 
     private readonly record struct BoardOperationContext(
         string ActionName,
@@ -1071,7 +1072,7 @@
     private string BuildQuickMoveFeedback(int delta)
     {
         var latestChangeSummary = _latestImpactSummary is not null
-            ? string.Join(" ", _latestImpactSummary.SummaryItems.Take(2))
+            ? string.Join(" ", _latestImpactSummary.SummaryItems.Take(QuickMoveFeedbackSummaryCount))
             : _renderModel is not null
               && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeTitle)
               && !string.IsNullOrWhiteSpace(_renderModel.LatestChangeDetail)
