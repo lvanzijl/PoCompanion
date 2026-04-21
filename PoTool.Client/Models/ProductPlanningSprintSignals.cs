@@ -19,6 +19,14 @@ public enum PlanningBoardSprintConfidenceLevel
 
 public static class ProductPlanningSprintSignalFactory
 {
+    private const double EmptyBoardBaseline = 1d;
+    private const double ElevatedLoadBaselineOffset = 0.5d;
+    private const double HighLoadBaselineOffset = 1.25d;
+    private const double ConfidenceDecayAcrossHorizon = 1.9d;
+    private const double SubstantialChangeShare = 0.75d;
+    private const double HighForwardShiftShare = 0.5d;
+    private const int MaxExplanationChips = 4;
+
     public static IReadOnlyList<ProductPlanningSprintColumn> BuildColumns(
         ProductPlanningBoardDto board,
         int sprintCount,
@@ -108,10 +116,10 @@ public static class ProductPlanningSprintSignalFactory
 
         var activeWindow = rawMetrics.Where(static metric => metric.ActiveEpicCount > 0).ToArray();
         var loadBaseline = activeWindow.Length == 0
-            ? 1d
+            ? EmptyBoardBaseline
             : activeWindow.Average(static metric => (double)metric.ActiveEpicCount);
         var trackBaseline = activeWindow.Length == 0
-            ? 1d
+            ? EmptyBoardBaseline
             : activeWindow.Average(static metric => (double)Math.Max(metric.ActiveTrackCount, 1));
         var overlapBaseline = activeWindow.Length == 0
             ? 0d
@@ -143,10 +151,10 @@ public static class ProductPlanningSprintSignalFactory
         }
 
         var score = 0d;
-        var elevatedLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + 0.5d);
-        var highLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + 1.25d);
+        var elevatedLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + ElevatedLoadBaselineOffset);
+        var highLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + HighLoadBaselineOffset);
         var elevatedOverlapThreshold = Math.Max(1, (int)Math.Ceiling(metric.OverlapBaseline + 1d));
-        var highForwardShiftThreshold = Math.Max(2, (int)Math.Ceiling(metric.ActiveEpicCount * 0.5d));
+        var highForwardShiftThreshold = Math.Max(2, (int)Math.Ceiling(metric.ActiveEpicCount * HighForwardShiftShare));
 
         score += metric.ActiveEpicCount >= Math.Max(5, highLoadThreshold)
             ? 1.55d
@@ -190,8 +198,8 @@ public static class ProductPlanningSprintSignalFactory
 
     private static PlanningBoardSprintConfidenceLevel ClassifyConfidence(SprintSignalMetrics metric)
     {
-        var penalty = metric.DistanceRatio * 1.9d;
-        var substantialChangeThreshold = Math.Max(3, (int)Math.Ceiling(metric.ActiveEpicCount * 0.75d));
+        var penalty = metric.DistanceRatio * ConfidenceDecayAcrossHorizon;
+        var substantialChangeThreshold = Math.Max(3, (int)Math.Ceiling(metric.ActiveEpicCount * SubstantialChangeShare));
 
         penalty += metric.ChangedEpicCount switch
         {
@@ -210,7 +218,7 @@ public static class ProductPlanningSprintSignalFactory
 
         penalty += metric.ForwardShiftCount switch
         {
-            > 0 when metric.ForwardShiftCount >= Math.Max(2, (int)Math.Ceiling(metric.ActiveEpicCount * 0.5d)) => 0.55d,
+            > 0 when metric.ForwardShiftCount >= Math.Max(2, (int)Math.Ceiling(metric.ActiveEpicCount * HighForwardShiftShare)) => 0.55d,
             > 0 => 0.30d,
             _ => 0d
         };
@@ -320,7 +328,7 @@ public static class ProductPlanningSprintSignalFactory
 
         return chips
             .Distinct(StringComparer.Ordinal)
-            .Take(4)
+            .Take(MaxExplanationChips)
             .ToArray();
     }
 
