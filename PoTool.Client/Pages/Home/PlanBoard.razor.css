@@ -17,6 +17,42 @@
     align-items: start;
 }
 
+.planning-board-sprint-signal-grid {
+    display: grid;
+    gap: 0.75rem;
+    align-items: stretch;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+}
+
+.planning-board-sprint-signal {
+    min-width: 0;
+    min-height: 9.5rem;
+}
+
+.planning-board-sprint-chip {
+    opacity: 0.92;
+}
+
+.planning-board-sprint-chip--primary {
+    font-weight: 600;
+    opacity: 1;
+}
+
+.planning-board-sprint-chip--secondary {
+    opacity: 0.78;
+}
+
+.planning-board-sprint-confidence-chip {
+    align-self: flex-start;
+}
+
+.planning-board-sprint-delta-chip {
+    align-self: flex-start;
+    font-weight: 600;
+    max-width: 100%;
+}
+
 .planning-board-authority-banner {
     border-left: 4px solid var(--mud-palette-info);
 }
@@ -31,6 +67,14 @@
 
 .planning-board-impact-list {
     margin-top: -0.25rem;
+}
+
+.planning-board-impact-signal-group {
+    margin-top: 0.125rem;
+}
+
+.planning-board-impact-signal-chip {
+    font-weight: 600;
 }
 
 .planning-board-epic {

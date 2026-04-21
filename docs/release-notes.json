@@ -1,5 +1,45 @@
 [
   {
+    "date": "2026-04-21",
+    "type": "Changed",
+    "title": "Plan Board now makes recent sprint-signal changes more visible without overstating calm states",
+    "impact": "Later on 2026-04-21, the /planning/plan-board workspace now pulls the latest sprint signal shifts to the top of the latest-impact banner, repeats the matching delta directly on the affected sprint card, keeps the strongest signal chip first, and tones down calm low-risk/high-confidence styling so recent strain or plan-settling changes are easier to notice while typical-range states stay visually neutral.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-21",
+    "type": "Changed",
+    "title": "Plan Board sprint signals now use more interpretive wording and avoid delivery-certainty language",
+    "impact": "Later on 2026-04-21, the /planning/plan-board workspace now describes sprint heat as a current-plan interpretation instead of a guarantee, renames low-risk and high-confidence labels so they read as typical-range or near-term stability rather than safety or delivery probability, and updates sprint chips, tooltips, and latest-impact summaries to use short advisory wording such as 'based on the current plan' and 'suggests' without changing any signal calculations or backend behavior.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-21",
+    "type": "Changed",
+    "title": "Plan Board sprint signals now show board-wide overload more explicitly and keep far-horizon confidence provisional",
+    "impact": "Later on 2026-04-21, as a follow-up refinement to the sprint risk and confidence rollout, the /planning/plan-board workspace now keeps chronically overloaded boards visibly elevated instead of treating that pressure as fully normal, prevents mid-to-far horizon steady sprints from staying fully high-confidence, and makes sprint chips and tooltips lead with the strongest risk or confidence driver so overlap, reshaping, and board-relative context read more credibly without changing backend planning logic, persistence, or TFS/API contracts.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-21",
+    "type": "Changed",
+    "title": "Plan Board sprint risk and confidence signals now use steadier follow-up calibration",
+    "impact": "Later on 2026-04-21, as a follow-up to the initial per-sprint planning intelligence rollout, the /planning/plan-board workspace now calibrates risk and confidence against the board’s typical load and a gradual planning-horizon decay, so small plan edits are less likely to cause abrupt signal swings while larger structural compression and repeated reshaping still surface clearly in sprint heat, chips, tooltips, and latest-impact summaries.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-21",
+    "type": "Changed",
+    "title": "Plan Board now adds per-sprint risk and confidence planning signals",
+    "impact": "The /planning/plan-board workspace now colors each sprint by interpreted planning risk, fades that heat by how trustworthy the sprint still is, adds plain-language sprint chips and tooltips that explain why a sprint looks strained or uncertain, and extends latest-impact feedback so planning actions call out when a sprint moved above normal load or when confidence dropped after recent reshaping without changing backend planning logic or TFS reporting behavior.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
     "date": "2026-04-20",
     "type": "Changed",
     "title": "Plan Board now explains latest impact and separates reporting maintenance from planning actions",

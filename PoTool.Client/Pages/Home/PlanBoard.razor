@@ -212,16 +212,32 @@
 
                         @if (_latestImpactSummary is not null)
                         {
+                            var signalSummaries = PlanBoardSprintSignalPresentation.GetSignalDeltaSummaries(_latestImpactSummary);
+                            var otherSummaries = PlanBoardSprintSignalPresentation.GetNonSignalSummaries(_latestImpactSummary);
                             <MudAlert Severity="@(_latestImpactSummary.IsMaintenance ? Severity.Info : Severity.Success)" Variant="Variant.Outlined" Dense="true" Class="planning-board-change-alert">
                                 <MudStack Spacing="1">
                                     <MudStack Spacing="0">
                                         <MudText Typo="Typo.subtitle2">@_latestImpactSummary.Title</MudText>
                                         <MudText Typo="Typo.body2">@_latestImpactSummary.Detail</MudText>
                                     </MudStack>
-                                    @if (_latestImpactSummary.SummaryItems.Count > 0)
+                                    @if (signalSummaries.Count > 0)
+                                    {
+                                        <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="planning-board-impact-signal-group">
+                                            @foreach (var signalSummary in signalSummaries)
+                                            {
+                                                <MudChip T="string"
+                                                         Variant="Variant.Outlined"
+                                                         Color="@PlanBoardSprintSignalPresentation.GetDeltaSummaryColor(signalSummary)"
+                                                         Class="planning-board-impact-signal-chip">
+                                                    @signalSummary
+                                                </MudChip>
+                                            }
+                                        </MudStack>
+                                    }
+                                    @if (otherSummaries.Count > 0)
                                     {
                                         <MudList T="string" Dense="true" Class="planning-board-issue-list planning-board-impact-list">
-                                            @foreach (var summaryItem in _latestImpactSummary.SummaryItems)
+                                            @foreach (var summaryItem in otherSummaries)
                                             {
                                                 <MudListItem T="string">
                                                     <MudText Typo="Typo.body2">@summaryItem</MudText>
@@ -279,13 +295,57 @@
                 </MudPaper>
 
                 <MudPaper Elevation="1" Class="pa-3">
-                    <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
-                        @foreach (var sprint in renderModel.SprintColumns)
-                        {
-                            <MudChip T="string" Variant="Variant.Outlined" Color="Color.Default">
-                                @sprint.Label
-                            </MudChip>
-                        }
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.subtitle2">Sprint heat</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Background color indicates sprint planning strain in the current plan. Color strength indicates how settled that sprint still looks, not delivery certainty.
+                        </MudText>
+                        <div class="planning-board-sprint-signal-grid" style="@GetTrackGridStyle(renderModel.MaxSprintCount)">
+                            @foreach (var sprint in renderModel.SprintColumns)
+                            {
+                                var latestSprintDelta = PlanBoardSprintSignalPresentation.GetDeltaSummaryForSprint(_latestImpactSummary, sprint);
+                                <MudTooltip Text="@sprint.Tooltip" Arrow="true" Placement="Placement.Top">
+                                    <MudPaper Class="pa-3 planning-board-sprint-signal" Style="@sprint.HeatStyle">
+                                        <MudStack Spacing="1">
+                                            @if (!string.IsNullOrWhiteSpace(latestSprintDelta))
+                                            {
+                                                <MudChip T="string"
+                                                         Variant="Variant.Outlined"
+                                                         Color="@PlanBoardSprintSignalPresentation.GetDeltaSummaryColor(latestSprintDelta)"
+                                                         Class="planning-board-sprint-delta-chip">
+                                                    @latestSprintDelta
+                                                </MudChip>
+                                            }
+                                            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                                <MudText Typo="Typo.subtitle2">@sprint.Label</MudText>
+                                                <MudChip T="string"
+                                                         Variant="@PlanBoardSprintSignalPresentation.GetRiskChipVariant(sprint.RiskLevel)"
+                                                         Color="@PlanBoardSprintSignalPresentation.GetRiskChipColor(sprint.RiskLevel)">
+                                                    @sprint.RiskLabel
+                                                </MudChip>
+                                            </MudStack>
+                                            <MudChip T="string"
+                                                     Variant="@PlanBoardSprintSignalPresentation.GetConfidenceChipVariant(sprint.ConfidenceLevel)"
+                                                     Color="@PlanBoardSprintSignalPresentation.GetConfidenceChipColor(sprint.ConfidenceLevel)"
+                                                     Class="planning-board-sprint-confidence-chip">
+                                                @sprint.ConfidenceLabel
+                                            </MudChip>
+                                            <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                                                @foreach (var chip in sprint.ExplanationChips.Select((text, index) => new { text, index }))
+                                                {
+                                                    <MudChip T="string"
+                                                             Variant="@PlanBoardSprintSignalPresentation.GetExplanationChipVariant(sprint, chip.index)"
+                                                             Color="@PlanBoardSprintSignalPresentation.GetExplanationChipColor(sprint, chip.index)"
+                                                             Class="@GetSprintChipClass(sprint, chip.index)">
+                                                        @chip.text
+                                                    </MudChip>
+                                                }
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudPaper>
+                                </MudTooltip>
+                            }
+                        </div>
                     </MudStack>
                 </MudPaper>
 
@@ -945,7 +1005,7 @@
                         operationContext.Value.EpicId,
                         operationContext.Value.IsMaintenance));
 
-            ApplyBoard(result.Board, impactSummary);
+            ApplyBoard(result.Board, impactSummary, operationContext is null ? null : _boardState.Data);
             _boardState = result.Board.EpicItems.Count == 0
                 ? DataStateViewModel<ProductPlanningBoardDto>.Empty("The selected product has no active roadmap epics for the planning board.")
                 : DataStateViewModel<ProductPlanningBoardDto>.Ready(result.Board);
@@ -991,9 +1051,12 @@
         }
     }
 
-    private void ApplyBoard(ProductPlanningBoardDto board, PlanningBoardImpactSummary? impactSummary = null)
+    private void ApplyBoard(
+        ProductPlanningBoardDto board,
+        PlanningBoardImpactSummary? impactSummary = null,
+        ProductPlanningBoardDto? previousBoard = null)
     {
-        _renderModel = ProductPlanningBoardRenderModelFactory.Create(board);
+        _renderModel = ProductPlanningBoardRenderModelFactory.Create(board, previousBoard);
         _latestImpactSummary = impactSummary;
         foreach (var epic in board.EpicItems)
         {
@@ -1149,6 +1212,27 @@
             ProductPlanningBoardStatusKind.Changed => Color.Primary,
             _ => Color.Success
         };
+
+    private static Color GetSprintRiskColor(PlanningBoardSprintRiskLevel riskLevel)
+        => riskLevel switch
+        {
+            PlanningBoardSprintRiskLevel.High => Color.Error,
+            PlanningBoardSprintRiskLevel.Medium => Color.Warning,
+            _ => Color.Success
+        };
+
+    private static Color GetSprintConfidenceColor(PlanningBoardSprintConfidenceLevel confidenceLevel)
+        => confidenceLevel switch
+        {
+            PlanningBoardSprintConfidenceLevel.Low => Color.Secondary,
+            PlanningBoardSprintConfidenceLevel.Medium => Color.Info,
+            _ => Color.Success
+        };
+
+    private static string GetSprintChipClass(ProductPlanningSprintColumn sprint, int chipIndex)
+        => PlanBoardSprintSignalPresentation.IsPrimaryExplanationChip(sprint, chipIndex)
+            ? "planning-board-sprint-chip planning-board-sprint-chip--primary"
+            : "planning-board-sprint-chip planning-board-sprint-chip--secondary";
 
     private static string FormatIssueText(PlanningBoardIssueDto issue)
         => issue.EpicId.HasValue
