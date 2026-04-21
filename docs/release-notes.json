@@ -2,6 +2,14 @@
   {
     "date": "2026-04-21",
     "type": "Changed",
+    "title": "Plan Board sprint signals now show board-wide overload more explicitly and keep far-horizon confidence provisional",
+    "impact": "Later on 2026-04-21, as a follow-up refinement to the sprint risk and confidence rollout, the /planning/plan-board workspace now keeps chronically overloaded boards visibly elevated instead of treating that pressure as fully normal, prevents mid-to-far horizon steady sprints from staying fully high-confidence, and makes sprint chips and tooltips lead with the strongest risk or confidence driver so overlap, reshaping, and board-relative context read more credibly without changing backend planning logic, persistence, or TFS/API contracts.",
+    "area": "Planning / Plan Board / Planning Intelligence",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-21",
+    "type": "Changed",
     "title": "Plan Board sprint risk and confidence signals now use steadier follow-up calibration",
     "impact": "Later on 2026-04-21, as a follow-up to the initial per-sprint planning intelligence rollout, the /planning/plan-board workspace now calibrates risk and confidence against the board’s typical load and a gradual planning-horizon decay, so small plan edits are less likely to cause abrupt signal swings while larger structural compression and repeated reshaping still surface clearly in sprint heat, chips, tooltips, and latest-impact summaries.",
     "area": "Planning / Plan Board / Planning Intelligence",
