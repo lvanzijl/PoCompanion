@@ -3,7 +3,7 @@
     "date": "2026-04-21",
     "type": "Changed",
     "title": "Plan Board sprint risk and confidence signals now use steadier follow-up calibration",
-    "impact": "As a follow-up to the initial per-sprint planning intelligence rollout, the /planning/plan-board workspace now calibrates risk and confidence against the board’s typical load and a gradual planning-horizon decay, so small plan edits are less likely to cause abrupt signal swings while larger structural compression and repeated reshaping still surface clearly in sprint heat, chips, tooltips, and latest-impact summaries.",
+    "impact": "Later on 2026-04-21, as a follow-up to the initial per-sprint planning intelligence rollout, the /planning/plan-board workspace now calibrates risk and confidence against the board’s typical load and a gradual planning-horizon decay, so small plan edits are less likely to cause abrupt signal swings while larger structural compression and repeated reshaping still surface clearly in sprint heat, chips, tooltips, and latest-impact summaries.",
     "area": "Planning / Plan Board / Planning Intelligence",
     "link": "/planning/plan-board"
   },

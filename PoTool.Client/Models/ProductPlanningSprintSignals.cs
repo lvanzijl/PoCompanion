@@ -521,6 +521,9 @@ public static class ProductPlanningSprintSignalFactory
         return overlapCount;
     }
 
+    /// <summary>
+    /// Captures the raw per-sprint counts collected directly from the board before any horizon or baseline calibration is applied.
+    /// </summary>
     private sealed record RawSprintSignalMetrics(
         int SprintIndex,
         int ActiveEpicCount,
@@ -531,6 +534,9 @@ public static class ProductPlanningSprintSignalFactory
         bool HasParallelStructureChange,
         bool HasOverlapChange);
 
+    /// <summary>
+    /// Carries the calibrated per-sprint signal inputs, including raw counts, board-relative baselines, and normalized horizon distance.
+    /// </summary>
     private sealed record SprintSignalMetrics(
         int SprintIndex,
         int ActiveEpicCount,
