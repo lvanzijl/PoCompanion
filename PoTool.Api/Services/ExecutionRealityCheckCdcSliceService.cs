@@ -127,8 +127,8 @@ public sealed class ExecutionRealityCheckCdcSliceService
             return ExecutionRealityCheckCdcSliceResult.InsufficientEvidence();
         }
 
-        var earliestSprintStartUtc = orderedWindow.Min(sprint => sprint.StartDateUtc!.Value);
-        var latestSprintEndUtc = orderedWindow.Max(sprint => sprint.EndDateUtc!.Value);
+        var earliestSprintStartUtc = orderedWindow[0].StartDateUtc!.Value;
+        var latestSprintEndUtc = orderedWindow[^1].EndDateUtc!.Value;
         var stateLookup = await GetStateLookupAsync(cancellationToken);
 
         var stateEvents = await _context.ActivityEventLedgerEntries
@@ -247,12 +247,10 @@ public sealed class ExecutionRealityCheckCdcSliceService
             throw new InvalidOperationException("Execution reality-check slice requires sprints with both start and end dates.");
         }
 
-        var startDateUtc = sprint.StartDateUtc ?? throw new InvalidOperationException("Sprint start date is required.");
-        var endDateUtc = sprint.EndDateUtc ?? throw new InvalidOperationException("Sprint end date is required.");
         var startUtc = sprint.StartUtc
-            ?? new DateTimeOffset(DateTime.SpecifyKind(startDateUtc, DateTimeKind.Utc), TimeSpan.Zero);
+            ?? new DateTimeOffset(DateTime.SpecifyKind(sprint.StartDateUtc!.Value, DateTimeKind.Utc), TimeSpan.Zero);
         var endUtc = sprint.EndUtc
-            ?? new DateTimeOffset(DateTime.SpecifyKind(endDateUtc, DateTimeKind.Utc), TimeSpan.Zero);
+            ?? new DateTimeOffset(DateTime.SpecifyKind(sprint.EndDateUtc!.Value, DateTimeKind.Utc), TimeSpan.Zero);
 
         return new SprintDefinition(
             sprint.Id,

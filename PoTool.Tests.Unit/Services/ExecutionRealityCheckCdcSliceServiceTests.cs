@@ -16,6 +16,7 @@ namespace PoTool.Tests.Unit.Services;
 public sealed class ExecutionRealityCheckCdcSliceServiceTests
 {
     private const double Tolerance = 0.0001d;
+    private const int SprintDurationDays = 14;
 
     private SqliteConnection _connection = null!;
     private ServiceProvider _serviceProvider = null!;
@@ -187,8 +188,8 @@ public sealed class ExecutionRealityCheckCdcSliceServiceTests
 
         for (var sprintNumber = 1; sprintNumber <= totalSprints; sprintNumber++)
         {
-            var startUtc = baseStartUtc.AddDays((sprintNumber - 1) * 14);
-            var endUtc = startUtc.AddDays(13);
+            var startUtc = baseStartUtc.AddDays((sprintNumber - 1) * SprintDurationDays);
+            var endUtc = startUtc.AddDays(SprintDurationDays - 1);
             var sprint = new SprintEntity
             {
                 TeamId = team.Id,
