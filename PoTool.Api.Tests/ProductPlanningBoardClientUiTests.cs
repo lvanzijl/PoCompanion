@@ -161,10 +161,15 @@ public sealed class ProductPlanningBoardClientUiTests
         Assert.AreEqual(3, renderModel.MaxSprintCount);
         Assert.HasCount(2, renderModel.Tracks);
         Assert.IsTrue(renderModel.Tracks[0].IsMainLane);
+        Assert.AreEqual("Main plan", renderModel.Tracks[0].Title);
+        Assert.AreEqual("Parallel lane 1", renderModel.Tracks[1].Title);
         CollectionAssert.AreEqual(new[] { 101 }, renderModel.Tracks[0].Epics.Select(static epic => epic.EpicId).ToArray());
         CollectionAssert.AreEqual(new[] { 102 }, renderModel.Tracks[1].Epics.Select(static epic => epic.EpicId).ToArray());
         Assert.IsTrue(renderModel.HasRecentChanges);
         Assert.AreEqual(ProductPlanningBoardStatusKind.Changed, renderModel.StatusKind);
+        Assert.AreEqual("Plan updated", renderModel.StatusLabel);
+        Assert.AreEqual("Latest action changed 1 Epic directly", renderModel.LatestChangeTitle);
+        Assert.AreEqual("1 more Epic shifted after it. Everything visible on the board was part of the latest change.", renderModel.LatestChangeDetail);
     }
 
     [TestMethod]
@@ -191,6 +196,8 @@ public sealed class ProductPlanningBoardClientUiTests
             [
                 new PlanningBoardDiagnosticDto("Error", "CalendarResolutionFailure", "Sprint calendar is ambiguous.", null, true, false)
             ],
+            ChangedEpicIds = [],
+            AffectedEpicIds = [],
             EpicItems =
             [
                 new PlanningBoardEpicItemDto(
@@ -223,7 +230,27 @@ public sealed class ProductPlanningBoardClientUiTests
         Assert.AreEqual(1, renderModel.RecoveredEpicCount);
         Assert.AreEqual(1, renderModel.DriftedEpicCount);
         Assert.AreEqual(ProductPlanningBoardStatusKind.Warning, renderModel.StatusKind);
-        StringAssert.Contains(renderModel.StatusLabel, "blocked");
+        Assert.AreEqual("Plan needs attention", renderModel.StatusLabel);
+        StringAssert.Contains(renderModel.StatusDetail, "reported to TFS");
+        Assert.IsNull(renderModel.LatestChangeTitle);
+        Assert.IsNull(renderModel.LatestChangeDetail);
+    }
+
+    [TestMethod]
+    public void ProductPlanningBoardUxText_TranslateVisibleText_UsesPlanningLanguage()
+    {
+        var translated = ProductPlanningBoardUxText.TranslateVisibleText("Recovered + normalized projection differs from internal intent and durable state.");
+
+        Assert.AreEqual("Imported from existing data and cleaned up reported dates differs from saved plan and saved state.", translated);
+        Assert.IsFalse(translated.Contains("durable", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    public void ProductPlanningBoardUxText_GetDriftLabel_UsesOutOfSyncLanguage()
+    {
+        var label = ProductPlanningBoardUxText.GetDriftLabel(PlanningBoardDriftStatus.TfsProjectionMismatch);
+
+        Assert.AreEqual("Out of sync with TFS", label);
     }
 
     private static async Task AssertDeltaMutationAsync(

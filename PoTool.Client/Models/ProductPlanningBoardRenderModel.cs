@@ -23,7 +23,9 @@ public sealed record ProductPlanningBoardRenderModel(
     bool HasBlockingDiagnostics,
     int RecoveredEpicCount,
     int DriftedEpicCount,
-    int BlockingDiagnosticCount);
+    int BlockingDiagnosticCount,
+    string? LatestChangeTitle,
+    string? LatestChangeDetail);
 
 public sealed record ProductPlanningSprintColumn(int SprintIndex, string Label);
 
@@ -56,8 +58,8 @@ public static class ProductPlanningBoardRenderModelFactory
                 return new ProductPlanningTrackRow(
                     track.TrackIndex,
                     track.IsMainLane,
-                    track.IsMainLane ? "Main lane" : $"Parallel track {track.TrackIndex}",
-                    track.IsMainLane ? "Primary roadmap sequence" : "Derived secondary execution track",
+                    track.IsMainLane ? "Main plan" : $"Parallel lane {track.TrackIndex}",
+                    track.IsMainLane ? "Primary sequence on this board" : "Parallel work derived automatically from the plan",
                     epics);
             })
             .ToArray();
@@ -85,6 +87,7 @@ public static class ProductPlanningBoardRenderModelFactory
             recoveredEpicCount,
             driftedEpicCount,
             blockingDiagnosticCount);
+        var (latestChangeTitle, latestChangeDetail) = ResolveLatestChangeSummary(board, hasRecentChanges);
 
         return new ProductPlanningBoardRenderModel(
             board,
@@ -100,7 +103,9 @@ public static class ProductPlanningBoardRenderModelFactory
             hasBlockingDiagnostics,
             recoveredEpicCount,
             driftedEpicCount,
-            blockingDiagnosticCount);
+            blockingDiagnosticCount,
+            latestChangeTitle,
+            latestChangeDetail);
     }
 
     private static (ProductPlanningBoardStatusKind Kind, string Label, string Detail) ResolveStatus(
@@ -117,23 +122,23 @@ public static class ProductPlanningBoardRenderModelFactory
         {
             return (
                 ProductPlanningBoardStatusKind.Warning,
-                "Planning projection blocked",
-                $"{blockingDiagnosticCount} blocking planning diagnostic(s) need attention before the board can be trusted for reliable projection.");
+                "Plan needs attention",
+                $"{blockingDiagnosticCount} blocking issue(s) affect the plan or the dates reported to TFS.");
         }
 
         if (hasOperationalDiagnostics)
         {
             return (
                 ProductPlanningBoardStatusKind.Warning,
-                "Operational diagnostics present",
-                $"{recoveredEpicCount} recovered epic(s) and {driftedEpicCount} drifted epic(s) are being surfaced from the current planning board state.");
+                "Check reporting details",
+                $"{recoveredEpicCount} epic(s) were imported from existing data and {driftedEpicCount} epic(s) are out of sync with TFS.");
         }
 
         if (hasValidationIssues)
         {
             return (
                 ProductPlanningBoardStatusKind.Warning,
-                "Validation issues present",
+                "Planning issues present",
                 $"{board.Issues.Count} issue(s) need attention before the plan is considered stable.");
         }
 
@@ -141,13 +146,45 @@ public static class ProductPlanningBoardRenderModelFactory
         {
             return (
                 ProductPlanningBoardStatusKind.Changed,
-                "Working session updated",
-                $"{board.ChangedEpicIds.Count} changed epic(s) and {board.AffectedEpicIds.Count} affected epic(s) are highlighted from the latest operation.");
+                "Plan updated",
+                $"{board.ChangedEpicIds.Count} epic(s) changed directly and {board.AffectedEpicIds.Count} more shifted from your latest action.");
         }
 
         return (
             ProductPlanningBoardStatusKind.Stable,
-            "Board matches current durable base",
-            "No recent operation deltas are highlighted, and the board is ready for the next explicit planning decision.");
+            "Saved plan loaded",
+            "This board defines the plan, and no recent changes are highlighted.");
+    }
+
+    private static (string? Title, string? Detail) ResolveLatestChangeSummary(ProductPlanningBoardDto board, bool hasRecentChanges)
+    {
+        if (!hasRecentChanges)
+        {
+            return (null, null);
+        }
+
+        var changedCount = board.ChangedEpicIds.Count;
+        var affectedCount = board.AffectedEpicIds.Count;
+        var untouchedCount = Math.Max(0, board.EpicItems.Count - changedCount - affectedCount);
+
+        var title = changedCount == 1
+            ? "Latest action changed 1 Epic directly"
+            : $"Latest action changed {changedCount} Epics directly";
+
+        var affectedText = affectedCount switch
+        {
+            <= 0 => "No additional Epics shifted after it.",
+            1 => "1 more Epic shifted after it.",
+            _ => $"{affectedCount} more Epics shifted after it."
+        };
+
+        var untouchedText = untouchedCount switch
+        {
+            <= 0 => "Everything visible on the board was part of the latest change.",
+            1 => "1 visible Epic stayed in place.",
+            _ => $"{untouchedCount} visible Epics stayed in place."
+        };
+
+        return (title, $"{affectedText} {untouchedText}");
     }
 }

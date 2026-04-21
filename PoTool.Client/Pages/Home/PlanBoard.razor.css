@@ -17,6 +17,22 @@
     align-items: start;
 }
 
+.planning-board-authority-banner {
+    border-left: 4px solid var(--mud-palette-info);
+}
+
+.planning-board-change-alert {
+    border-left: 4px solid var(--mud-palette-primary);
+}
+
+.planning-board-change-alert--inline {
+    margin-top: -0.25rem;
+}
+
+.planning-board-impact-list {
+    margin-top: -0.25rem;
+}
+
 .planning-board-epic {
     border: 1px solid var(--mud-palette-lines-default);
     border-radius: 10px;
@@ -33,18 +49,64 @@
     background: color-mix(in srgb, var(--mud-palette-info) 6%, var(--mud-palette-surface) 94%);
 }
 
+.planning-board-epic--sync {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mud-palette-warning) 35%, transparent 65%);
+}
+
+.planning-board-epic--imported {
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--mud-palette-secondary) 4%, transparent 96%), transparent);
+}
+
 .planning-board-metric {
     height: 100%;
+}
+
+.planning-board-time-group--planned {
+    background: color-mix(in srgb, var(--mud-palette-primary) 5%, var(--mud-palette-surface) 95%);
+}
+
+.planning-board-time-group--calculated {
+    background: color-mix(in srgb, var(--mud-palette-info) 6%, var(--mud-palette-surface) 94%);
 }
 
 .planning-board-number-field {
     min-width: 8rem;
 }
 
+.planning-board-number-field--secondary {
+    opacity: 0.88;
+}
+
 .planning-board-action-group {
     min-height: 100%;
 }
 
+.planning-board-primary-action {
+    border: 2px solid color-mix(in srgb, var(--mud-palette-primary) 35%, var(--mud-palette-lines-default) 65%);
+    background: color-mix(in srgb, var(--mud-palette-primary) 4%, var(--mud-palette-surface) 96%);
+}
+
+.planning-board-maintenance-action {
+    border: 1px solid color-mix(in srgb, var(--mud-palette-warning) 35%, var(--mud-palette-lines-default) 65%);
+    background: color-mix(in srgb, var(--mud-palette-warning) 5%, var(--mud-palette-surface) 95%);
+}
+
+.planning-board-advanced-options {
+    margin-top: 0.25rem;
+}
+
+.planning-board-quick-actions {
+    align-items: center;
+}
+
 .planning-board-issue-list {
     padding-left: 0.25rem;
+}
+
+.planning-board-chip--secondary {
+    opacity: 0.88;
+}
+
+.planning-board-chip--tertiary {
+    opacity: 0.72;
 }

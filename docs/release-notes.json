@@ -2,6 +2,38 @@
   {
     "date": "2026-04-20",
     "type": "Changed",
+    "title": "Plan Board now explains latest impact and separates reporting maintenance from planning actions",
+    "impact": "The /planning/plan-board workspace now shows a structured latest-impact summary after each planning action, quantifies how many Epics changed directly or shifted, calls out major structural changes such as new parallel work or overlap changes, adds inline per-Epic cause messages so affected cards explain why they moved, and moves the TFS date refresh into a separate reporting-maintenance section so planning flow is easier to follow without scanning the full board.",
+    "area": "Planning / Plan Board / Impact Visibility",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-20",
+    "type": "Changed",
+    "title": "Plan Board now supports one-click sprint nudges and repeat moves for faster reshaping",
+    "impact": "The /planning/plan-board workspace now keeps the default \"Move Epic\" behavior but adds visible one-click -2, -1, +1, and +2 sprint controls, leaves exact numeric entry available as a secondary path, keeps a repeat-last-move action on the same Epic, and mirrors the latest changed/shifted summary directly on updated Epic cards so consecutive planning adjustments take less typing and less scanning.",
+    "area": "Planning / Plan Board / Interaction Speed",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-20",
+    "type": "Changed",
+    "title": "Plan Board now uses one default move action and hides precision overrides until needed",
+    "impact": "The /planning/plan-board workspace now promotes one primary \"Move Epic\" action that moves the selected Epic and shifts following work by default, moves one-off scheduling overrides into collapsed advanced options, summarizes what changed after each move, and separates \"Your plan\" from the calculated schedule so planning stays precise without forcing as many upfront interaction choices.",
+    "area": "Planning / Plan Board / Interaction Speed",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-20",
+    "type": "Changed",
+    "title": "Plan Board now explains the plan in plain language and clearer action labels",
+    "impact": "The /planning/plan-board workspace now explains that the board is the real plan and TFS only receives reported dates, replaces technical labels such as drift, reconciliation, recovery, and durable-session wording with planning language, simplifies action labels so each action explains what will move, and reduces visual noise by keeping changed and blocking issues primary while leaving affected, sync, and imported-state details visible but less dominant.",
+    "area": "Planning / Plan Board / UX Clarity",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-20",
+    "type": "Changed",
     "title": "Plan Board can now explicitly reconcile stale TFS planning dates from internal intent",
     "impact": "When the /planning/plan-board workspace detects stale, missing, or legacy-invalid TFS planning-date projection on an epic that already has internal planning intent, it now exposes one explicit per-epic \"Reconcile TFS projection\" action that rewrites both TFS planning-date fields together from the existing internal intent, refreshes the returned board diagnostics, and leaves the durable internal planning intent unchanged.",
     "area": "Planning / Plan Board / TFS Projection Reconciliation",
