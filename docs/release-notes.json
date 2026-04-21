@@ -2,6 +2,14 @@
   {
     "date": "2026-04-20",
     "type": "Changed",
+    "title": "Plan Board now explains latest impact and separates reporting maintenance from planning actions",
+    "impact": "The /planning/plan-board workspace now shows a structured latest-impact summary after each planning action, quantifies how many Epics changed directly or shifted, calls out major structural changes such as new parallel work or overlap changes, adds inline per-Epic cause messages so affected cards explain why they moved, and moves the TFS date refresh into a separate reporting-maintenance section so planning flow is easier to follow without scanning the full board.",
+    "area": "Planning / Plan Board / Impact Visibility",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-20",
+    "type": "Changed",
     "title": "Plan Board now supports one-click sprint nudges and repeat moves for faster reshaping",
     "impact": "The /planning/plan-board workspace now keeps the default \"Move Epic\" behavior but adds visible one-click -2, -1, +1, and +2 sprint controls, leaves exact numeric entry available as a secondary path, keeps a repeat-last-move action on the same Epic, and mirrors the latest changed/shifted summary directly on updated Epic cards so consecutive planning adjustments take less typing and less scanning.",
     "area": "Planning / Plan Board / Interaction Speed",
