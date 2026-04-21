@@ -31,7 +31,7 @@ public static class PlanningBoardImpactSummaryBuilder
             return BuildFallback(currentBoard, context);
         }
 
-        var previousEpics = previousBoard.EpicItems.ToDictionary(static epic => epic.EpicId);
+        var previousEpics = ToEpicLookup(previousBoard);
         var changedEpics = currentBoard.EpicItems.Where(static epic => epic.IsChanged).ToArray();
         var affectedEpics = currentBoard.EpicItems.Where(static epic => epic.IsAffected && !epic.IsChanged).ToArray();
         var impactMessages = BuildEpicMessages(previousBoard, currentBoard, previousEpics);
@@ -244,14 +244,13 @@ public static class PlanningBoardImpactSummaryBuilder
         out string summary)
     {
         summary = string.Empty;
+        var currentEpics = ToEpicLookup(currentBoard);
         if (!context.EpicId.HasValue
             || !previousEpics.TryGetValue(context.EpicId.Value, out var previousEpic)
-            || !currentBoard.EpicItems.Any(epic => epic.EpicId == context.EpicId.Value))
+            || !currentEpics.TryGetValue(context.EpicId.Value, out var currentEpic))
         {
             return false;
         }
-
-        var currentEpic = currentBoard.EpicItems.First(epic => epic.EpicId == context.EpicId.Value);
 
         if (previousEpic.TrackIndex == 0 && currentEpic.TrackIndex > 0)
         {
@@ -411,6 +410,11 @@ public static class PlanningBoardImpactSummaryBuilder
 
         return overlaps;
     }
+
+    private static Dictionary<int, PlanningBoardEpicItemDto> ToEpicLookup(ProductPlanningBoardDto board)
+        => board.EpicItems
+            .GroupBy(static epic => epic.EpicId)
+            .ToDictionary(static group => group.Key, static group => group.Last());
 
     private static bool Overlaps(PlanningBoardEpicItemDto left, PlanningBoardEpicItemDto right)
         // EndSprintIndexExclusive is the first sprint outside the Epic range, so overlap uses half-open intervals.
