@@ -28,7 +28,8 @@ public sealed class ProductPlanningSprintSignalFactoryTests
         Assert.AreEqual(PlanningBoardSprintConfidenceLevel.Low, sprintTwo.ConfidenceLevel);
         CollectionAssert.Contains(sprintTwo.ExplanationChips.ToArray(), "Parallel work high");
         CollectionAssert.Contains(sprintTwo.ExplanationChips.ToArray(), "Plan frequently changed");
-        StringAssert.Contains(sprintTwo.Tooltip, "parallel lanes");
+        StringAssert.Contains(sprintTwo.Tooltip, "Based on the current plan");
+        StringAssert.Contains(sprintTwo.Tooltip, "suggests higher planning strain");
         StringAssert.Contains(sprintTwo.HeatStyle, "198, 40, 40");
         StringAssert.Contains(sprintTwo.HeatStyle, "0.10");
     }
@@ -44,13 +45,14 @@ public sealed class ProductPlanningSprintSignalFactoryTests
 
         Assert.AreEqual(PlanningBoardSprintRiskLevel.Low, sprintOne.RiskLevel);
         Assert.AreEqual(PlanningBoardSprintConfidenceLevel.High, sprintOne.ConfidenceLevel);
-        CollectionAssert.Contains(sprintOne.ExplanationChips.ToArray(), "Load in range");
-        CollectionAssert.Contains(sprintOne.ExplanationChips.ToArray(), "Confidence steady");
-        StringAssert.Contains(sprintOne.Tooltip, "manageable");
-        StringAssert.Contains(sprintOne.Tooltip, "usual pattern");
-        StringAssert.Contains(sprintOne.Tooltip, "relatively steady");
-        Assert.AreEqual("Risk low", sprintOne.RiskLabel);
-        Assert.AreEqual("Confidence high", sprintOne.ConfidenceLabel);
+        CollectionAssert.Contains(sprintOne.ExplanationChips.ToArray(), "Load within board norm");
+        CollectionAssert.Contains(sprintOne.ExplanationChips.ToArray(), "Near-term plan stable");
+        StringAssert.Contains(sprintOne.Tooltip, "Based on the current plan");
+        StringAssert.Contains(sprintOne.Tooltip, "looks relatively stable");
+        Assert.IsFalse(sprintOne.Tooltip.Contains("guarantee", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(sprintOne.Tooltip.Contains("will deliver", StringComparison.OrdinalIgnoreCase));
+        Assert.AreEqual("Within typical range", sprintOne.RiskLabel);
+        Assert.AreEqual("Plan stable (near-term)", sprintOne.ConfidenceLabel);
     }
 
     [TestMethod]
@@ -70,7 +72,7 @@ public sealed class ProductPlanningSprintSignalFactoryTests
         var visibleText = string.Join(" | ", sprintTwo.ExplanationChips) + " | " + sprintTwo.Tooltip;
 
         Assert.AreEqual(PlanningBoardSprintRiskLevel.Low, sprintTwo.RiskLevel);
-        CollectionAssert.Contains(sprintTwo.ExplanationChips.ToArray(), "Load in range");
+        CollectionAssert.Contains(sprintTwo.ExplanationChips.ToArray(), "Load within board norm");
         Assert.IsFalse(visibleText.Contains("score", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(visibleText.Contains("ratio", StringComparison.OrdinalIgnoreCase));
         Assert.IsFalse(visibleText.Any(char.IsDigit));
@@ -108,13 +110,30 @@ public sealed class ProductPlanningSprintSignalFactoryTests
         Assert.AreEqual(PlanningBoardSprintConfidenceLevel.High, columns[0].ConfidenceLevel);
         Assert.AreEqual(PlanningBoardSprintConfidenceLevel.Medium, columns[^1].ConfidenceLevel);
         Assert.AreEqual(PlanningBoardSprintConfidenceLevel.Medium, columns[3].ConfidenceLevel);
-        CollectionAssert.Contains(columns[3].ExplanationChips.ToArray(), "Far horizon limits confidence");
+        CollectionAssert.Contains(columns[3].ExplanationChips.ToArray(), "Far-future view provisional");
 
         for (var index = 1; index < confidenceRanks.Length; index++)
         {
             Assert.IsGreaterThanOrEqualTo(confidenceRanks[index - 1], confidenceRanks[index], "Confidence should not improve in later stable sprints.");
             Assert.IsLessThanOrEqualTo(1, confidenceRanks[index] - confidenceRanks[index - 1], "Confidence decay should be gradual.");
         }
+    }
+
+    [TestMethod]
+    public void BuildColumns_UsesInterpretiveLanguageInsteadOfDeliveryCertainty()
+    {
+        var board = CreateBoard(
+            CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, computedStart: 0, duration: 1));
+
+        var sprintOne = ProductPlanningSprintSignalFactory.BuildColumns(board, sprintCount: 2)[0];
+        var visibleText = string.Join(" | ", sprintOne.ExplanationChips) + " | " + sprintOne.Tooltip + " | " + sprintOne.RiskLabel + " | " + sprintOne.ConfidenceLabel;
+
+        StringAssert.Contains(visibleText, "Based on the current plan");
+        Assert.IsFalse(visibleText.Contains("guarantee", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(visibleText.Contains("will deliver", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(visibleText.Contains("safe plan", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(visibleText.Contains("Confidence high", StringComparison.Ordinal));
+        Assert.IsFalse(visibleText.Contains("Risk low", StringComparison.Ordinal));
     }
 
     [TestMethod]

@@ -80,8 +80,10 @@ public sealed class PlanningBoardImpactSummaryBuilderTests
             new PlanningBoardActionImpactContext("Move Epic", 101));
 
         Assert.IsNotNull(summary);
-        CollectionAssert.Contains(summary.SummaryItems.ToArray(), "Sprint 2 now above normal load.");
-        CollectionAssert.Contains(summary.SummaryItems.ToArray(), "Confidence decreased for Sprint 2 after recent changes.");
+        CollectionAssert.Contains(summary.SummaryItems.ToArray(), "Sprint 2 now suggests higher planning strain than usual.");
+        CollectionAssert.Contains(summary.SummaryItems.ToArray(), "Sprint 2 now looks more provisional after recent changes.");
+        Assert.IsFalse(summary.SummaryItems.Any(static item => item.Contains("will deliver", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(summary.SummaryItems.Any(static item => item.Contains("Confidence", StringComparison.Ordinal)));
     }
 
     [TestMethod]

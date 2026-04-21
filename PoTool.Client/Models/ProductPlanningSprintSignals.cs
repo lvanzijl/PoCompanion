@@ -313,17 +313,17 @@ public static class ProductPlanningSprintSignalFactory
     private static string BuildRiskLabel(PlanningBoardSprintRiskLevel riskLevel)
         => riskLevel switch
         {
-            PlanningBoardSprintRiskLevel.High => "Risk high",
-            PlanningBoardSprintRiskLevel.Medium => "Risk medium",
-            _ => "Risk low"
+            PlanningBoardSprintRiskLevel.High => "Strain elevated",
+            PlanningBoardSprintRiskLevel.Medium => "Needs attention",
+            _ => "Within typical range"
         };
 
     private static string BuildConfidenceLabel(PlanningBoardSprintConfidenceLevel confidenceLevel)
         => confidenceLevel switch
         {
-            PlanningBoardSprintConfidenceLevel.Low => "Confidence low",
-            PlanningBoardSprintConfidenceLevel.Medium => "Confidence medium",
-            _ => "Confidence high"
+            PlanningBoardSprintConfidenceLevel.Low => "Plan provisional",
+            PlanningBoardSprintConfidenceLevel.Medium => "Plan less settled",
+            _ => "Plan stable (near-term)"
         };
 
     private static string BuildHeatStyle(
@@ -364,7 +364,7 @@ public static class ProductPlanningSprintSignalFactory
             .Take(MaxExplanationChips)
             .ToArray();
 
-        return chips.Length == 0 ? ["Load in range", "Confidence steady"] : chips;
+        return chips.Length == 0 ? ["Load within board norm", "Near-term plan stable"] : chips;
     }
 
     private static string BuildTooltip(
@@ -393,7 +393,7 @@ public static class ProductPlanningSprintSignalFactory
         {
             factors.Add(new SignalExplanationFactor(
                 "Board load already high",
-                "Risk stays elevated because the board is already carrying a heavy load across most active sprints.",
+                "Based on the current plan, this suggests higher planning strain because the board is already carrying a heavy load across most active sprints.",
                 loadContribution > 0d ? loadContribution + 0.05d : systemicLoadContribution));
         }
 
@@ -405,15 +405,15 @@ public static class ProductPlanningSprintSignalFactory
                 ? "Load well above board norm"
                 : "Load above board norm";
             var sentence = loadContribution >= 1.10d
-                ? "Risk is driven mainly by this sprint landing heavier than the board usually carries."
-                : "Risk is lifted because this sprint sits above the board's usual load.";
+                ? "Based on the current plan, this suggests higher planning strain because this sprint lands heavier than the board usually carries."
+                : "Based on the current plan, this suggests higher planning strain because this sprint sits above the board's usual load.";
             factors.Add(new SignalExplanationFactor(chip, sentence, loadContribution));
         }
         else if (riskLevel == PlanningBoardSprintRiskLevel.Low)
         {
             factors.Add(new SignalExplanationFactor(
-                "Load in range",
-                "This sprint looks manageable because its load and shape stay in line with the board's usual pattern.",
+                "Load within board norm",
+                "Based on the current plan, this sprint sits within the board's usual load and shape.",
                 0d));
         }
 
@@ -421,8 +421,8 @@ public static class ProductPlanningSprintSignalFactory
         {
             var chip = metric.ActiveTrackCount >= 3 ? "Parallel work high" : "Parallel work active";
             var sentence = metric.ActiveTrackCount >= 3
-                ? "Risk is elevated because work is spread across several parallel lanes at once."
-                : "Risk is elevated because this sprint uses more parallel work than the board usually needs.";
+                ? "Based on the current plan, this suggests higher planning strain because work is spread across several parallel lanes at once."
+                : "Based on the current plan, this suggests higher planning strain because this sprint uses more parallel work than the board usually needs.";
             factors.Add(new SignalExplanationFactor(chip, sentence, trackContribution));
         }
 
@@ -432,16 +432,16 @@ public static class ProductPlanningSprintSignalFactory
                 ? "Overlap above board norm"
                 : "Overlap pressure";
             var sentence = metric.OverlapPairCount > metric.OverlapBaseline
-                ? "Risk is elevated because more Epics overlap here than the board typically carries."
-                : "Risk is elevated because overlapping work is adding pressure in this sprint.";
+                ? "Based on the current plan, this suggests higher planning strain because more Epics overlap here than the board typically carries."
+                : "Based on the current plan, this suggests higher planning strain because overlapping work is adding pressure in this sprint.";
             factors.Add(new SignalExplanationFactor(chip, sentence, overlapContribution));
         }
 
         if (forwardShiftContribution > 0d)
         {
             var sentence = forwardShiftContribution >= 0.95d
-                ? "Risk is elevated because recent pull-ins compressed several Epics into this sprint."
-                : "Risk is elevated because work was pulled forward into this sprint.";
+                ? "Based on the current plan, this suggests higher planning strain because recent pull-ins compressed several Epics into this sprint."
+                : "Based on the current plan, this suggests higher planning strain because work was pulled forward into this sprint.";
             factors.Add(new SignalExplanationFactor("Work pulled forward", sentence, forwardShiftContribution));
         }
 
@@ -463,8 +463,8 @@ public static class ProductPlanningSprintSignalFactory
         if (confidenceLevel == PlanningBoardSprintConfidenceLevel.High)
         {
             factors.Add(new SignalExplanationFactor(
-                "Confidence steady",
-                "Confidence is high because this sprint is near-term and its shape is relatively steady.",
+                "Near-term plan stable",
+                "Based on the current plan, this sprint looks relatively stable because it is near-term and its shape has stayed steady.",
                 0d));
 
             return factors;
@@ -473,11 +473,11 @@ public static class ProductPlanningSprintSignalFactory
         if (IsFarHorizonHighConfidenceCapped(metric) || metric.DistanceRatio >= 0.65d)
         {
             var chip = confidenceLevel == PlanningBoardSprintConfidenceLevel.Low
-                ? "Low confidence (far future)"
-                : "Far horizon limits confidence";
+                ? "Far-future plan provisional"
+                : "Far-future view provisional";
             var sentence = confidenceLevel == PlanningBoardSprintConfidenceLevel.Low
-                ? "Confidence is low because this sprint sits far enough out that recent reshaping can still change it materially."
-                : "Confidence is held to medium because this sprint sits far enough out that it should stay provisional even when the shape is steady.";
+                ? "Based on the current plan, this sprint looks more provisional because it sits far enough out that reshaping can still change it materially."
+                : "Based on the current plan, this sprint stays provisional because it sits far enough out that even a steady shape should not be read as certain.";
             factors.Add(new SignalExplanationFactor(chip, sentence, Math.Max(metric.DistanceRatio, 0.60d)));
         }
 
@@ -485,8 +485,8 @@ public static class ProductPlanningSprintSignalFactory
         {
             var chip = metric.ChangedEpicCount >= 2 ? "Plan frequently changed" : "Recent plan changes";
             var sentence = metric.ChangedEpicCount >= 2
-                ? "Confidence is reduced because several Epics in this sprint changed recently."
-                : "Confidence is reduced because this sprint still reflects a recent plan change.";
+                ? "Based on the current plan, this sprint looks less settled because several Epics in it changed recently."
+                : "Based on the current plan, this sprint looks less settled because it still reflects a recent plan change.";
             factors.Add(new SignalExplanationFactor(chip, sentence, changedEpicPenalty));
         }
 
@@ -494,7 +494,7 @@ public static class ProductPlanningSprintSignalFactory
         {
             factors.Add(new SignalExplanationFactor(
                 "Structure still shifting",
-                "Confidence is reduced because the sprint structure is still changing around it.",
+                "Based on the current plan, this sprint looks less settled because the sprint structure is still changing around it.",
                 structurePenalty));
         }
 
@@ -502,17 +502,17 @@ public static class ProductPlanningSprintSignalFactory
         {
             factors.Add(new SignalExplanationFactor(
                 "Work pulled forward",
-                "Confidence is reduced because work was recently pulled into this sprint.",
+                "Based on the current plan, this sprint looks less settled because work was recently pulled into it.",
                 forwardShiftPenalty));
         }
 
         if (factors.Count == 0)
         {
             factors.Add(new SignalExplanationFactor(
-                confidenceLevel == PlanningBoardSprintConfidenceLevel.Medium ? "Confidence softened" : "Low confidence",
+                confidenceLevel == PlanningBoardSprintConfidenceLevel.Medium ? "Plan less settled" : "Plan provisional",
                 confidenceLevel == PlanningBoardSprintConfidenceLevel.Medium
-                    ? "Confidence is medium because some recent reshaping still affects how trustworthy this sprint is."
-                    : "Confidence is low because recent changes still make this sprint volatile.",
+                    ? "Based on the current plan, this sprint looks less settled because recent reshaping still affects this view."
+                    : "Based on the current plan, this sprint looks more provisional because recent changes still make it volatile.",
                 0d));
         }
 
@@ -539,9 +539,9 @@ public static class ProductPlanningSprintSignalFactory
         {
             summary = currentSignals[increased].RiskLevel switch
             {
-                PlanningBoardSprintRiskLevel.High => $"{currentSignals[increased].Label} now above normal load.",
-                PlanningBoardSprintRiskLevel.Medium => $"{currentSignals[increased].Label} now needs more planning attention.",
-                _ => $"{currentSignals[increased].Label} now looks steadier."
+                PlanningBoardSprintRiskLevel.High => $"{currentSignals[increased].Label} now suggests higher planning strain than usual.",
+                PlanningBoardSprintRiskLevel.Medium => $"{currentSignals[increased].Label} now needs closer planning attention.",
+                _ => $"{currentSignals[increased].Label} now looks more settled."
             };
 
             return true;
@@ -557,8 +557,8 @@ public static class ProductPlanningSprintSignalFactory
         {
             summary = currentSignals[decreased].RiskLevel switch
             {
-                PlanningBoardSprintRiskLevel.Low => $"{currentSignals[decreased].Label} now looks manageable again.",
-                _ => $"{currentSignals[decreased].Label} pressure eased after the latest change."
+                PlanningBoardSprintRiskLevel.Low => $"{currentSignals[decreased].Label} now sits back within its typical range.",
+                _ => $"{currentSignals[decreased].Label} now suggests less planning strain after the latest change."
             };
 
             return true;
@@ -584,8 +584,8 @@ public static class ProductPlanningSprintSignalFactory
         {
             summary = currentSignals[decreased].ConfidenceLevel switch
             {
-                PlanningBoardSprintConfidenceLevel.Low => $"Confidence decreased for {currentSignals[decreased].Label} after recent changes.",
-                _ => $"Confidence softened for {currentSignals[decreased].Label} after the latest reshaping."
+                PlanningBoardSprintConfidenceLevel.Low => $"{currentSignals[decreased].Label} now looks more provisional after recent changes.",
+                _ => $"{currentSignals[decreased].Label} now looks less settled after the latest reshaping."
             };
 
             return true;
@@ -599,7 +599,7 @@ public static class ProductPlanningSprintSignalFactory
 
         if (increased >= 0)
         {
-            summary = $"Confidence increased for {currentSignals[increased].Label} because the plan is steadier there.";
+            summary = $"{currentSignals[increased].Label} now looks more settled in the current plan.";
             return true;
         }
 
