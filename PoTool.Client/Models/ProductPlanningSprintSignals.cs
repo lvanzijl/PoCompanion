@@ -79,7 +79,7 @@ public static class ProductPlanningSprintSignalFactory
             ? new Dictionary<int, SprintSignalMetrics>()
             : BuildMetrics(previousBoard, sprintCount, previousBoard: null).ToDictionary(static metric => metric.SprintIndex);
 
-        return Enumerable.Range(0, Math.Max(1, sprintCount))
+        var rawMetrics = Enumerable.Range(0, Math.Max(1, sprintCount))
             .Select(sprintIndex =>
             {
                 var activeEpics = board.EpicItems.Where(epic => IsActiveInSprint(epic, sprintIndex)).ToArray();
@@ -94,91 +94,132 @@ public static class ProductPlanningSprintSignalFactory
 
                 previousMetrics.TryGetValue(sprintIndex, out var previousMetric);
 
-                return new SprintSignalMetrics(
+                return new RawSprintSignalMetrics(
                     sprintIndex,
                     activeEpics.Length,
                     activeTrackCount,
                     overlapPairCount,
                     changedEpicCount,
                     forwardShiftCount,
-                    sprintIndex switch
-                    {
-                        >= 6 => 3,
-                        >= 4 => 2,
-                        >= 2 => 1,
-                        _ => 0
-                    },
                     previousMetric is not null && previousMetric.ActiveTrackCount != activeTrackCount,
                     previousMetric is not null && previousMetric.OverlapPairCount != overlapPairCount);
             })
+            .ToArray();
+
+        var activeWindow = rawMetrics.Where(static metric => metric.ActiveEpicCount > 0).ToArray();
+        var loadBaseline = activeWindow.Length == 0
+            ? 1d
+            : activeWindow.Average(static metric => (double)metric.ActiveEpicCount);
+        var trackBaseline = activeWindow.Length == 0
+            ? 1d
+            : activeWindow.Average(static metric => (double)Math.Max(metric.ActiveTrackCount, 1));
+        var overlapBaseline = activeWindow.Length == 0
+            ? 0d
+            : activeWindow.Average(static metric => (double)metric.OverlapPairCount);
+        var sprintHorizon = Math.Max(1, Math.Max(1, sprintCount) - 1);
+
+        return rawMetrics
+            .Select(metric => new SprintSignalMetrics(
+                metric.SprintIndex,
+                metric.ActiveEpicCount,
+                metric.ActiveTrackCount,
+                metric.OverlapPairCount,
+                metric.ChangedEpicCount,
+                metric.ForwardShiftCount,
+                metric.HasParallelStructureChange,
+                metric.HasOverlapChange,
+                sprintCount <= 1 ? 0d : (double)metric.SprintIndex / sprintHorizon,
+                loadBaseline,
+                trackBaseline,
+                overlapBaseline))
             .ToArray();
     }
 
     private static PlanningBoardSprintRiskLevel ClassifyRisk(SprintSignalMetrics metric)
     {
-        var score = 0;
-
-        score += metric.ActiveEpicCount switch
+        if (metric.ActiveEpicCount == 0)
         {
-            >= 4 => 2,
-            >= 3 => 1,
-            _ => 0
-        };
+            return PlanningBoardSprintRiskLevel.Low;
+        }
 
-        score += metric.ActiveTrackCount switch
-        {
-            >= 3 => 2,
-            >= 2 => 1,
-            _ => 0
-        };
+        var score = 0d;
+        var elevatedLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + 0.5d);
+        var highLoadThreshold = (int)Math.Ceiling(metric.LoadBaseline + 1.25d);
+        var elevatedOverlapThreshold = Math.Max(1, (int)Math.Ceiling(metric.OverlapBaseline + 1d));
+        var highForwardShiftThreshold = Math.Max(2, (int)Math.Ceiling(metric.ActiveEpicCount * 0.5d));
 
-        score += metric.ForwardShiftCount switch
-        {
-            >= 2 => 2,
-            1 => 1,
-            _ => 0
-        };
+        score += metric.ActiveEpicCount >= Math.Max(5, highLoadThreshold)
+            ? 1.55d
+            : metric.ActiveEpicCount >= 4
+                ? 1.10d
+            : metric.ActiveEpicCount >= Math.Max(2, elevatedLoadThreshold)
+                ? 0.80d
+                : 0d;
 
-        score += metric.OverlapPairCount switch
-        {
-            >= 3 => 2,
-            >= 1 => 1,
-            _ => 0
-        };
+        score += metric.ActiveTrackCount >= 3
+            ? 1.10d
+            : metric.ActiveTrackCount >= 2 && metric.TrackBaseline < 1.5d
+                ? 0.55d
+                : metric.ActiveTrackCount >= 2 &&
+                  metric.ActiveEpicCount >= 3 &&
+                  metric.ActiveTrackCount > metric.TrackBaseline
+                    ? 0.65d
+                    : 0d;
+
+        score += metric.ForwardShiftCount >= highForwardShiftThreshold
+            ? 0.95d
+            : metric.ForwardShiftCount > 0
+                ? 0.40d
+                : 0d;
+
+        score += metric.OverlapPairCount >= 3 || metric.OverlapPairCount >= elevatedOverlapThreshold + 1
+            ? 0.95d
+            : metric.OverlapPairCount >= elevatedOverlapThreshold
+                ? 0.45d
+                : metric.OverlapPairCount > 0 && metric.ActiveTrackCount >= 3
+                    ? 0.30d
+                    : 0d;
 
         return score switch
         {
-            >= 5 => PlanningBoardSprintRiskLevel.High,
-            >= 2 => PlanningBoardSprintRiskLevel.Medium,
+            >= 3d => PlanningBoardSprintRiskLevel.High,
+            >= 1.25d => PlanningBoardSprintRiskLevel.Medium,
             _ => PlanningBoardSprintRiskLevel.Low
         };
     }
 
     private static PlanningBoardSprintConfidenceLevel ClassifyConfidence(SprintSignalMetrics metric)
     {
-        var penalty = metric.DistancePenalty;
+        var penalty = metric.DistanceRatio * 1.9d;
+        var substantialChangeThreshold = Math.Max(3, (int)Math.Ceiling(metric.ActiveEpicCount * 0.75d));
 
         penalty += metric.ChangedEpicCount switch
         {
-            >= 2 => 2,
-            1 => 1,
-            _ => 0
+            var count when count >= substantialChangeThreshold => 1.00d,
+            >= 2 => 0.55d,
+            1 => 0.30d,
+            _ => 0d
         };
 
-        penalty += (metric.HasParallelStructureChange, metric.HasOverlapChange, metric.ForwardShiftCount > 0) switch
+        penalty += (metric.HasParallelStructureChange, metric.HasOverlapChange) switch
         {
-            (true, true, _) => 2,
-            (true, _, _) => 1,
-            (_, true, _) => 1,
-            (_, _, true) => 1,
-            _ => 0
+            (true, true) => 0.75d,
+            (true, false) or (false, true) => 0.45d,
+            _ => 0d
+        };
+
+        penalty += metric.ForwardShiftCount switch
+        {
+            > 0 when metric.ForwardShiftCount >= Math.Max(2, (int)Math.Ceiling(metric.ActiveEpicCount * 0.5d)) => 0.55d,
+            > 0 => 0.30d,
+            _ => 0d
         };
 
         return penalty switch
         {
-            <= 1 => PlanningBoardSprintConfidenceLevel.High,
-            <= 2 => PlanningBoardSprintConfidenceLevel.Medium,
-            _ => PlanningBoardSprintConfidenceLevel.Low
+            >= 2.75d => PlanningBoardSprintConfidenceLevel.Low,
+            >= 1.15d => PlanningBoardSprintConfidenceLevel.Medium,
+            _ => PlanningBoardSprintConfidenceLevel.High
         };
     }
 
@@ -260,7 +301,7 @@ public static class ProductPlanningSprintSignalFactory
             chips.Add("Overlap pressure");
         }
 
-        if (confidenceLevel == PlanningBoardSprintConfidenceLevel.Low && metric.DistancePenalty >= 2)
+        if (confidenceLevel == PlanningBoardSprintConfidenceLevel.Low && metric.DistanceRatio >= 0.65d)
         {
             chips.Add("Low confidence (far future)");
         }
@@ -297,7 +338,7 @@ public static class ProductPlanningSprintSignalFactory
 
         var confidenceSentence = confidenceLevel switch
         {
-            PlanningBoardSprintConfidenceLevel.Low when metric.DistancePenalty >= 2 => "Confidence is low because this sprint sits farther out and recent reshaping can still change it.",
+            PlanningBoardSprintConfidenceLevel.Low when metric.DistanceRatio >= 0.65d => "Confidence is low because this sprint sits farther out and recent reshaping can still change it.",
             PlanningBoardSprintConfidenceLevel.Low => "Confidence is low because this sprint changed recently and the structure is still moving.",
             PlanningBoardSprintConfidenceLevel.Medium => "Confidence is medium because some recent changes still affect how trustworthy this sprint is.",
             _ => "Confidence is high because this sprint is near-term and its shape is relatively steady."
@@ -433,6 +474,16 @@ public static class ProductPlanningSprintSignalFactory
         return overlapCount;
     }
 
+    private sealed record RawSprintSignalMetrics(
+        int SprintIndex,
+        int ActiveEpicCount,
+        int ActiveTrackCount,
+        int OverlapPairCount,
+        int ChangedEpicCount,
+        int ForwardShiftCount,
+        bool HasParallelStructureChange,
+        bool HasOverlapChange);
+
     private sealed record SprintSignalMetrics(
         int SprintIndex,
         int ActiveEpicCount,
@@ -440,7 +491,10 @@ public static class ProductPlanningSprintSignalFactory
         int OverlapPairCount,
         int ChangedEpicCount,
         int ForwardShiftCount,
-        int DistancePenalty,
         bool HasParallelStructureChange,
-        bool HasOverlapChange);
+        bool HasOverlapChange,
+        double DistanceRatio,
+        double LoadBaseline,
+        double TrackBaseline,
+        double OverlapBaseline);
 }

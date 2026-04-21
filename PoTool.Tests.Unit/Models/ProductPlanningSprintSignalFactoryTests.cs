@@ -52,6 +52,89 @@ public sealed class ProductPlanningSprintSignalFactoryTests
         Assert.AreEqual("Confidence high", sprintOne.ConfidenceLabel);
     }
 
+    [TestMethod]
+    public void BuildColumns_NormalizesTypicalDenseBoardLoadInsteadOfRecoloringRawCounts()
+    {
+        var board = CreateBoard(
+            [
+                CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, computedStart: 0, duration: 4),
+                CreateEpic(102, "Epic B", roadmapOrder: 2, trackIndex: 1, computedStart: 0, duration: 4),
+                CreateEpic(103, "Epic C", roadmapOrder: 3, trackIndex: 0, computedStart: 0, duration: 4)
+            ],
+            changedEpicIds: [],
+            affectedEpicIds: []);
+
+        var columns = ProductPlanningSprintSignalFactory.BuildColumns(board, sprintCount: 4);
+        var sprintTwo = columns[1];
+        var visibleText = string.Join(" | ", sprintTwo.ExplanationChips) + " | " + sprintTwo.Tooltip;
+
+        Assert.AreEqual(PlanningBoardSprintRiskLevel.Low, sprintTwo.RiskLevel);
+        CollectionAssert.Contains(sprintTwo.ExplanationChips.ToArray(), "Load in range");
+        Assert.IsFalse(visibleText.Contains("score", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(visibleText.Contains("ratio", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(visibleText.Any(char.IsDigit));
+    }
+
+    [TestMethod]
+    public void BuildColumns_KeepsMinorFarFutureChangeFromDroppingStraightToLowConfidence()
+    {
+        var previousBoard = CreateBoard(
+            CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, computedStart: 0, duration: 7));
+
+        var currentBoard = CreateBoard(
+            [
+                CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, computedStart: 0, duration: 7, isAffected: true)
+            ],
+            changedEpicIds: [],
+            affectedEpicIds: [101]);
+
+        var columns = ProductPlanningSprintSignalFactory.BuildColumns(currentBoard, sprintCount: 7, previousBoard);
+
+        Assert.AreEqual(PlanningBoardSprintConfidenceLevel.High, columns[0].ConfidenceLevel);
+        Assert.AreEqual(PlanningBoardSprintConfidenceLevel.Medium, columns[^1].ConfidenceLevel);
+        Assert.AreNotEqual(PlanningBoardSprintConfidenceLevel.Low, columns[^1].ConfidenceLevel);
+    }
+
+    [TestMethod]
+    public void BuildColumns_DecaysConfidenceGraduallyAcrossStablePlanningHorizon()
+    {
+        var board = CreateBoard(
+            CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, computedStart: 0, duration: 7));
+
+        var columns = ProductPlanningSprintSignalFactory.BuildColumns(board, sprintCount: 7);
+        var confidenceRanks = columns.Select(static column => GetConfidenceRank(column.ConfidenceLevel)).ToArray();
+
+        Assert.AreEqual(PlanningBoardSprintConfidenceLevel.High, columns[0].ConfidenceLevel);
+        Assert.AreEqual(PlanningBoardSprintConfidenceLevel.Medium, columns[^1].ConfidenceLevel);
+
+        for (var index = 1; index < confidenceRanks.Length; index++)
+        {
+            Assert.IsGreaterThanOrEqualTo(confidenceRanks[index - 1], confidenceRanks[index], "Confidence should not improve in later stable sprints.");
+            Assert.IsLessThanOrEqualTo(1, confidenceRanks[index] - confidenceRanks[index - 1], "Confidence decay should be gradual.");
+        }
+    }
+
+    [TestMethod]
+    public void BuildColumns_SeparatesNearTermRiskFromConfidenceWithoutGlobalScore()
+    {
+        var board = CreateBoard(
+            [
+                CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, computedStart: 0, duration: 1),
+                CreateEpic(102, "Epic B", roadmapOrder: 2, trackIndex: 1, computedStart: 0, duration: 1),
+                CreateEpic(103, "Epic C", roadmapOrder: 3, trackIndex: 2, computedStart: 0, duration: 1),
+                CreateEpic(104, "Epic D", roadmapOrder: 4, trackIndex: 0, computedStart: 0, duration: 1),
+                CreateEpic(105, "Epic E", roadmapOrder: 5, trackIndex: 1, computedStart: 0, duration: 1)
+            ],
+            changedEpicIds: [],
+            affectedEpicIds: []);
+
+        var sprintOne = ProductPlanningSprintSignalFactory.BuildColumns(board, sprintCount: 1)[0];
+
+        Assert.AreEqual(PlanningBoardSprintRiskLevel.High, sprintOne.RiskLevel);
+        Assert.AreEqual(PlanningBoardSprintConfidenceLevel.High, sprintOne.ConfidenceLevel);
+        Assert.IsFalse(typeof(ProductPlanningSprintColumn).GetProperties().Any(static property => property.Name.Contains("Score", StringComparison.Ordinal)));
+    }
+
     private static ProductPlanningBoardDto CreateBoard(
         params PlanningBoardEpicItemDto[] epics)
         => CreateBoard(epics, changedEpicIds: [], affectedEpicIds: []);
@@ -106,4 +189,12 @@ public sealed class ProductPlanningSprintSignalFactoryTests
             [],
             isChanged,
             isAffected);
+
+    private static int GetConfidenceRank(PlanningBoardSprintConfidenceLevel level)
+        => level switch
+        {
+            PlanningBoardSprintConfidenceLevel.High => 0,
+            PlanningBoardSprintConfidenceLevel.Medium => 1,
+            _ => 2
+        };
 }
