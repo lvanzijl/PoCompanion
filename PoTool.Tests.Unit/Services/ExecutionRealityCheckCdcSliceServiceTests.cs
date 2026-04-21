@@ -17,6 +17,7 @@ public sealed class ExecutionRealityCheckCdcSliceServiceTests
 {
     private const double Tolerance = 0.0001d;
     private const int SprintDurationDays = 14;
+    private static readonly DateTimeOffset FixedUtcNow = new(2026, 4, 21, 12, 0, 0, TimeSpan.Zero);
 
     private SqliteConnection _connection = null!;
     private ServiceProvider _serviceProvider = null!;
@@ -183,7 +184,7 @@ public sealed class ExecutionRealityCheckCdcSliceServiceTests
             TeamId = team.Id
         });
 
-        var baseStartUtc = DateTime.UtcNow.Date.AddDays(-(completedSprintCount * 14));
+        var baseStartUtc = FixedUtcNow.UtcDateTime.Date.AddDays(-(completedSprintCount * SprintDurationDays));
         var sprints = new List<SprintEntity>();
 
         for (var sprintNumber = 1; sprintNumber <= totalSprints; sprintNumber++)
@@ -269,7 +270,8 @@ public sealed class ExecutionRealityCheckCdcSliceServiceTests
             _serviceProvider.GetRequiredService<ISprintSpilloverService>(),
             _serviceProvider.GetRequiredService<ISprintFactService>(),
             _serviceProvider.GetRequiredService<ISprintExecutionMetricsCalculator>(),
-            _serviceProvider.GetRequiredService<IExecutionRealityCheckCdcSliceProjector>());
+            _serviceProvider.GetRequiredService<IExecutionRealityCheckCdcSliceProjector>(),
+            new FixedTimeProvider(FixedUtcNow));
     }
 
     private static void SeedDeliveredWorkItem(
@@ -417,5 +419,17 @@ public sealed class ExecutionRealityCheckCdcSliceServiceTests
             var right = Convert.ToDouble(y);
             return Math.Abs(left - right) <= _tolerance ? 0 : left.CompareTo(right);
         }
+    }
+
+    private sealed class FixedTimeProvider : TimeProvider
+    {
+        private readonly DateTimeOffset _utcNow;
+
+        public FixedTimeProvider(DateTimeOffset utcNow)
+        {
+            _utcNow = utcNow;
+        }
+
+        public override DateTimeOffset GetUtcNow() => _utcNow;
     }
 }

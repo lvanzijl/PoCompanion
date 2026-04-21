@@ -366,6 +366,7 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<IEffortDistributionService, EffortDistributionService>();
         services.AddSingleton<IEffortEstimationQualityService, EffortEstimationQualityService>();
         services.AddSingleton<IEffortEstimationSuggestionService, EffortEstimationSuggestionService>();
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>();
         services.AddSingleton<PoTool.Core.Domain.Cdc.Sprints.ISprintExecutionMetricsCalculator>(sp =>
             sp.GetRequiredService<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>());

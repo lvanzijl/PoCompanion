@@ -28,6 +28,7 @@ public sealed class ExecutionRealityCheckCdcSliceService
     private readonly ISprintFactService _sprintFactService;
     private readonly ISprintExecutionMetricsCalculator _metricsCalculator;
     private readonly IExecutionRealityCheckCdcSliceProjector _projector;
+    private readonly TimeProvider _timeProvider;
 
     public ExecutionRealityCheckCdcSliceService(
         PoToolDbContext context,
@@ -36,7 +37,8 @@ public sealed class ExecutionRealityCheckCdcSliceService
         ISprintSpilloverService sprintSpilloverService,
         ISprintFactService sprintFactService,
         ISprintExecutionMetricsCalculator metricsCalculator,
-        IExecutionRealityCheckCdcSliceProjector projector)
+        IExecutionRealityCheckCdcSliceProjector projector,
+        TimeProvider timeProvider)
     {
         _context = context;
         _logger = logger;
@@ -45,6 +47,7 @@ public sealed class ExecutionRealityCheckCdcSliceService
         _sprintFactService = sprintFactService;
         _metricsCalculator = metricsCalculator;
         _projector = projector;
+        _timeProvider = timeProvider;
     }
 
     public async Task<ExecutionRealityCheckCdcSliceResult> BuildAsync(
@@ -83,7 +86,7 @@ public sealed class ExecutionRealityCheckCdcSliceService
             .AsNoTracking()
             .Where(sprint => sprint.TeamId == anchorSprint.TeamId)
             .ToListAsync(cancellationToken);
-        var orderedWindow = SelectCompletedWindow(teamSprints);
+        var orderedWindow = SelectCompletedWindow(teamSprints, _timeProvider.GetUtcNow().UtcDateTime);
         if (orderedWindow.Count != ExecutionRealityCheckCdcSliceProjector.RequiredWindowSize)
         {
             return ExecutionRealityCheckCdcSliceResult.InsufficientEvidence();
@@ -190,10 +193,10 @@ public sealed class ExecutionRealityCheckCdcSliceService
         return _projector.TryProject(rows);
     }
 
-    private static List<SprintEntity> SelectCompletedWindow(IReadOnlyList<SprintEntity> teamSprints)
+    private static List<SprintEntity> SelectCompletedWindow(
+        IReadOnlyList<SprintEntity> teamSprints,
+        DateTime nowUtc)
     {
-        var nowUtc = DateTime.UtcNow;
-
         return teamSprints
             .Where(HasCompleteSprintWindow)
             .Where(sprint => sprint.EndDateUtc!.Value < nowUtc)
