@@ -22,7 +22,10 @@ public static class ProductPlanningSprintSignalFactory
     private const double EmptyBoardBaseline = 1d;
     private const double ElevatedLoadBaselineOffset = 0.5d;
     private const double HighLoadBaselineOffset = 1.25d;
+    private const double SystemicLoadBaselineThreshold = 4d;
+    private const double SystemicLoadContribution = 0.55d;
     private const double ConfidenceDecayAcrossHorizon = 1.9d;
+    private const double FarHorizonHighConfidenceBoundary = 0.5d;
     private const double SubstantialChangeShare = 0.75d;
     private const double HighForwardShiftShare = 0.5d;
     private const int MaxExplanationChips = 4;
@@ -36,16 +39,22 @@ public static class ProductPlanningSprintSignalFactory
 
         var metrics = BuildMetrics(board, sprintCount, previousBoard);
         return metrics
-            .Select(metric => new ProductPlanningSprintColumn(
-                metric.SprintIndex,
-                $"Sprint {metric.SprintIndex + 1}",
-                ClassifyRisk(metric),
-                ClassifyConfidence(metric),
-                BuildRiskLabel(ClassifyRisk(metric)),
-                BuildConfidenceLabel(ClassifyConfidence(metric)),
-                BuildHeatStyle(ClassifyRisk(metric), ClassifyConfidence(metric)),
-                BuildChips(metric, ClassifyRisk(metric), ClassifyConfidence(metric)),
-                BuildTooltip(metric, ClassifyRisk(metric), ClassifyConfidence(metric))))
+            .Select(metric =>
+            {
+                var riskLevel = ClassifyRisk(metric);
+                var confidenceLevel = ClassifyConfidence(metric);
+
+                return new ProductPlanningSprintColumn(
+                    metric.SprintIndex,
+                    $"Sprint {metric.SprintIndex + 1}",
+                    riskLevel,
+                    confidenceLevel,
+                    BuildRiskLabel(riskLevel),
+                    BuildConfidenceLabel(confidenceLevel),
+                    BuildHeatStyle(riskLevel, confidenceLevel),
+                    BuildChips(metric, riskLevel, confidenceLevel),
+                    BuildTooltip(metric, riskLevel, confidenceLevel));
+            })
             .ToArray();
     }
 
@@ -151,6 +160,7 @@ public static class ProductPlanningSprintSignalFactory
         }
 
         var score = GetLoadRiskContribution(metric) +
+                    GetSystemicLoadRiskContribution(metric) +
                     GetTrackRiskContribution(metric) +
                     GetForwardShiftRiskContribution(metric) +
                     GetOverlapRiskContribution(metric);
@@ -180,6 +190,19 @@ public static class ProductPlanningSprintSignalFactory
 
         return metric.ActiveEpicCount >= Math.Max(2, elevatedLoadThreshold)
             ? 0.80d
+            : 0d;
+    }
+
+    private static double GetSystemicLoadRiskContribution(SprintSignalMetrics metric)
+    {
+        if (metric.ActiveEpicCount == 0)
+        {
+            return 0d;
+        }
+
+        return metric.LoadBaseline >= SystemicLoadBaselineThreshold &&
+               metric.ActiveEpicCount >= Math.Max(4, (int)Math.Floor(metric.LoadBaseline))
+            ? SystemicLoadContribution
             : 0d;
     }
 
@@ -238,37 +261,54 @@ public static class ProductPlanningSprintSignalFactory
     private static PlanningBoardSprintConfidenceLevel ClassifyConfidence(SprintSignalMetrics metric)
     {
         var penalty = metric.DistanceRatio * ConfidenceDecayAcrossHorizon;
+        penalty += GetChangedEpicConfidencePenalty(metric);
+        penalty += GetStructureConfidencePenalty(metric);
+        penalty += GetForwardShiftConfidencePenalty(metric);
+
+        var confidenceLevel = penalty switch
+        {
+            >= 2.75d => PlanningBoardSprintConfidenceLevel.Low,
+            >= 1.15d => PlanningBoardSprintConfidenceLevel.Medium,
+            _ => PlanningBoardSprintConfidenceLevel.High
+        };
+
+        return confidenceLevel == PlanningBoardSprintConfidenceLevel.High &&
+               IsFarHorizonHighConfidenceCapped(metric)
+            ? PlanningBoardSprintConfidenceLevel.Medium
+            : confidenceLevel;
+    }
+
+    private static double GetChangedEpicConfidencePenalty(SprintSignalMetrics metric)
+    {
         var substantialChangeThreshold = Math.Max(3, (int)Math.Ceiling(metric.ActiveEpicCount * SubstantialChangeShare));
 
-        penalty += metric.ChangedEpicCount switch
+        return metric.ChangedEpicCount switch
         {
             var count when count >= substantialChangeThreshold => 1.00d,
             >= 2 => 0.55d,
             1 => 0.30d,
             _ => 0d
         };
+    }
 
-        penalty += (metric.HasParallelStructureChange, metric.HasOverlapChange) switch
+    private static double GetStructureConfidencePenalty(SprintSignalMetrics metric)
+        => (metric.HasParallelStructureChange, metric.HasOverlapChange) switch
         {
             (true, true) => 0.75d,
             (true, false) or (false, true) => 0.45d,
             _ => 0d
         };
 
-        penalty += metric.ForwardShiftCount switch
+    private static double GetForwardShiftConfidencePenalty(SprintSignalMetrics metric)
+        => metric.ForwardShiftCount switch
         {
             > 0 when metric.ForwardShiftCount >= Math.Max(2, (int)Math.Ceiling(metric.ActiveEpicCount * HighForwardShiftShare)) => 0.55d,
             > 0 => 0.30d,
             _ => 0d
         };
 
-        return penalty switch
-        {
-            >= 2.75d => PlanningBoardSprintConfidenceLevel.Low,
-            >= 1.15d => PlanningBoardSprintConfidenceLevel.Medium,
-            _ => PlanningBoardSprintConfidenceLevel.High
-        };
-    }
+    private static bool IsFarHorizonHighConfidenceCapped(SprintSignalMetrics metric)
+        => metric.ActiveEpicCount > 0 && metric.DistanceRatio >= FarHorizonHighConfidenceBoundary;
 
     private static string BuildRiskLabel(PlanningBoardSprintRiskLevel riskLevel)
         => riskLevel switch
@@ -315,60 +355,16 @@ public static class ProductPlanningSprintSignalFactory
         PlanningBoardSprintRiskLevel riskLevel,
         PlanningBoardSprintConfidenceLevel confidenceLevel)
     {
-        var chips = new List<string>();
-
-        if (riskLevel == PlanningBoardSprintRiskLevel.High)
-        {
-            chips.Add("High load");
-        }
-        else if (riskLevel == PlanningBoardSprintRiskLevel.Medium)
-        {
-            chips.Add("Load above normal");
-        }
-        else
-        {
-            chips.Add("Load in range");
-        }
-
-        if (metric.ActiveTrackCount >= 3)
-        {
-            chips.Add("Parallel work high");
-        }
-        else if (metric.ActiveTrackCount == 2)
-        {
-            chips.Add("Parallel work active");
-        }
-
-        if (metric.ForwardShiftCount > 0)
-        {
-            chips.Add("Work pulled forward");
-        }
-        else if (metric.OverlapPairCount > 0)
-        {
-            chips.Add("Overlap pressure");
-        }
-
-        if (confidenceLevel == PlanningBoardSprintConfidenceLevel.Low && metric.DistanceRatio >= 0.65d)
-        {
-            chips.Add("Low confidence (far future)");
-        }
-        else if (metric.ChangedEpicCount >= 2)
-        {
-            chips.Add("Plan frequently changed");
-        }
-        else if (metric.HasParallelStructureChange || metric.HasOverlapChange)
-        {
-            chips.Add("Structure still shifting");
-        }
-        else if (confidenceLevel == PlanningBoardSprintConfidenceLevel.High)
-        {
-            chips.Add("Confidence steady");
-        }
-
-        return chips
+        var chips = BuildRiskFactors(metric, riskLevel)
+            .Take(2)
+            .Concat(BuildConfidenceFactors(metric, confidenceLevel).Take(2))
+            .Select(static factor => factor.Chip)
+            .Where(static chip => !string.IsNullOrWhiteSpace(chip))
             .Distinct(StringComparer.Ordinal)
             .Take(MaxExplanationChips)
             .ToArray();
+
+        return chips.Length == 0 ? ["Load in range", "Confidence steady"] : chips;
     }
 
     private static string BuildTooltip(
@@ -376,22 +372,154 @@ public static class ProductPlanningSprintSignalFactory
         PlanningBoardSprintRiskLevel riskLevel,
         PlanningBoardSprintConfidenceLevel confidenceLevel)
     {
-        var riskSentence = riskLevel switch
-        {
-            PlanningBoardSprintRiskLevel.High => "This sprint looks strained because several Epics land together, parallel work is elevated, or recent moves compressed the plan.",
-            PlanningBoardSprintRiskLevel.Medium => "This sprint needs extra attention because the load is stacking up or the plan overlaps more than usual.",
-            _ => "This sprint looks manageable with the current load and shape of work."
-        };
-
-        var confidenceSentence = confidenceLevel switch
-        {
-            PlanningBoardSprintConfidenceLevel.Low when metric.DistanceRatio >= 0.65d => "Confidence is low because this sprint sits farther out and recent reshaping can still change it.",
-            PlanningBoardSprintConfidenceLevel.Low => "Confidence is low because this sprint changed recently and the structure is still moving.",
-            PlanningBoardSprintConfidenceLevel.Medium => "Confidence is medium because some recent changes still affect how trustworthy this sprint is.",
-            _ => "Confidence is high because this sprint is near-term and its shape is relatively steady."
-        };
+        var riskSentence = BuildRiskFactors(metric, riskLevel)[0].Sentence;
+        var confidenceSentence = BuildConfidenceFactors(metric, confidenceLevel)[0].Sentence;
 
         return $"{riskSentence} {confidenceSentence}";
+    }
+
+    private static IReadOnlyList<SignalExplanationFactor> BuildRiskFactors(
+        SprintSignalMetrics metric,
+        PlanningBoardSprintRiskLevel riskLevel)
+    {
+        var factors = new List<SignalExplanationFactor>();
+        var systemicLoadContribution = GetSystemicLoadRiskContribution(metric);
+        var loadContribution = GetLoadRiskContribution(metric);
+        var trackContribution = GetTrackRiskContribution(metric);
+        var forwardShiftContribution = GetForwardShiftRiskContribution(metric);
+        var overlapContribution = GetOverlapRiskContribution(metric);
+
+        if (systemicLoadContribution > 0d)
+        {
+            factors.Add(new SignalExplanationFactor(
+                "Board load already high",
+                "Risk stays elevated because the board is already carrying a heavy load across most active sprints.",
+                loadContribution > 0d ? loadContribution + 0.05d : systemicLoadContribution));
+        }
+
+        var sitsAboveBoardNorm = metric.ActiveEpicCount > Math.Ceiling(metric.LoadBaseline);
+
+        if (loadContribution > 0d && (systemicLoadContribution == 0d || sitsAboveBoardNorm))
+        {
+            var chip = loadContribution >= 1.10d
+                ? "Load well above board norm"
+                : "Load above board norm";
+            var sentence = loadContribution >= 1.10d
+                ? "Risk is driven mainly by this sprint landing heavier than the board usually carries."
+                : "Risk is lifted because this sprint sits above the board's usual load.";
+            factors.Add(new SignalExplanationFactor(chip, sentence, loadContribution));
+        }
+        else if (riskLevel == PlanningBoardSprintRiskLevel.Low)
+        {
+            factors.Add(new SignalExplanationFactor(
+                "Load in range",
+                "This sprint looks manageable because its load and shape stay in line with the board's usual pattern.",
+                0d));
+        }
+
+        if (trackContribution > 0d)
+        {
+            var chip = metric.ActiveTrackCount >= 3 ? "Parallel work high" : "Parallel work active";
+            var sentence = metric.ActiveTrackCount >= 3
+                ? "Risk is elevated because work is spread across several parallel lanes at once."
+                : "Risk is elevated because this sprint uses more parallel work than the board usually needs.";
+            factors.Add(new SignalExplanationFactor(chip, sentence, trackContribution));
+        }
+
+        if (overlapContribution > 0d)
+        {
+            var chip = metric.OverlapPairCount > metric.OverlapBaseline
+                ? "Overlap above board norm"
+                : "Overlap pressure";
+            var sentence = metric.OverlapPairCount > metric.OverlapBaseline
+                ? "Risk is elevated because more Epics overlap here than the board typically carries."
+                : "Risk is elevated because overlapping work is adding pressure in this sprint.";
+            factors.Add(new SignalExplanationFactor(chip, sentence, overlapContribution));
+        }
+
+        if (forwardShiftContribution > 0d)
+        {
+            var sentence = forwardShiftContribution >= 0.95d
+                ? "Risk is elevated because recent pull-ins compressed several Epics into this sprint."
+                : "Risk is elevated because work was pulled forward into this sprint.";
+            factors.Add(new SignalExplanationFactor("Work pulled forward", sentence, forwardShiftContribution));
+        }
+
+        return factors
+            .OrderByDescending(static factor => factor.Weight)
+            .ThenBy(static factor => factor.Chip, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<SignalExplanationFactor> BuildConfidenceFactors(
+        SprintSignalMetrics metric,
+        PlanningBoardSprintConfidenceLevel confidenceLevel)
+    {
+        var factors = new List<SignalExplanationFactor>();
+        var changedEpicPenalty = GetChangedEpicConfidencePenalty(metric);
+        var structurePenalty = GetStructureConfidencePenalty(metric);
+        var forwardShiftPenalty = GetForwardShiftConfidencePenalty(metric);
+
+        if (confidenceLevel == PlanningBoardSprintConfidenceLevel.High)
+        {
+            factors.Add(new SignalExplanationFactor(
+                "Confidence steady",
+                "Confidence is high because this sprint is near-term and its shape is relatively steady.",
+                0d));
+
+            return factors;
+        }
+
+        if (IsFarHorizonHighConfidenceCapped(metric) || metric.DistanceRatio >= 0.65d)
+        {
+            var chip = confidenceLevel == PlanningBoardSprintConfidenceLevel.Low
+                ? "Low confidence (far future)"
+                : "Far horizon limits confidence";
+            var sentence = confidenceLevel == PlanningBoardSprintConfidenceLevel.Low
+                ? "Confidence is low because this sprint sits far enough out that recent reshaping can still change it materially."
+                : "Confidence is held to medium because this sprint sits far enough out that it should stay provisional even when the shape is steady.";
+            factors.Add(new SignalExplanationFactor(chip, sentence, Math.Max(metric.DistanceRatio, 0.60d)));
+        }
+
+        if (changedEpicPenalty > 0d)
+        {
+            var chip = metric.ChangedEpicCount >= 2 ? "Plan frequently changed" : "Recent plan changes";
+            var sentence = metric.ChangedEpicCount >= 2
+                ? "Confidence is reduced because several Epics in this sprint changed recently."
+                : "Confidence is reduced because this sprint still reflects a recent plan change.";
+            factors.Add(new SignalExplanationFactor(chip, sentence, changedEpicPenalty));
+        }
+
+        if (structurePenalty > 0d)
+        {
+            factors.Add(new SignalExplanationFactor(
+                "Structure still shifting",
+                "Confidence is reduced because the sprint structure is still changing around it.",
+                structurePenalty));
+        }
+
+        if (forwardShiftPenalty > 0d)
+        {
+            factors.Add(new SignalExplanationFactor(
+                "Work pulled forward",
+                "Confidence is reduced because work was recently pulled into this sprint.",
+                forwardShiftPenalty));
+        }
+
+        if (factors.Count == 0)
+        {
+            factors.Add(new SignalExplanationFactor(
+                confidenceLevel == PlanningBoardSprintConfidenceLevel.Medium ? "Confidence softened" : "Low confidence",
+                confidenceLevel == PlanningBoardSprintConfidenceLevel.Medium
+                    ? "Confidence is medium because some recent reshaping still affects how trustworthy this sprint is."
+                    : "Confidence is low because recent changes still make this sprint volatile.",
+                0d));
+        }
+
+        return factors
+            .OrderByDescending(static factor => factor.Weight)
+            .ThenBy(static factor => factor.Chip, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static bool TryBuildRiskDeltaSummary(
@@ -550,4 +678,9 @@ public static class ProductPlanningSprintSignalFactory
         double LoadBaseline,
         double TrackBaseline,
         double OverlapBaseline);
+
+    private sealed record SignalExplanationFactor(
+        string Chip,
+        string Sentence,
+        double Weight);
 }

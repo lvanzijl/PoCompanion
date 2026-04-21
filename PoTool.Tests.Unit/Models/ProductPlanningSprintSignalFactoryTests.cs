@@ -26,9 +26,9 @@ public sealed class ProductPlanningSprintSignalFactoryTests
 
         Assert.AreEqual(PlanningBoardSprintRiskLevel.High, sprintTwo.RiskLevel);
         Assert.AreEqual(PlanningBoardSprintConfidenceLevel.Low, sprintTwo.ConfidenceLevel);
-        CollectionAssert.Contains(sprintTwo.ExplanationChips.ToArray(), "High load");
         CollectionAssert.Contains(sprintTwo.ExplanationChips.ToArray(), "Parallel work high");
         CollectionAssert.Contains(sprintTwo.ExplanationChips.ToArray(), "Plan frequently changed");
+        StringAssert.Contains(sprintTwo.Tooltip, "parallel lanes");
         StringAssert.Contains(sprintTwo.HeatStyle, "198, 40, 40");
         StringAssert.Contains(sprintTwo.HeatStyle, "0.10");
     }
@@ -47,6 +47,7 @@ public sealed class ProductPlanningSprintSignalFactoryTests
         CollectionAssert.Contains(sprintOne.ExplanationChips.ToArray(), "Load in range");
         CollectionAssert.Contains(sprintOne.ExplanationChips.ToArray(), "Confidence steady");
         StringAssert.Contains(sprintOne.Tooltip, "manageable");
+        StringAssert.Contains(sprintOne.Tooltip, "usual pattern");
         StringAssert.Contains(sprintOne.Tooltip, "relatively steady");
         Assert.AreEqual("Risk low", sprintOne.RiskLabel);
         Assert.AreEqual("Confidence high", sprintOne.ConfidenceLabel);
@@ -106,6 +107,8 @@ public sealed class ProductPlanningSprintSignalFactoryTests
 
         Assert.AreEqual(PlanningBoardSprintConfidenceLevel.High, columns[0].ConfidenceLevel);
         Assert.AreEqual(PlanningBoardSprintConfidenceLevel.Medium, columns[^1].ConfidenceLevel);
+        Assert.AreEqual(PlanningBoardSprintConfidenceLevel.Medium, columns[3].ConfidenceLevel);
+        CollectionAssert.Contains(columns[3].ExplanationChips.ToArray(), "Far horizon limits confidence");
 
         for (var index = 1; index < confidenceRanks.Length; index++)
         {
@@ -133,6 +136,54 @@ public sealed class ProductPlanningSprintSignalFactoryTests
         Assert.AreEqual(PlanningBoardSprintRiskLevel.High, sprintOne.RiskLevel);
         Assert.AreEqual(PlanningBoardSprintConfidenceLevel.High, sprintOne.ConfidenceLevel);
         Assert.IsFalse(typeof(ProductPlanningSprintColumn).GetProperties().Any(static property => property.Name.Contains("Score", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    public void BuildColumns_SurfacesSystemicOverloadOnChronicallyHotBoard()
+    {
+        var board = CreateBoard(
+            [
+                CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, computedStart: 0, duration: 4),
+                CreateEpic(102, "Epic B", roadmapOrder: 2, trackIndex: 1, computedStart: 0, duration: 4),
+                CreateEpic(103, "Epic C", roadmapOrder: 3, trackIndex: 0, computedStart: 0, duration: 4),
+                CreateEpic(104, "Epic D", roadmapOrder: 4, trackIndex: 1, computedStart: 0, duration: 4)
+            ],
+            changedEpicIds: [],
+            affectedEpicIds: []);
+
+        var sprintTwo = ProductPlanningSprintSignalFactory.BuildColumns(board, sprintCount: 4)[1];
+
+        Assert.AreEqual(PlanningBoardSprintRiskLevel.Medium, sprintTwo.RiskLevel);
+        CollectionAssert.Contains(sprintTwo.ExplanationChips.ToArray(), "Board load already high");
+        StringAssert.Contains(sprintTwo.Tooltip, "already carrying a heavy load");
+    }
+
+    [TestMethod]
+    public void BuildColumns_KeepsDominantOverlapVisibleWhenWorkIsAlsoPulledForward()
+    {
+        var previousBoard = CreateBoard(
+            [
+                CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, computedStart: 0, duration: 4),
+                CreateEpic(102, "Epic B", roadmapOrder: 2, trackIndex: 0, computedStart: 4, duration: 2),
+                CreateEpic(103, "Epic C", roadmapOrder: 3, trackIndex: 0, computedStart: 1, duration: 4)
+            ],
+            changedEpicIds: [],
+            affectedEpicIds: []);
+
+        var currentBoard = CreateBoard(
+            [
+                CreateEpic(101, "Epic A", roadmapOrder: 1, trackIndex: 0, computedStart: 0, duration: 4),
+                CreateEpic(102, "Epic B", roadmapOrder: 2, trackIndex: 0, computedStart: 2, duration: 3, isAffected: true),
+                CreateEpic(103, "Epic C", roadmapOrder: 3, trackIndex: 0, computedStart: 1, duration: 4)
+            ],
+            changedEpicIds: [],
+            affectedEpicIds: [102]);
+
+        var sprintThree = ProductPlanningSprintSignalFactory.BuildColumns(currentBoard, sprintCount: 6, previousBoard)[2];
+
+        Assert.AreEqual("Overlap above board norm", sprintThree.ExplanationChips[0]);
+        CollectionAssert.Contains(sprintThree.ExplanationChips.ToArray(), "Recent plan changes");
+        StringAssert.Contains(sprintThree.Tooltip, "more Epics overlap here than the board typically carries");
     }
 
     private static ProductPlanningBoardDto CreateBoard(
