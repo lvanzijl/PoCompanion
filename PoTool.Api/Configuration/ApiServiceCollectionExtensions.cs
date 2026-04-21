@@ -16,6 +16,7 @@ using PoTool.Integrations.Tfs.Clients;
 using PoTool.Core.BacklogQuality;
 using PoTool.Core.Contracts;
 using PoTool.Core.Configuration;
+using PoTool.Core.Domain.Cdc.ExecutionRealityCheck;
 using PoTool.Core.Filters;
 using PoTool.Core.Sync;
 using PoTool.Core.WorkItems.Validators;
@@ -370,6 +371,8 @@ public static class ApiServiceCollectionExtensions
             sp.GetRequiredService<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>());
         services.AddSingleton<PoTool.Core.Domain.Metrics.ISprintExecutionMetricsCalculator>(sp =>
             sp.GetRequiredService<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>());
+        services.AddSingleton<IExecutionRealityCheckCdcSliceProjector, ExecutionRealityCheckCdcSliceProjector>();
+        services.AddScoped<ExecutionRealityCheckCdcSliceService>();
 
         // Register TFS configuration and client
         services.AddDataProtection();
