@@ -43,6 +43,14 @@ public static class PlanningBoardImpactSummaryBuilder
             summaryItems.Add(impactCountSummary);
         }
 
+        if (!context.IsMaintenance)
+        {
+            foreach (var sprintSignalSummary in ProductPlanningSprintSignalFactory.BuildDeltaSummaries(previousBoard, currentBoard))
+            {
+                summaryItems.Add(sprintSignalSummary);
+            }
+        }
+
         if (TryBuildActedEpicSummary(currentBoard, previousEpics, context, out var actedEpicSummary))
         {
             summaryItems.Add(actedEpicSummary);
@@ -61,14 +69,6 @@ public static class PlanningBoardImpactSummaryBuilder
         foreach (var overlapSummary in BuildOverlapSummaries(previousBoard, currentBoard))
         {
             summaryItems.Add(overlapSummary);
-        }
-
-        if (!context.IsMaintenance)
-        {
-            foreach (var sprintSignalSummary in ProductPlanningSprintSignalFactory.BuildDeltaSummaries(previousBoard, currentBoard))
-            {
-                summaryItems.Add(sprintSignalSummary);
-            }
         }
 
         if (context.IsMaintenance)

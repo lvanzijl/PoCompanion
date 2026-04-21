@@ -84,6 +84,13 @@ public sealed class PlanningBoardImpactSummaryBuilderTests
         CollectionAssert.Contains(summary.SummaryItems.ToArray(), "Sprint 2 now looks more provisional after recent changes.");
         Assert.IsFalse(summary.SummaryItems.Any(static item => item.Contains("will deliver", StringComparison.OrdinalIgnoreCase)));
         Assert.IsFalse(summary.SummaryItems.Any(static item => item.Contains("Confidence", StringComparison.Ordinal)));
+        CollectionAssert.AreEqual(
+            [
+                "1 Epic changed directly; 2 more Epics shifted.",
+                "Sprint 2 now suggests higher planning strain than usual.",
+                "Sprint 2 now looks more provisional after recent changes."
+            ],
+            summary.SummaryItems.Take(3).ToArray());
     }
 
     [TestMethod]

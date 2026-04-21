@@ -358,6 +358,7 @@ public static class ProductPlanningSprintSignalFactory
         var chips = BuildRiskFactors(metric, riskLevel)
             .Take(2)
             .Concat(BuildConfidenceFactors(metric, confidenceLevel).Take(2))
+            .OrderByDescending(static factor => factor.Weight)
             .Select(static factor => factor.Chip)
             .Where(static chip => !string.IsNullOrWhiteSpace(chip))
             .Distinct(StringComparer.Ordinal)
