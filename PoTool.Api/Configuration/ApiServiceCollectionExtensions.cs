@@ -373,7 +373,9 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<PoTool.Core.Domain.Metrics.ISprintExecutionMetricsCalculator>(sp =>
             sp.GetRequiredService<PoTool.Core.Domain.Cdc.Sprints.SprintExecutionMetricsCalculator>());
         services.AddSingleton<IExecutionRealityCheckCdcSliceProjector, ExecutionRealityCheckCdcSliceProjector>();
+        services.AddSingleton<IExecutionRealityCheckInterpretationService, ExecutionRealityCheckInterpretationService>();
         services.AddScoped<ExecutionRealityCheckCdcSliceService>();
+        services.AddScoped<ExecutionRealityCheckInterpretationLayerService>();
 
         // Register TFS configuration and client
         services.AddDataProtection();
