@@ -18,40 +18,38 @@
 
 ### OBSERVED
 
-1. Application startup at `http://localhost:5291/` entered sync-gate and then completed successfully to `/home`.
-2. Sync-gate advanced through the previously critical stage:
-   - `SyncWorkItems`
+1. Application startup at `http://localhost:5291/` entered sync-gate and completed successfully to `/home`.
+2. Sync-gate advanced through the expected working stages, including:
+   - `SyncWorkItemRelationships`
    - `ComputeSprintTrends`
    - `ComputeForecastProjections`
    - `SyncPipelines`
-   - final `syncStatus = 2`
 3. Natural navigation worked:
    - `/home`
    - Planning workspace
    - Plan Board
 4. Anomaly product context was opened naturally by selecting:
    - `Incident Response Control` (`productId=1`)
-5. The Plan Board API for that anomaly context returned a real execution hint:
-   - `anomalyKey = completion-below-typical`
-   - `message = Execution signal: committed delivery below typical range`
-   - `teamId = 4`
-   - `sprintId = 9`
-6. The repaired destination route loaded successfully when opened directly:
+5. The anomaly board initially showed planning summary tiles plus loading/progress indicators.
+6. After the board fully resolved, the live UI surfaced a visible hint button above sprint heat:
+   - `Execution signal: committed delivery below typical range`
+7. Clicking that hint navigated to:
    - `/home/delivery/execution?productId=1&teamId=4&sprintId=9&timeMode=Sprint`
 
 ### CONFIRMED
 
-- Sync-gate completion is no longer the primary blocker in this rerun.
-- The Sprint Execution destination is functionally repaired and reachable.
-- The Battleship anomaly data is active and produces a valid execution hint at API level.
+- Sync-gate completes.
+- The planning board does load in anomaly context.
+- The hint is visible in the live UI once the board finishes rendering.
+- The repaired Sprint Execution destination is reachable from the hint itself.
 
 ### UNCLEAR
 
-- The Plan Board shell loaded, but the live board content remained visually incomplete long enough that the hint never surfaced in the browser session even though the API returned it.
+- The anomaly board did not feel fast or immediately ready; the hint appeared only after a materially longer wait than the first visible shell.
 
 ### RISK
 
-- The end-to-end system is only partially “fully working” in real usage because the source hint exists in data but does not become reliably visible in the board UI.
+- The feature is end-to-end functional, but its real value depends on users waiting long enough for the anomaly board to finish rendering.
 
 ---
 
@@ -59,27 +57,34 @@
 
 ### OBSERVED
 
-- During normal scanning of the anomaly product Plan Board, the visible UI showed:
+- During the first normal scan of the anomaly board, the visible UI showed:
   - planning header
   - project planning summary
   - product imbalance
-  - persistent progress bars in the board area
-- The hint text was **not** visible in the live browser render.
-- DOM inspection during the live session found:
-  - no visible `Execution signal:` text in the rendered page
-- API inspection at the same time confirmed that the hint payload existed.
+  - progress indicators in the board area
+- During that initial 5–10 second scan, the hint was not yet visible.
+- After the board completed rendering, the hint appeared as a distinct button directly above sprint heat.
+- The live planning-board API for the same context returned:
+  - `anomalyKey = completion-below-typical`
+  - `message = Execution signal: committed delivery below typical range`
+  - `teamId = 4`
+  - `sprintId = 9`
 
 ### CONFIRMED
 
-- In real browser usage for this rerun, the hint is **skipped entirely** because it is not surfaced visually.
+- The hint is naturally noticeable once the board has fully loaded because it sits immediately above the primary sprint-heat region.
+
+### UNCLEAR
+
+- Users who treat the earlier summary-plus-progress state as “good enough” may never wait to see the hint.
 
 ### MISLEADING
 
-- The current UI gives the impression that there is no execution hint at all, even while the API is already returning one.
+- The first visible board state suggests “still loading” rather than “execution issue detected.”
 
 ### RISK
 
-- A signal that only exists behind the API boundary has no practical decision value for a planning user.
+- Visibility is real, but delayed visibility weakens the signal in rushed usage.
 
 ---
 
@@ -87,24 +92,28 @@
 
 ### OBSERVED
 
-- The first impression in anomaly context was not “execution warning”.
-- It was:
+- In the first 5–10 seconds without interaction, the page impression was:
   - planning summary tiles
-  - board-level loading/progress indicators
-  - no execution strip above sprint heat
-- Because the hint never rendered, it did not compete with planning heat; it simply was not part of the first impression.
+  - progress/loading activity
+  - no visible execution cue yet
+- Once the board finished, the hint appeared before sprint heat and became part of the page hierarchy.
 
 ### CONFIRMED
 
-- The hint does **not** feel relevant immediately in this rerun because the user never sees it.
+- The immediate first impression is not the hint.
+- Once the board resolves, the hint feels relevant because it sits at the transition into sprint heat.
 
 ### UNCLEAR
 
-- If the hint had rendered in its intended location, it likely would have read as secondary to planning heat, but that was not observable in the live UI.
+- Whether typical users wait long enough to form that second, more accurate impression remains uncertain.
 
 ### MISLEADING
 
-- The page feels like “board still loading” rather than “board ready, with an execution anomaly worth investigating.”
+- Early rendering emphasizes board readiness problems more than execution insight.
+
+### RISK
+
+- A delayed first impression reduces the chance that the signal changes behavior in fast planning reviews.
 
 ---
 
@@ -112,25 +121,23 @@
 
 ### OBSERVED
 
-- Hint-only comprehension could not be validated from the live board because the hint did not appear.
-- API payload wording was:
+- Visible hint copy:
   - `Execution signal: committed delivery below typical range`
+- Hover text:
   - `Open Sprint Execution to inspect what happened to committed work inside the sprint.`
 
 ### CONFIRMED
 
-- At copy level, the hint is clearly execution-related rather than planning-related.
+- The hint is clearly execution-related rather than planning-related.
+- The hover clarifies meaning effectively and makes the destination purpose obvious.
 
 ### UNCLEAR
 
-- In actual board context, I could not validate:
-  - whether a user immediately understands what happened
-  - whether the sprint/team ambiguity is acceptable
-  - whether hover clarification is enough
+- Without hover, the phrase `below typical range` is somewhat abstract and does not immediately say whether the issue is completion, spillover, or delivery collapse.
 
 ### MISLEADING
 
-- In the live UI, comprehension fails before wording matters because the signal is absent.
+- The wording is not misleading, but it is less concrete than the destination page itself.
 
 ---
 
@@ -138,23 +145,22 @@
 
 ### OBSERVED
 
-- No visible hint was available to click in the real board session.
-- Therefore:
-  - no natural hesitation-before-click behavior could be observed
-  - no hover behavior could be validated in-browser
-- To continue the validation, I opened the exact destination route derived from the live hint payload directly.
+- The visible hint rendered as a button and was obviously clickable.
+- Clicking it navigated directly to Sprint Execution with the expected product/team/sprint context.
+- I did not observe meaningful hesitation before clicking once the hint was visible.
 
 ### CONFIRMED
 
-- Real click behavior from the source board is currently blocked by missing hint visibility.
+- Destination matches expectation.
+- Navigation feels obvious after hover and still reasonable without hover.
 
 ### UNCLEAR
 
-- Whether the hint would feel obviously clickable if it rendered remains unproven in this rerun.
+- The largest hesitation point is not the click itself; it is whether users wait for the hint to appear.
 
-### MISLEADING
+### RISK
 
-- The current live experience makes the feature feel absent rather than actionable.
+- Click-path value is gated by delayed board completion, not by bad affordance.
 
 ---
 
@@ -162,7 +168,7 @@
 
 ### OBSERVED
 
-- The repaired Sprint Execution destination loaded successfully.
+- Sprint Execution loaded successfully from the actual hint click.
 - The destination immediately showed:
   - `Team: Crew Safety`
   - `Time: Sprint 11`
@@ -172,27 +178,24 @@
   - `Committed Story Points = 669`
   - `Delivered Story Points = 0`
   - `Unfinished PBIs (208)`
-- This destination quickly communicates that the sprint had large committed scope and effectively no delivered scope.
+- The page quickly explained what went wrong: large committed scope, effectively no delivery, and a very large unfinished set.
 
 ### CONFIRMED
 
-- If a user reaches the destination, it does provide real explanatory value.
-- The repaired destination now explains the anomaly substantially better than in the earlier failed-load validation.
+- The destination provides immediate explanatory value.
+- A user can understand the anomaly quickly without hunting across multiple widgets.
 
 ### UNCLEAR
 
-- The filter-scope banner is useful but still slightly abstract:
-  - `Requested: All`
-  - `Applied: \Battleship Systems\Sprint 11`
-- A user may still need a moment to interpret why the applied scope is narrower than the request.
+- The filter-scope banner is still slightly abstract and may require a moment of interpretation.
 
 ### MISLEADING
 
-- The destination is useful, but that usefulness is hidden behind a source hint that currently does not appear in the live board.
+- Nothing on the destination felt misleading in this rerun.
 
 ### RISK
 
-- Strong destination value does not help if the user is never prompted into it by the source experience.
+- The destination is strong enough that the remaining risk is source-timing, not destination quality.
 
 ---
 
@@ -200,20 +203,20 @@
 
 ### OBSERVED
 
-- In the real board experience, the hint did not change planning confidence because it was not visible.
-- In the direct destination view, the evidence was strong enough to reduce confidence in the current plan:
+- Returning mentally from Sprint Execution to the plan, the anomaly meaning is actionable:
   - heavy committed scope
   - zero delivered points
-  - large unfinished backlog
+  - very large unfinished backlog
+- This materially lowers confidence that the current plan is healthy for that product context.
 
 ### CONFIRMED
 
-- The destination could plausibly trigger action if reached.
-- The source board currently does **not** trigger that action in live usage because the hint is absent.
+- The signal has real decision-making value.
+- It can trigger a sensible planning action such as revisiting sequencing, commitment level, or execution risk discussion.
 
 ### UNCLEAR
 
-- Whether users would return mentally to the plan and adjust sequencing based on this evidence remains partly inferential, because the click path was not available in the live board.
+- The exact action still depends on the planner’s workflow; the hint signals risk well, but it does not prescribe a single remediation.
 
 ---
 
@@ -221,30 +224,29 @@
 
 ### OBSERVED
 
-- Network activity during Plan Board loading showed multiple anomaly-related evaluations across products and sprints:
-  - sprint execution calls for product 1 and 2
+- Network activity during board loading evaluated multiple anomaly candidates across products and sprints:
+  - sprint execution calls for products 1 and 2
   - sprint ids `9`, `21`, and `33`
-- Despite those multiple evaluations, the anomaly product planning-board API returned exactly one surfaced hint:
+- The anomaly product planning-board API returned exactly one surfaced hint:
   - `completion-below-typical`
-- Non-anomaly comparison product (`productId=2`) returned:
-  - `executionHint = null`
+- In the live anomaly board UI, only one hint button was shown.
 
 ### CONFIRMED
 
-- One-hint arbitration is active at API level.
-- Silence works at API level for the quieter comparison context.
+- One-hint arbitration works.
+- Only one hint is surfaced even when multiple anomaly evaluations are happening behind the scenes.
 
 ### UNCLEAR
 
-- Because the hint was not rendered, I could not validate whether “only one hint shown” feels correct in the actual board UI.
+- It remains possible that some users would want awareness of additional hidden anomalies elsewhere, but that is not necessary for this entry-point signal to be useful.
 
 ### MISLEADING
 
-- Current UI behavior hides not just secondary anomalies, but also the primary surfaced anomaly.
+- The single-hint behavior did not feel misleading in the rendered UI.
 
 ### RISK
 
-- Arbitration quality is irrelevant to users unless the winning hint is actually visible.
+- Hiding secondary anomalies may feel incomplete for power users, but it keeps the planning board from becoming noisy.
 
 ---
 
@@ -252,21 +254,20 @@
 
 ### OBSERVED
 
-- Ignoring the hint is trivially easy in this rerun because there is no visible hint to notice.
-- Misinterpretation risk shifts from wording risk to feature-presence risk:
-  - users may conclude there is no execution issue surfaced at all
-  - users may assume the planning board is still loading or partially incomplete
-- The board area remained visually dominated by loading indicators long after the planning-board API had returned valid content.
+- Ignoring the hint is easy because the board can still be used as a planning surface without clicking it.
+- The strongest weakness is timing:
+  - early state looks partially loaded
+  - the useful signal appears later
+- Without hover, the wording is good but still less concrete than the destination explanation.
 
 ### MISLEADING
 
-- The current live behavior undercuts the feature more strongly than vague wording would:
-  - not “weak signal”
-  - but effectively “missing signal”
+- The main misleading behavior is temporal, not semantic:
+  - the board first reads as “loading” instead of “important execution signal available.”
 
 ### RISK
 
-- A hidden signal becomes noise only in retrospect; in-session it becomes non-existent.
+- In short or impatient sessions, users may ignore the hint simply because the board has not fully resolved yet.
 
 ---
 
@@ -274,20 +275,18 @@
 
 ### OBSERVED
 
-- In non-anomaly comparison context (`productId=2`), the planning-board API returned no execution hint.
-- In the live UI, no hint was visible in anomaly context either.
+- In non-anomaly comparison context (`productId=2`), the planning-board API returned:
+  - `executionHint = null`
+- The non-anomaly board loaded fully with sprint heat and no execution hint.
 
 ### CONFIRMED
 
-- Silence is correct at API level for the non-anomaly product.
+- No hint appears in non-anomaly context.
+- Silence feels correct when compared against the anomaly context that eventually surfaces a real hint.
 
 ### UNCLEAR
 
-- UI-level silence does not feel trustworthy because the anomaly product is also silent in this rerun.
-
-### MISLEADING
-
-- When anomaly and non-anomaly contexts both look silent in-browser, the user cannot distinguish “healthy silence” from “missing signal”.
+- None that block the conclusion.
 
 ---
 
@@ -295,23 +294,24 @@
 
 ### OBSERVED
 
-- Trust improved in one important area:
-  - the repaired Sprint Execution destination now loads and explains the anomaly
-- Trust failed in the earlier part of the flow:
-  - the board never surfaced the hint that should trigger the investigation
+- Trust was strengthened by three facts in sequence:
+  - sync-gate completed
+  - the hint appeared in the live anomaly board
+  - the hint click landed on a destination that immediately explained the issue
+- The only trust-reducing factor was the delay before the board exposed the hint.
 
 ### CONFIRMED
 
-- Users could trust the destination **if they somehow reached it**.
-- Users are unlikely to trust or rely on the overall hint workflow because the board does not currently surface the source cue in real usage.
+- A user can trust this signal.
+- A user could reasonably rely on it as a prompt to inspect execution problems from planning context.
 
 ### UNCLEAR
 
-- Whether this is a timing issue, a rendering issue, or a visibility regression in the current browser path was not resolved during validation because no implementation changes were allowed.
+- Trust will be weaker for users who expect the board to be decision-ready immediately after the first shell render.
 
 ### RISK
 
-- A decision-support chain is only as trustworthy as its weakest step; here the weak step is source visibility, not destination explanation.
+- If load timing regresses, trust will erode before the signal itself is judged on merit.
 
 ---
 
@@ -319,31 +319,32 @@
 
 ### CONFIRMED VALUE
 
-- CONFIRMED: sync-gate completes and no longer blocks the full flow.
-- CONFIRMED: the Battleship anomaly data produces a real execution hint at API level.
-- CONFIRMED: the repaired Sprint Execution destination now loads successfully.
-- CONFIRMED: once reached, Sprint Execution gives meaningful anomaly explanation quickly.
+- CONFIRMED: sync-gate completes and allows the full flow to reach planning naturally.
+- CONFIRMED: the Battleship anomaly data produces a real execution hint in the working end-to-end flow.
+- CONFIRMED: the hint becomes visible in the anomaly plan board and is naturally positioned above sprint heat.
+- CONFIRMED: hover clarifies intent effectively.
+- CONFIRMED: clicking the hint opens a repaired Sprint Execution page that explains what went wrong quickly.
+- CONFIRMED: non-anomaly context stays silent.
+- CONFIRMED: the signal provides real decision-making value once surfaced.
 
 ### UNCLEAR VALUE
 
-- UNCLEAR: hover clarity in live UI.
-- UNCLEAR: hesitation-before-click in live UI.
-- UNCLEAR: whether one-hint arbitration feels right when rendered.
+- UNCLEAR: how many users will wait through the anomaly board’s slower initial loading state before the hint appears.
+- UNCLEAR: whether some users would prefer awareness of secondary anomalies beyond the single surfaced hint.
 
 ### MISLEADING BEHAVIOR
 
-- MISLEADING: the anomaly board appears effectively silent even though the live API returns a valid hint.
-- MISLEADING: users are more likely to interpret the board as partially loaded than as intentionally surfacing execution guidance.
-- MISLEADING: non-anomaly silence cannot feel “correct” when anomaly context is also visually silent.
+- MISLEADING: the first visible anomaly-board state looks like generic loading rather than immediate execution guidance.
 
 ### RISKS
 
-- RISK: the feature’s practical value is nullified at the source step because the hint is not visible in live browser usage.
-- RISK: users may never discover the repaired destination on their own.
-- RISK: trust in the workflow is broken by source invisibility even though the destination itself is now useful.
+- RISK: the signal’s usefulness is sensitive to board-render timing.
+- RISK: rushed users may leave or decide too early, before the hint appears.
 
 ---
 
 ## Decision
 
-**NO-GO → exact blocking reason:** in this final real-usage rerun, the execution hint provides no dependable decision-making value because the anomaly Plan Board API returns a valid hint but the live browser UI does not surface it, so users cannot naturally notice, interpret, hover, click, or rely on the signal even though the repaired destination now works.
+**GO → Phase 29**
+
+The execution hint provides real decision-making value in a fully working end-to-end system: it surfaces in the anomaly planning context, reads as execution-related, clarifies on hover, navigates correctly on click, and lands on a destination that quickly explains what went wrong. The remaining issue is not usefulness but timing risk during the anomaly board’s initial render.
