@@ -302,7 +302,19 @@ public class BattleshipWorkItemGenerator
             }
         }
 
+        AppendExecutionAnomalyScenario(items, now);
         return items;
+    }
+
+    private static void AppendExecutionAnomalyScenario(List<WorkItemDto> items, DateTimeOffset now)
+    {
+        var targetGoalId = items
+            .Where(item => item.Type == WorkItemType.Goal)
+            .Where(item => string.Equals(item.Title, "Mission-Ready Incident Response Platform", StringComparison.OrdinalIgnoreCase))
+            .Select(item => item.TfsId)
+            .Single();
+
+        items.AddRange(BattleshipExecutionAnomalySeedCatalog.CreateScenarioHierarchy(now, targetGoalId));
     }
 
     internal static List<(string Program, List<string> Teams)> GetTeamStructure()
