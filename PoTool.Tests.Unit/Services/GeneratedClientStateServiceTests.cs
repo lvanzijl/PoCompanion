@@ -5,6 +5,7 @@ using PoTool.Client.ApiClient;
 using PoTool.Client.Models;
 using PoTool.Client.Services;
 using PoTool.Shared.DataState;
+using PoTool.Shared.Metrics;
 using PoTool.Shared.Pipelines;
 using PoTool.Shared.PullRequests;
 
@@ -114,6 +115,77 @@ public sealed class GeneratedClientStateServiceTests
 
         Assert.AreEqual(DataStateResultStatus.NotReady, response.Status);
         Assert.AreEqual("Board cache not ready", response.Reason);
+    }
+
+    [TestMethod]
+    public async Task MetricsStateService_GetSprintExecutionStateAsync_DeserializesCanonicalLabelDictionaries()
+    {
+        var service = new MetricsStateService(new MetricsClient(CreateHttpClient("""
+            {
+              "state": 2,
+              "data": {
+                "data": {
+                  "sprintId": 9,
+                  "sprintName": "Sprint 11",
+                  "summary": {
+                    "committedSP": 21,
+                    "addedSP": 0,
+                    "removedSP": 0,
+                    "deliveredSP": 0,
+                    "deliveredFromAddedSP": 0,
+                    "spilloverSP": 0,
+                    "remainingStoryPoints": 21,
+                    "churnRate": 0,
+                    "commitmentCompletion": 0,
+                    "spilloverRate": 0,
+                    "addedDeliveryRate": 0,
+                    "starvedCount": 0
+                  },
+                  "completedPbis": [],
+                  "unfinishedPbis": [],
+                  "addedDuringSprint": [],
+                  "removedDuringSprint": [],
+                  "spilloverPbis": [],
+                  "starvedPbis": [],
+                  "hasData": true
+                },
+                "requestedFilter": {
+                  "productIds": { "isAll": false, "values": [1] },
+                  "teamIds": { "isAll": false, "values": [4] },
+                  "areaPaths": { "isAll": true, "values": [] },
+                  "iterationPaths": { "isAll": true, "values": [] },
+                  "time": { "mode": 1, "sprintId": 9, "sprintIds": [] }
+                },
+                "effectiveFilter": {
+                  "productIds": { "isAll": false, "values": [1] },
+                  "teamIds": { "isAll": false, "values": [4] },
+                  "areaPaths": { "isAll": true, "values": [] },
+                  "iterationPaths": { "isAll": false, "values": ["\\\\Battleship Systems\\\\Sprint 11"] },
+                  "time": { "mode": 1, "sprintId": 9, "sprintIds": [] }
+                },
+                "invalidFields": [],
+                "validationMessages": [],
+                "teamLabels": {
+                  "4": "Crew Safety"
+                },
+                "sprintLabels": {
+                  "9": "Sprint 11"
+                }
+              }
+            }
+            """))
+        {
+            BaseUrl = "http://localhost"
+        });
+
+        var response = await service.GetSprintExecutionStateAsync(1, 9, 1);
+
+        Assert.IsNotNull(response);
+        Assert.AreEqual(DataStateDto.Available, response.State);
+        Assert.IsNotNull(response.Data);
+        Assert.AreEqual("Sprint 11", response.Data.Data!.SprintName);
+        Assert.AreEqual("Crew Safety", response.Data.TeamLabels[4]);
+        Assert.AreEqual("Sprint 11", response.Data.SprintLabels[9]);
     }
 
     private static HttpClient CreateHttpClient(string json)
