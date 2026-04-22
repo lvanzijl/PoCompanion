@@ -21,7 +21,7 @@
 }
 
 @code {
-    private const int ShowDebounceMilliseconds = 200;
+    private const int ShowDebounceMilliseconds = 75;
     private const int MinimumVisibleMilliseconds = 1500;
 
     [Parameter]
@@ -99,7 +99,7 @@
     }
 
     private string BuildContextKey()
-        => $"{ProductId?.ToString() ?? "none"}:{ContextTeamId?.ToString() ?? Hint?.TeamId.ToString() ?? "none"}";
+        => $"{ProductId?.ToString() ?? "none"}:{ContextTeamId?.ToString() ?? Hint?.TeamId.ToString() ?? "none"}:{Hint?.SprintId.ToString() ?? "none"}";
 
     private void ScheduleShow(ProductPlanningExecutionHintDto hint, string contextKey)
     {

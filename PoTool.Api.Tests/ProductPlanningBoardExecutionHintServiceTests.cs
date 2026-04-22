@@ -50,7 +50,8 @@ public sealed class ProductPlanningBoardExecutionHintServiceTests
 
         Assert.IsNotNull(result.ExecutionHint);
         Assert.AreEqual("completion-below-typical", result.ExecutionHint.AnomalyKey);
-        Assert.AreEqual("Execution signal: committed delivery below typical range", result.ExecutionHint.Message);
+        Assert.AreEqual("Execution signal: committed work was not delivered as expected (recent sprint)", result.ExecutionHint.Message);
+        Assert.AreEqual("Recent sprint delivered less than committed. Open Sprint Execution to see unfinished work.", result.ExecutionHint.Explanation);
         Assert.AreEqual(10, result.ExecutionHint.TeamId);
         Assert.AreEqual(1, result.ExecutionHint.SprintId);
     }
@@ -83,7 +84,7 @@ public sealed class ProductPlanningBoardExecutionHintServiceTests
 
         Assert.IsNotNull(result.ExecutionHint);
         Assert.AreEqual("spillover-increase", result.ExecutionHint.AnomalyKey);
-        Assert.AreEqual("Execution signal: direct spillover increasing", result.ExecutionHint.Message);
+        Assert.AreEqual("Execution signal: committed work kept carrying into the next sprint (recent sprint)", result.ExecutionHint.Message);
     }
 
     [TestMethod]

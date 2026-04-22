@@ -20,6 +20,7 @@ public static class ProductPlanningBoardUxText
     public const string HeaderSummary = "Product-scoped epic planning with explicit actions and automatically derived parallel work.";
     public const string AuthoritySummary = "This board defines your plan. Dates are written to TFS for reporting.";
     public const string AuthoritySummaryWithBlockingIssues = "This board defines your plan. The dates reported to TFS need attention in the blocking issues below.";
+    public const string SprintHeatSummary = "Background color indicates sprint planning strain in the current plan. Color strength indicates how settled that sprint still looks, not delivery certainty.";
 
     public static string TranslateVisibleText(string text)
     {

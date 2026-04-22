@@ -128,20 +128,20 @@ public sealed class ProductPlanningBoardExecutionHintService : IProductPlanningB
         {
             ExecutionRealityCheckCdcKeys.CompletionBelowTypicalAnomalyKey => new ProductPlanningExecutionHintDto(
                 anomaly.AnomalyKey,
-                "Execution signal: committed delivery below typical range",
-                "Open Sprint Execution to inspect what happened to committed work inside the sprint.",
+                "Execution signal: committed work was not delivered as expected (recent sprint)",
+                "Recent sprint delivered less than committed. Open Sprint Execution to see unfinished work.",
                 teamId,
                 sprintId),
             ExecutionRealityCheckCdcKeys.CompletionVariabilityAnomalyKey => new ProductPlanningExecutionHintDto(
                 anomaly.AnomalyKey,
-                "Execution signal: delivery consistency outside typical range",
-                "Open Delivery Trends to inspect when this instability started across recent sprints.",
+                "Execution signal: delivery was less steady than expected (recent sprints)",
+                "Recent sprints delivered unevenly. Open Delivery Trends to see when this changed.",
                 teamId,
                 sprintId),
             ExecutionRealityCheckCdcKeys.SpilloverIncreaseAnomalyKey => new ProductPlanningExecutionHintDto(
                 anomaly.AnomalyKey,
-                "Execution signal: direct spillover increasing",
-                "Open Sprint Execution to inspect which committed work carried into the next sprint.",
+                "Execution signal: committed work kept carrying into the next sprint (recent sprint)",
+                "Recent sprint carried more committed work forward. Open Sprint Execution to see unfinished work.",
                 teamId,
                 sprintId),
             _ => null

@@ -117,6 +117,17 @@ public sealed class BattleshipExecutionAnomalyMockScenarioTests
         Assert.IsTrue(
             ProductPlanningExecutionHintNavigation.ResolveRoute(hintedBoard.ExecutionHint) is WorkspaceRoutes.SprintExecution or WorkspaceRoutes.DeliveryTrends,
             "The surfaced planning-board hint should resolve to one of the supported execution destinations.");
+        StringAssert.StartsWith(
+            hintedBoard.ExecutionHint.Message,
+            "Execution signal:",
+            "The surfaced planning-board hint should keep the required execution-signal prefix.");
+        Assert.IsTrue(
+            hintedBoard.ExecutionHint.Message.Contains("(recent sprint", StringComparison.Ordinal)
+            || hintedBoard.ExecutionHint.Message.Contains("(recent sprints", StringComparison.Ordinal),
+            "The surfaced planning-board hint should include a compact recent-sprint context anchor.");
+        Assert.IsFalse(
+            hintedBoard.ExecutionHint.Explanation.Contains(Environment.NewLine, StringComparison.Ordinal),
+            "The surfaced planning-board hover copy should remain a single short sentence.");
     }
 
     private static async Task RunSyncStagesAsync(ServiceProvider provider)

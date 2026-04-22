@@ -124,6 +124,15 @@
             </ChildContent>
         </CanonicalDataStateView>
 
+        @if (ShouldRenderEarlyExecutionHintPreview)
+        {
+            <MudPaper Elevation="1" Class="pa-3 planning-board-sprint-heat-preview">
+                <PlanBoardExecutionHintSection Hint="@_earlyExecutionHint"
+                                              ProductId="@_selectedProductId"
+                                              ContextTeamId="@CurrentBoardTeamId" />
+            </MudPaper>
+        }
+
         <CanonicalDataStateView TData="ProductPlanningBoardRenderModel"
                                 State="@BoardRenderState"
                                 ProductOwnerId="@_activeProfileId"
@@ -296,14 +305,9 @@
                 </MudPaper>
 
                 <MudPaper Elevation="1" Class="pa-3">
-                    <MudStack Spacing="1">
-                        <MudText Typo="Typo.subtitle2">Sprint heat</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            Background color indicates sprint planning strain in the current plan. Color strength indicates how settled that sprint still looks, not delivery certainty.
-                        </MudText>
-                        <ExecutionRealityHint Hint="@renderModel.Board.ExecutionHint"
-                                              ProductId="@_selectedProductId"
-                                              ContextTeamId="@CurrentBoardTeamId" />
+                    <PlanBoardExecutionHintSection Hint="@renderModel.Board.ExecutionHint"
+                                                  ProductId="@_selectedProductId"
+                                                  ContextTeamId="@CurrentBoardTeamId">
                         <div class="planning-board-sprint-signal-grid" style="@GetTrackGridStyle(renderModel.MaxSprintCount)">
                             @foreach (var sprint in renderModel.SprintColumns)
                             {
@@ -350,7 +354,7 @@
                                 </MudTooltip>
                             }
                         </div>
-                    </MudStack>
+                    </PlanBoardExecutionHintSection>
                 </MudPaper>
 
                 @foreach (var track in renderModel.Tracks)
@@ -714,6 +718,7 @@
 
     private readonly record struct BoardFeedback(string Message, Severity Severity);
     private const int QuickMoveFeedbackSummaryCount = 2;
+    private const int EarlyHintPreviewMinimumMilliseconds = 250;
 
     private readonly record struct BoardOperationContext(
         string ActionName,
@@ -747,12 +752,19 @@
     private readonly Dictionary<int, EpicActionState> _epicActionState = new();
     private readonly Dictionary<int, EpicActionFeedback> _epicActionFeedback = new();
     private PlanningBoardImpactSummary? _latestImpactSummary;
+    private ProductPlanningExecutionHintDto? _earlyExecutionHint;
+    private bool _isHintPreviewPending;
 
     private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
     private int? CurrentBoardTeamId => GlobalFilterStore.GetState().TeamId;
     private int? CurrentBoardSprintId => GlobalFilterStore.GetState().Time.SprintId;
     private string? _boardFeedbackMessage => _boardFeedback?.Message;
     private Severity _boardFeedbackSeverity => _boardFeedback?.Severity ?? Severity.Info;
+    private bool ShouldRenderEarlyExecutionHintPreview
+        => _isHintPreviewPending
+           && _selectedProductId.HasValue
+           && _earlyExecutionHint is not null
+           && _boardState.UiState == UiDataState.Loading;
 
     private DataStateViewModel<ProjectPlanningSummaryDto> ProjectPlanningSummaryState
         => string.IsNullOrWhiteSpace(_selectedProjectRouteKey) || _projectPlanningSummaryState is null
@@ -819,7 +831,6 @@
             ResolveInitialProjectSelection(context);
             ApplyProjectFilter();
             RefreshContextError();
-            await LoadProjectPlanningSummaryAsync();
 
             if (!string.IsNullOrWhiteSpace(_contextError))
             {
@@ -827,10 +838,13 @@
             }
             else if (_selectedProductId.HasValue)
             {
-                await LoadBoardAsync(_selectedProductId.Value, successFeedback: null);
+                await Task.WhenAll(
+                    LoadProjectPlanningSummaryAsync(),
+                    LoadBoardAsync(_selectedProductId.Value, successFeedback: null));
             }
             else
             {
+                await LoadProjectPlanningSummaryAsync();
                 ClearBoard();
             }
         }
@@ -1090,6 +1104,8 @@
         _isBusy = true;
         _boardFeedback = null;
         _latestImpactSummary = null;
+        _earlyExecutionHint = null;
+        _isHintPreviewPending = false;
         StateHasChanged();
 
         try
@@ -1098,11 +1114,40 @@
                 productId,
                 CurrentBoardTeamId,
                 CurrentBoardSprintId);
+            await ShowEarlyExecutionHintPreviewAsync(result, productId, successFeedback);
             HandleBoardResult(result, "The planning board could not be loaded right now.", operationContext: null, successFeedback);
         }
         finally
         {
+            _earlyExecutionHint = null;
+            _isHintPreviewPending = false;
             _isBusy = false;
+        }
+    }
+
+    private async Task ShowEarlyExecutionHintPreviewAsync(
+        ProductPlanningBoardClientResult result,
+        int productId,
+        BoardFeedback? successFeedback)
+    {
+        if (!result.IsSuccess
+            || result.Board?.ExecutionHint is null
+            || successFeedback is not null
+            || (_boardState.Data is not null && _boardState.Data.ProductId == productId))
+        {
+            return;
+        }
+
+        var previewStartedAtUtc = DateTimeOffset.UtcNow;
+        _earlyExecutionHint = result.Board.ExecutionHint;
+        _isHintPreviewPending = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+
+        var remainingDelay = EarlyHintPreviewMinimumMilliseconds - (int)(DateTimeOffset.UtcNow - previewStartedAtUtc).TotalMilliseconds;
+        if (remainingDelay > 0)
+        {
+            await Task.Delay(remainingDelay);
         }
     }
 
@@ -1420,7 +1465,6 @@
         var context = WorkspaceQueryContextHelper.Parse(NavigationManager.Uri);
         ResolveInitialProjectSelection(context);
         ApplyProjectFilter();
-        await LoadProjectPlanningSummaryAsync();
 
         if (!string.IsNullOrWhiteSpace(_contextError))
         {
@@ -1431,10 +1475,13 @@
 
         if (_selectedProductId.HasValue)
         {
-            await LoadBoardAsync(_selectedProductId.Value, successFeedback: null);
+            await Task.WhenAll(
+                LoadProjectPlanningSummaryAsync(),
+                LoadBoardAsync(_selectedProductId.Value, successFeedback: null));
         }
         else
         {
+            await LoadProjectPlanningSummaryAsync();
             ClearBoard();
             await InvokeAsync(StateHasChanged);
         }
@@ -1473,6 +1520,8 @@
         _renderModel = null;
         _boardFeedback = null;
         _latestImpactSummary = null;
+        _earlyExecutionHint = null;
+        _isHintPreviewPending = false;
         _epicActionState.Clear();
         _epicActionFeedback.Clear();
     }
