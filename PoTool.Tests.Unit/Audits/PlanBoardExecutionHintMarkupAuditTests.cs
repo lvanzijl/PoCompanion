@@ -15,9 +15,9 @@ public sealed class PlanBoardExecutionHintMarkupAuditTests
         var hintIndex = content.IndexOf("<ExecutionRealityHint ", StringComparison.Ordinal);
         var sprintGridIndex = content.IndexOf("<div class=\"planning-board-sprint-signal-grid\"", StringComparison.Ordinal);
 
-        Assert.IsTrue(explanationIndex >= 0, "Sprint heat explanatory text must remain present.");
-        Assert.IsTrue(hintIndex > explanationIndex, "Execution hint must render below the sprint heat explanatory text.");
-        Assert.IsTrue(sprintGridIndex > hintIndex, "Execution hint must render directly above the sprint heat grid.");
+        Assert.IsGreaterThanOrEqualTo(0, explanationIndex, "Sprint heat explanatory text must remain present.");
+        Assert.IsGreaterThan(explanationIndex, hintIndex, "Execution hint must render below the sprint heat explanatory text.");
+        Assert.IsGreaterThan(hintIndex, sprintGridIndex, "Execution hint must render directly above the sprint heat grid.");
     }
 
     [TestMethod]
@@ -29,9 +29,9 @@ public sealed class PlanBoardExecutionHintMarkupAuditTests
         var trackLoopIndex = content.IndexOf("@foreach (var track in renderModel.Tracks)", StringComparison.Ordinal);
         var epicCardIndex = content.IndexOf("<MudCard Class=\"@GetEpicCardClass(epic)\"", StringComparison.Ordinal);
 
-        Assert.IsTrue(hintIndex >= 0, "Execution hint must be present in PlanBoard markup.");
-        Assert.IsTrue(trackLoopIndex > hintIndex, "Execution hint must render before any track markup.");
-        Assert.IsTrue(epicCardIndex > hintIndex, "Execution hint must not be nested inside epic card markup.");
+        Assert.IsGreaterThanOrEqualTo(0, hintIndex, "Execution hint must be present in PlanBoard markup.");
+        Assert.IsGreaterThan(hintIndex, trackLoopIndex, "Execution hint must render before any track markup.");
+        Assert.IsGreaterThan(hintIndex, epicCardIndex, "Execution hint must not be nested inside epic card markup.");
     }
 
     private static string GetPlanBoardPath()

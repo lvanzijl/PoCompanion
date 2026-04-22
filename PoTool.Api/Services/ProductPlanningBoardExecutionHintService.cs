@@ -38,10 +38,12 @@ public sealed class ProductPlanningBoardExecutionHintService : IProductPlanningB
         ArgumentNullException.ThrowIfNull(board);
 
         var product = await _productRepository.GetProductByIdAsync(board.ProductId, cancellationToken);
-        if (product?.ProductOwnerId is not int productOwnerId || product.TeamIds.Count == 0)
+        if (product is null || !product.ProductOwnerId.HasValue || product.TeamIds.Count == 0)
         {
             return board with { ExecutionHint = null };
         }
+
+        var productOwnerId = product.ProductOwnerId.Value;
 
         var teamId = ResolveTeamId(product.TeamIds, requestedTeamId);
         if (!teamId.HasValue)
@@ -80,7 +82,7 @@ public sealed class ProductPlanningBoardExecutionHintService : IProductPlanningB
     private async Task<int?> ResolveSprintIdAsync(int teamId, int? requestedSprintId, CancellationToken cancellationToken)
     {
         var teamSprints = (await _sprintRepository.GetSprintsForTeamAsync(teamId, cancellationToken))
-            .OrderBy(static sprint => sprint.StartDateUtc)
+            .OrderBy(static sprint => sprint.StartUtc?.UtcDateTime ?? DateTime.MinValue)
             .ThenBy(static sprint => sprint.Id)
             .ToArray();
 
@@ -103,13 +105,16 @@ public sealed class ProductPlanningBoardExecutionHintService : IProductPlanningB
         int teamId,
         int sprintId)
     {
-        if (interpretation.OverallState is not (ExecutionRealityCheckOverallState.Watch or ExecutionRealityCheckOverallState.Investigate))
+        if (interpretation.OverallState != ExecutionRealityCheckOverallState.Watch
+            && interpretation.OverallState != ExecutionRealityCheckOverallState.Investigate)
         {
             return null;
         }
 
         var anomaly = interpretation.Anomalies
-            .Where(static candidate => candidate.Status is ExecutionRealityCheckAnomalyStatus.Weak or ExecutionRealityCheckAnomalyStatus.Strong)
+            .Where(static candidate =>
+                candidate.Status == ExecutionRealityCheckAnomalyStatus.Weak
+                || candidate.Status == ExecutionRealityCheckAnomalyStatus.Strong)
             .OrderByDescending(candidate => GetStatusPriority(candidate.Status))
             .ThenBy(candidate => GetAnomalyPriority(candidate.AnomalyKey))
             .FirstOrDefault();

@@ -14,7 +14,7 @@ public sealed class ProductPlanningBoardExecutionHintServiceTests
     public async Task ApplyExecutionHintAsync_DoesNotSurfaceHint_WhenOverallStateIsStable()
     {
         var service = CreateService(
-            CreateProduct(7, "Roadmap Product", [100], [10]),
+            CreateExecutionProduct(),
             CreateDefaultSprintsByTeam([10]),
             new ExecutionRealityCheckInterpretation(
                 [],
@@ -30,7 +30,7 @@ public sealed class ProductPlanningBoardExecutionHintServiceTests
     public async Task ApplyExecutionHintAsync_PrefersStrongAnomalyOverWeakAndMapsExactText()
     {
         var service = CreateService(
-            CreateProduct(7, "Roadmap Product", [100], [10]),
+            CreateExecutionProduct(),
             CreateDefaultSprintsByTeam([10]),
             new ExecutionRealityCheckInterpretation(
                 [
@@ -59,7 +59,7 @@ public sealed class ProductPlanningBoardExecutionHintServiceTests
     public async Task ApplyExecutionHintAsync_UsesPhase26TieBreakOrderForEqualSeverity()
     {
         var service = CreateService(
-            CreateProduct(7, "Roadmap Product", [100], [10]),
+            CreateExecutionProduct(),
             CreateDefaultSprintsByTeam([10]),
             new ExecutionRealityCheckInterpretation(
                 [
@@ -91,7 +91,7 @@ public sealed class ProductPlanningBoardExecutionHintServiceTests
     {
         var sprintsByTeam = CreateDefaultSprintsByTeam([10]);
         var service = CreateService(
-            CreateProduct(7, "Roadmap Product", [100], [10]),
+            CreateExecutionProduct(),
             sprintsByTeam,
             new ExecutionRealityCheckInterpretation(
                 [
@@ -120,6 +120,22 @@ public sealed class ProductPlanningBoardExecutionHintServiceTests
             new StubSprintRepository(sprintsByTeam),
             new StubInterpretationLayerService(interpretation));
     }
+
+    private static ProductDto CreateExecutionProduct()
+        => new(
+            7,
+            1,
+            "Roadmap Product",
+            [100],
+            0,
+            ProductPictureType.Default,
+            0,
+            null,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow,
+            null,
+            [10],
+            []);
 
     private static ProductPlanningBoardDto CreateBoard()
         => new(

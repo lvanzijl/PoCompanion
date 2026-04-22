@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-04-22",
+    "type": "Changed",
+    "title": "Plan Board now shows one execution hint above sprint heat when recent delivery needs attention",
+    "impact": "The /planning/plan-board workspace now surfaces a single board-level `Execution signal:` strip directly above the sprint heat grid when the existing execution interpretation is in Watch or Investigate, routes that hint straight to Sprint Execution or Delivery Trends using the existing Phase 25 anomaly mapping, keeps Stable and insufficient-evidence states silent, and preserves the existing planning heat cards, labels, and chips as the dominant planning signal.",
+    "area": "Planning / Plan Board / Execution Reality Hint",
+    "link": "/planning/plan-board"
+  },
+  {
     "date": "2026-04-21",
     "type": "Changed",
     "title": "Plan Board now makes recent sprint-signal changes more visible without overstating calm states",
