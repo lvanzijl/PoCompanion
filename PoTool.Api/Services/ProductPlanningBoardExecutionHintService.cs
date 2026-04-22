@@ -15,6 +15,9 @@ public interface IProductPlanningBoardExecutionHintService
 
 public sealed class ProductPlanningBoardExecutionHintService : IProductPlanningBoardExecutionHintService
 {
+    private const string LastCompletedSprintAnchor = "in the last completed sprint";
+    private const string RecentCompletedSprintsAnchor = "across recent completed sprints";
+
     private readonly IProductRepository _productRepository;
     private readonly ISprintRepository _sprintRepository;
     private readonly IExecutionRealityCheckInterpretationLayerService _interpretationLayerService;
@@ -126,27 +129,53 @@ public sealed class ProductPlanningBoardExecutionHintService : IProductPlanningB
 
         return anomaly.AnomalyKey switch
         {
-            ExecutionRealityCheckCdcKeys.CompletionBelowTypicalAnomalyKey => new ProductPlanningExecutionHintDto(
+            ExecutionRealityCheckCdcKeys.CompletionBelowTypicalAnomalyKey => BuildSprintExecutionHint(
                 anomaly.AnomalyKey,
-                "Execution signal: committed work was not delivered as expected (recent sprint)",
-                "Recent sprint delivered less than committed. Open Sprint Execution to see unfinished work.",
+                "committed work was not fully delivered",
+                "The last completed sprint delivered less than committed.",
                 teamId,
                 sprintId),
-            ExecutionRealityCheckCdcKeys.CompletionVariabilityAnomalyKey => new ProductPlanningExecutionHintDto(
+            ExecutionRealityCheckCdcKeys.CompletionVariabilityAnomalyKey => BuildDeliveryTrendsHint(
                 anomaly.AnomalyKey,
-                "Execution signal: delivery was less steady than expected (recent sprints)",
-                "Recent sprints delivered unevenly. Open Delivery Trends to see when this changed.",
+                "delivery was less steady",
+                "Recent completed sprints delivered unevenly.",
                 teamId,
                 sprintId),
-            ExecutionRealityCheckCdcKeys.SpilloverIncreaseAnomalyKey => new ProductPlanningExecutionHintDto(
+            ExecutionRealityCheckCdcKeys.SpilloverIncreaseAnomalyKey => BuildSprintExecutionHint(
                 anomaly.AnomalyKey,
-                "Execution signal: committed work kept carrying into the next sprint (recent sprint)",
-                "Recent sprint carried more committed work forward. Open Sprint Execution to see unfinished work.",
+                "committed work carried forward",
+                "The last completed sprint carried committed work into the next sprint.",
                 teamId,
                 sprintId),
             _ => null
         };
     }
+
+    private static ProductPlanningExecutionHintDto BuildSprintExecutionHint(
+        string anomalyKey,
+        string whatHappened,
+        string explanationLead,
+        int teamId,
+        int sprintId)
+        => new(
+            anomalyKey,
+            $"Execution signal: {whatHappened} {LastCompletedSprintAnchor}",
+            $"{explanationLead} Open Sprint Execution to see unfinished work.",
+            teamId,
+            sprintId);
+
+    private static ProductPlanningExecutionHintDto BuildDeliveryTrendsHint(
+        string anomalyKey,
+        string whatHappened,
+        string explanationLead,
+        int teamId,
+        int sprintId)
+        => new(
+            anomalyKey,
+            $"Execution signal: {whatHappened} {RecentCompletedSprintsAnchor}",
+            $"{explanationLead} Open Delivery Trends to see when this changed.",
+            teamId,
+            sprintId);
 
     private static int GetStatusPriority(ExecutionRealityCheckAnomalyStatus status)
     {

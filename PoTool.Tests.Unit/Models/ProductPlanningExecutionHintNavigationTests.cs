@@ -11,8 +11,8 @@ public sealed class ProductPlanningExecutionHintNavigationTests
     {
         var hint = new ProductPlanningExecutionHintDto(
             "spillover-increase",
-            "Execution signal: committed work kept carrying into the next sprint (recent sprint)",
-            "Recent sprint carried more committed work forward. Open Sprint Execution to see unfinished work.",
+            "Execution signal: committed work carried forward in the last completed sprint",
+            "The last completed sprint carried committed work into the next sprint. Open Sprint Execution to see unfinished work.",
             10,
             22);
         var currentState = new FilterState(
@@ -36,8 +36,8 @@ public sealed class ProductPlanningExecutionHintNavigationTests
     {
         var hint = new ProductPlanningExecutionHintDto(
             "completion-variability",
-            "Execution signal: delivery was less steady than expected (recent sprints)",
-            "Recent sprints delivered unevenly. Open Delivery Trends to see when this changed.",
+            "Execution signal: delivery was less steady across recent completed sprints",
+            "Recent completed sprints delivered unevenly. Open Delivery Trends to see when this changed.",
             10,
             22);
         var currentState = new FilterState(
@@ -59,8 +59,8 @@ public sealed class ProductPlanningExecutionHintNavigationTests
     {
         var hint = new ProductPlanningExecutionHintDto(
             "completion-variability",
-            "Execution signal: delivery was less steady than expected (recent sprints)",
-            "Recent sprints delivered unevenly. Open Delivery Trends to see when this changed.",
+            "Execution signal: delivery was less steady across recent completed sprints",
+            "Recent completed sprints delivered unevenly. Open Delivery Trends to see when this changed.",
             10,
             22);
         var currentState = new FilterState(

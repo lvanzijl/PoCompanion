@@ -2,6 +2,14 @@
   {
     "date": "2026-04-22",
     "type": "Changed",
+    "title": "Plan Board execution hints now use steadier completed-sprint wording and clearer fallback context copy",
+    "impact": "When the /planning/plan-board workspace surfaces the existing single `Execution signal:` hint, it now uses more consistent completed-sprint wording across anomaly types, keeps the hint transition steadier during loading and repeated context changes, and replaces the confusing requested-versus-applied fallback label with clearer \"closest matching context\" wording on downstream pages without changing routing, anomaly selection, or non-anomaly silence behavior.",
+    "area": "Planning / Plan Board / Execution Reality Hint",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-22",
+    "type": "Changed",
     "title": "Plan Board execution hint now appears earlier and explains recent delivery issues more directly",
     "impact": "When the /planning/plan-board workspace detects the existing execution anomaly signal, it now surfaces the single `Execution signal:` hint in the sprint-heat section before the full sprint grid finishes loading, uses clearer recent-sprint wording plus a compact context anchor, keeps the hover copy short and immediately actionable, preserves the existing click destination to Sprint Execution or Delivery Trends, and keeps non-anomaly product contexts silent.",
     "area": "Planning / Plan Board / Execution Reality Hint",
