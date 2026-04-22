@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PoTool.Api.Persistence;
 using PoTool.Api.Services;
@@ -12,15 +13,18 @@ namespace PoTool.Api.Services.Sync;
 public class SprintTrendProjectionSyncStage : ISyncStage
 {
     private readonly PoToolDbContext _context;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly SprintTrendProjectionService _projectionService;
     private readonly ILogger<SprintTrendProjectionSyncStage> _logger;
 
     public SprintTrendProjectionSyncStage(
         PoToolDbContext context,
+        IServiceScopeFactory scopeFactory,
         SprintTrendProjectionService projectionService,
         ILogger<SprintTrendProjectionSyncStage> logger)
     {
         _context = context;
+        _scopeFactory = scopeFactory;
         _projectionService = projectionService;
         _logger = logger;
     }
@@ -63,6 +67,11 @@ public class SprintTrendProjectionSyncStage : ISyncStage
                 context.ProductOwnerId,
                 sprintIds,
                 null,
+                async (progress, token) =>
+                {
+                    progressCallback(progress);
+                    await PersistProgressAsync(context.ProductOwnerId, progress, token);
+                },
                 cancellationToken);
 
             var cacheState = await _context.ProductOwnerCacheStates
@@ -88,5 +97,29 @@ public class SprintTrendProjectionSyncStage : ISyncStage
             _logger.LogError(ex, "Sprint trend projection compute failed for ProductOwner {ProductOwnerId}", context.ProductOwnerId);
             return SyncStageResult.CreateFailure(ex.Message);
         }
+    }
+
+    private async Task PersistProgressAsync(int productOwnerId, int progressPercent, CancellationToken cancellationToken)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var cacheState = await context.ProductOwnerCacheStates
+            .OrderBy(state => state.Id)
+            .FirstOrDefaultAsync(state => state.ProductOwnerId == productOwnerId, cancellationToken);
+
+        if (cacheState is null)
+        {
+            return;
+        }
+
+        if (cacheState.StageProgressPercent == progressPercent)
+        {
+            return;
+        }
+
+        cacheState.CurrentSyncStage = StageName;
+        cacheState.StageProgressPercent = progressPercent;
+        cacheState.LastAttemptSync = DateTimeOffset.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
     }
 }

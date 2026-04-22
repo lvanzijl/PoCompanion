@@ -160,6 +160,115 @@ public class SprintTrendProjectionServiceSqliteTests
     }
 
     [TestMethod]
+    public async Task ComputeProjectionsAsync_ReportsIntermediateProgress_ForSyncStageConsumers()
+    {
+        int productOwnerId;
+        int sprintId;
+
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+
+            var productOwner = new ProfileEntity { Name = "PO Progress" };
+            context.Profiles.Add(productOwner);
+            await context.SaveChangesAsync();
+            productOwnerId = productOwner.Id;
+
+            var team = new TeamEntity { Name = "Team Progress", TeamAreaPath = "\\Project\\Team Progress" };
+            context.Teams.Add(team);
+
+            PersistenceTestGraph.EnsureProject(context);
+            var product = new ProductEntity
+            {
+                ProductOwnerId = productOwner.Id,
+                ProjectId = PersistenceTestGraph.DefaultProjectId,
+                Name = "Product Progress",
+                BacklogRoots = new List<ProductBacklogRootEntity> { new() { WorkItemTfsId = 3000 } }
+            };
+            context.Products.Add(product);
+            await context.SaveChangesAsync();
+
+            var sprint = new SprintEntity
+            {
+                TeamId = team.Id,
+                Name = "Sprint Progress",
+                Path = "\\Project\\Sprint Progress",
+                StartDateUtc = new DateTime(2026, 3, 1, 0, 0, 0, DateTimeKind.Utc),
+                EndDateUtc = new DateTime(2026, 3, 14, 23, 59, 59, DateTimeKind.Utc),
+                LastSyncedDateUtc = DateTime.UtcNow
+            };
+            context.Sprints.Add(sprint);
+            await context.SaveChangesAsync();
+            sprintId = sprint.Id;
+
+            context.WorkItems.Add(new WorkItemEntity
+            {
+                TfsId = 3001,
+                Type = CanonicalWorkItemTypes.Pbi,
+                Title = "Progress PBI",
+                AreaPath = "Area",
+                IterationPath = sprint.Path,
+                State = "Done",
+                RetrievedAt = DateTimeOffset.UtcNow,
+                TfsChangedDate = DateTimeOffset.UtcNow,
+                TfsChangedDateUtc = DateTime.UtcNow
+            });
+
+            context.ResolvedWorkItems.Add(new ResolvedWorkItemEntity
+            {
+                WorkItemId = 3001,
+                WorkItemType = CanonicalWorkItemTypes.Pbi,
+                ResolvedProductId = product.Id,
+                ResolvedSprintId = sprint.Id,
+                ResolutionStatus = ResolutionStatus.Resolved,
+                ResolvedAtRevision = 1
+            });
+
+            var eventTimestamp = new DateTimeOffset(new DateTime(2026, 3, 5, 12, 0, 0, DateTimeKind.Utc));
+            context.ActivityEventLedgerEntries.Add(new ActivityEventLedgerEntryEntity
+            {
+                ProductOwnerId = productOwnerId,
+                WorkItemId = 3001,
+                UpdateId = 1,
+                FieldRefName = "System.State",
+                EventTimestamp = eventTimestamp,
+                EventTimestampUtc = eventTimestamp.UtcDateTime,
+                NewValue = "Done"
+            });
+
+            await context.SaveChangesAsync();
+        }
+
+        var service = new SprintTrendProjectionService(
+            _serviceProvider.GetRequiredService<IServiceScopeFactory>(),
+            NullLogger<SprintTrendProjectionService>.Instance,
+            stateClassificationService: null,
+            _serviceProvider.GetRequiredService<ICanonicalStoryPointResolutionService>(),
+            _serviceProvider.GetRequiredService<IHierarchyRollupService>(),
+            _serviceProvider.GetRequiredService<IDeliveryProgressRollupService>(),
+            _serviceProvider.GetRequiredService<ISprintCommitmentService>(),
+            _serviceProvider.GetRequiredService<ISprintCompletionService>(),
+            _serviceProvider.GetRequiredService<ISprintSpilloverService>(),
+            _serviceProvider.GetRequiredService<ISprintDeliveryProjectionService>());
+
+        var reportedProgress = new List<int>();
+
+        var projections = await service.ComputeProjectionsAsync(
+            productOwnerId,
+            new[] { sprintId },
+            effectiveProductIds: null,
+            async (progress, _) =>
+            {
+                reportedProgress.Add(progress);
+                await Task.CompletedTask;
+            },
+            CancellationToken.None);
+
+        Assert.HasCount(1, projections);
+        Assert.IsTrue(reportedProgress.Any(progress => progress > 0), "The sync stage should receive intermediate progress before completion.");
+    }
+
+    [TestMethod]
     public async Task ComputeProjectionsAsync_RebuildsPortfolioFlowProjectionInTheSprintPipeline_WithRawProductBacklogItemType()
     {
         int productOwnerId;

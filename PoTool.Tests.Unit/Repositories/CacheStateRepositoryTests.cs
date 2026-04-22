@@ -1,3 +1,4 @@
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PoTool.Api.Exceptions;
@@ -103,6 +104,58 @@ public class CacheStateRepositoryTests
         // Assert
         Assert.AreEqual(firstCall.ProductOwnerId, secondCall.ProductOwnerId);
         Assert.AreEqual(firstCall.SyncStatus, secondCall.SyncStatus);
+    }
+
+    [TestMethod]
+    public async Task UpdateSyncStatusAsync_ReusesConcurrentCacheStateInsert_WhenInitialCreateRaces()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.db");
+
+        try
+        {
+            var baseOptions = new DbContextOptionsBuilder<PoToolDbContext>()
+                .UseSqlite($"Data Source={databasePath}", sqliteOptions =>
+                {
+                    sqliteOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                })
+                .Options;
+
+            await using (var setupContext = new PoToolDbContext(baseOptions))
+            {
+                await setupContext.Database.EnsureCreatedAsync();
+                var setupProfiles = new ProfileRepository(setupContext);
+                await setupProfiles.CreateProfileAsync("Concurrent Owner", new List<int>());
+            }
+
+            var racingOptions = new DbContextOptionsBuilder<PoToolDbContext>()
+                .UseSqlite($"Data Source={databasePath}", sqliteOptions =>
+                {
+                    sqliteOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                })
+                .Options;
+
+            await using var racingContext = new ConcurrentInsertPoToolDbContext(racingOptions, databasePath);
+            var racingRepository = new CacheStateRepository(racingContext);
+
+            await racingRepository.UpdateSyncStatusAsync(
+                1,
+                Shared.Settings.CacheSyncStatusDto.InProgress,
+                "ComputeSprintTrends",
+                0);
+
+            await using var verificationContext = new PoToolDbContext(baseOptions);
+            var cacheStates = await verificationContext.ProductOwnerCacheStates
+                .Where(state => state.ProductOwnerId == 1)
+                .ToListAsync();
+
+            Assert.HasCount(1, cacheStates, "Concurrent create recovery must preserve a single cache-state row.");
+            Assert.AreEqual(CacheSyncStatus.InProgress, cacheStates[0].SyncStatus);
+            Assert.AreEqual("ComputeSprintTrends", cacheStates[0].CurrentSyncStage);
+        }
+        finally
+        {
+            File.Delete(databasePath);
+        }
     }
 
     /// <summary>
@@ -247,5 +300,47 @@ public class CacheStateRepositoryTests
 
         Assert.AreEqual(pipelineStartWatermark, watermarks.Pipeline);
         Assert.AreEqual(pipelineFinishWatermark, watermarks.PipelineFinish);
+    }
+
+    private sealed class ConcurrentInsertPoToolDbContext : PoToolDbContext
+    {
+        private readonly string _databasePath;
+        private bool _hasInjectedConflict;
+
+        public ConcurrentInsertPoToolDbContext(
+            DbContextOptions<PoToolDbContext> options,
+            string databasePath)
+            : base(options)
+        {
+            _databasePath = databasePath;
+        }
+
+        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            if (!_hasInjectedConflict &&
+                ChangeTracker.Entries<ProductOwnerCacheStateEntity>().Any(entry => entry.State == EntityState.Added))
+            {
+                _hasInjectedConflict = true;
+
+                var competingOptions = new DbContextOptionsBuilder<PoToolDbContext>()
+                    .UseSqlite(new SqliteConnection($"Data Source={_databasePath}"), sqliteOptions =>
+                    {
+                        sqliteOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    })
+                    .Options;
+
+                await using var competingContext = new PoToolDbContext(competingOptions);
+                await competingContext.Database.OpenConnectionAsync(cancellationToken);
+                competingContext.ProductOwnerCacheStates.Add(new ProductOwnerCacheStateEntity
+                {
+                    ProductOwnerId = 1,
+                    SyncStatus = CacheSyncStatus.Idle
+                });
+                await competingContext.SaveChangesAsync(cancellationToken);
+                await competingContext.Database.CloseConnectionAsync();
+            }
+
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
     }
 }
