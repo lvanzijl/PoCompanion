@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Api.Filters;
+using PoTool.Api.Services;
 using PoTool.Core.Planning;
 using PoTool.Shared.Planning;
 
@@ -14,10 +15,14 @@ namespace PoTool.Api.Controllers;
 public sealed class ProductPlanningBoardController : ControllerBase
 {
     private readonly IProductPlanningBoardService _planningBoardService;
+    private readonly IProductPlanningBoardExecutionHintService _executionHintService;
 
-    public ProductPlanningBoardController(IProductPlanningBoardService planningBoardService)
+    public ProductPlanningBoardController(
+        IProductPlanningBoardService planningBoardService,
+        IProductPlanningBoardExecutionHintService executionHintService)
     {
         _planningBoardService = planningBoardService ?? throw new ArgumentNullException(nameof(planningBoardService));
+        _executionHintService = executionHintService ?? throw new ArgumentNullException(nameof(executionHintService));
     }
 
     /// <summary>
@@ -28,10 +33,15 @@ public sealed class ProductPlanningBoardController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ProductPlanningBoardDto>> GetPlanningBoard(
         int productId,
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
         CancellationToken cancellationToken = default)
     {
         return await MapBoardResultAsync(
-            () => _planningBoardService.GetPlanningBoardAsync(productId, cancellationToken));
+            () => _planningBoardService.GetPlanningBoardAsync(productId, cancellationToken),
+            teamId,
+            sprintId,
+            cancellationToken);
     }
 
     /// <summary>
@@ -42,10 +52,15 @@ public sealed class ProductPlanningBoardController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ProductPlanningBoardDto>> ResetPlanningBoard(
         int productId,
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
         CancellationToken cancellationToken = default)
     {
         return await MapBoardResultAsync(
-            () => _planningBoardService.ResetPlanningBoardAsync(productId, cancellationToken));
+            () => _planningBoardService.ResetPlanningBoardAsync(productId, cancellationToken),
+            teamId,
+            sprintId,
+            cancellationToken);
     }
 
     /// <summary>
@@ -57,10 +72,15 @@ public sealed class ProductPlanningBoardController : ControllerBase
     public async Task<ActionResult<ProductPlanningBoardDto>> MoveEpicBySprints(
         int productId,
         [FromBody] ProductPlanningEpicDeltaRequest request,
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
         CancellationToken cancellationToken = default)
     {
         return await MapBoardResultAsync(
-            () => _planningBoardService.ExecuteMoveEpicBySprintsAsync(productId, request.EpicId, request.DeltaSprints, cancellationToken));
+            () => _planningBoardService.ExecuteMoveEpicBySprintsAsync(productId, request.EpicId, request.DeltaSprints, cancellationToken),
+            teamId,
+            sprintId,
+            cancellationToken);
     }
 
     /// <summary>
@@ -72,10 +92,15 @@ public sealed class ProductPlanningBoardController : ControllerBase
     public async Task<ActionResult<ProductPlanningBoardDto>> AdjustSpacingBefore(
         int productId,
         [FromBody] ProductPlanningEpicDeltaRequest request,
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
         CancellationToken cancellationToken = default)
     {
         return await MapBoardResultAsync(
-            () => _planningBoardService.ExecuteAdjustSpacingBeforeAsync(productId, request.EpicId, request.DeltaSprints, cancellationToken));
+            () => _planningBoardService.ExecuteAdjustSpacingBeforeAsync(productId, request.EpicId, request.DeltaSprints, cancellationToken),
+            teamId,
+            sprintId,
+            cancellationToken);
     }
 
     /// <summary>
@@ -87,10 +112,15 @@ public sealed class ProductPlanningBoardController : ControllerBase
     public async Task<ActionResult<ProductPlanningBoardDto>> RunInParallel(
         int productId,
         [FromBody] ProductPlanningEpicRequest request,
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
         CancellationToken cancellationToken = default)
     {
         return await MapBoardResultAsync(
-            () => _planningBoardService.ExecuteRunInParallelAsync(productId, request.EpicId, cancellationToken));
+            () => _planningBoardService.ExecuteRunInParallelAsync(productId, request.EpicId, cancellationToken),
+            teamId,
+            sprintId,
+            cancellationToken);
     }
 
     /// <summary>
@@ -102,10 +132,15 @@ public sealed class ProductPlanningBoardController : ControllerBase
     public async Task<ActionResult<ProductPlanningBoardDto>> ReturnToMain(
         int productId,
         [FromBody] ProductPlanningEpicRequest request,
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
         CancellationToken cancellationToken = default)
     {
         return await MapBoardResultAsync(
-            () => _planningBoardService.ExecuteReturnToMainAsync(productId, request.EpicId, cancellationToken));
+            () => _planningBoardService.ExecuteReturnToMainAsync(productId, request.EpicId, cancellationToken),
+            teamId,
+            sprintId,
+            cancellationToken);
     }
 
     /// <summary>
@@ -117,10 +152,15 @@ public sealed class ProductPlanningBoardController : ControllerBase
     public async Task<ActionResult<ProductPlanningBoardDto>> ReorderEpic(
         int productId,
         [FromBody] ReorderProductPlanningEpicRequest request,
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
         CancellationToken cancellationToken = default)
     {
         return await MapBoardResultAsync(
-            () => _planningBoardService.ExecuteReorderEpicAsync(productId, request.EpicId, request.TargetRoadmapOrder, cancellationToken));
+            () => _planningBoardService.ExecuteReorderEpicAsync(productId, request.EpicId, request.TargetRoadmapOrder, cancellationToken),
+            teamId,
+            sprintId,
+            cancellationToken);
     }
 
     /// <summary>
@@ -132,10 +172,15 @@ public sealed class ProductPlanningBoardController : ControllerBase
     public async Task<ActionResult<ProductPlanningBoardDto>> ShiftPlan(
         int productId,
         [FromBody] ProductPlanningEpicDeltaRequest request,
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
         CancellationToken cancellationToken = default)
     {
         return await MapBoardResultAsync(
-            () => _planningBoardService.ExecuteShiftPlanAsync(productId, request.EpicId, request.DeltaSprints, cancellationToken));
+            () => _planningBoardService.ExecuteShiftPlanAsync(productId, request.EpicId, request.DeltaSprints, cancellationToken),
+            teamId,
+            sprintId,
+            cancellationToken);
     }
 
     /// <summary>
@@ -148,14 +193,22 @@ public sealed class ProductPlanningBoardController : ControllerBase
     public async Task<ActionResult<ProductPlanningBoardDto>> ReconcileProjection(
         int productId,
         [FromBody] ProductPlanningEpicRequest request,
+        [FromQuery] int? teamId = null,
+        [FromQuery] int? sprintId = null,
         CancellationToken cancellationToken = default)
     {
         return await MapBoardResultAsync(
-            () => _planningBoardService.ExecuteReconcileProjectionAsync(productId, request.EpicId, cancellationToken));
+            () => _planningBoardService.ExecuteReconcileProjectionAsync(productId, request.EpicId, cancellationToken),
+            teamId,
+            sprintId,
+            cancellationToken);
     }
 
     private async Task<ActionResult<ProductPlanningBoardDto>> MapBoardResultAsync(
-        Func<ValueTask<ProductPlanningBoardDto?>> action)
+        Func<ValueTask<ProductPlanningBoardDto?>> action,
+        int? teamId,
+        int? sprintId,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -165,7 +218,7 @@ public sealed class ProductPlanningBoardController : ControllerBase
                 return NotFound();
             }
 
-            return Ok(board);
+            return Ok(await _executionHintService.ApplyExecutionHintAsync(board, teamId, sprintId, cancellationToken));
         }
         catch (InvalidOperationException ex)
         {

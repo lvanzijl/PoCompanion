@@ -75,12 +75,13 @@ public class SprintTrendProjectionService
         int productOwnerId,
         IEnumerable<int> sprintIds,
         CancellationToken cancellationToken = default)
-        => await ComputeProjectionsAsync(productOwnerId, sprintIds, null, cancellationToken);
+        => await ComputeProjectionsAsync(productOwnerId, sprintIds, null, progressCallback: null, cancellationToken);
 
     public virtual async Task<IReadOnlyList<SprintMetricsProjectionEntity>> ComputeProjectionsAsync(
         int productOwnerId,
         IEnumerable<int> sprintIds,
         IReadOnlyList<int>? effectiveProductIds,
+        Func<int, CancellationToken, Task>? progressCallback,
         CancellationToken cancellationToken)
     {
         var sprintIdList = sprintIds.Distinct().ToList();
@@ -204,6 +205,9 @@ public class SprintTrendProjectionService
         var deliveryTrendWorkItemsById = workItemsByTfsId
             .ToDictionary(pair => pair.Key, pair => pair.Value.ToDeliveryTrendWorkItem());
         var results = new List<SprintMetricsProjectionEntity>();
+        var totalProjectionSteps = validSprints.Count * productIds.Count;
+        var completedProjectionSteps = 0;
+        var lastReportedProgress = 0;
 
         foreach (var sprint in validSprints)
         {
@@ -261,6 +265,18 @@ public class SprintTrendProjectionService
                     context.SprintMetricsProjections.Add(projectionEntity);
                     results.Add(projectionEntity);
                 }
+
+                completedProjectionSteps++;
+
+                if (progressCallback is not null && totalProjectionSteps > 0)
+                {
+                    var currentProgress = Math.Min(95, completedProjectionSteps * 95 / totalProjectionSteps);
+                    if (currentProgress > lastReportedProgress)
+                    {
+                        lastReportedProgress = currentProgress;
+                        await progressCallback(currentProgress, cancellationToken);
+                    }
+                }
             }
         }
 
@@ -268,6 +284,12 @@ public class SprintTrendProjectionService
 
         if (_portfolioFlowProjectionService != null)
         {
+            if (progressCallback is not null && lastReportedProgress < 97)
+            {
+                lastReportedProgress = 97;
+                await progressCallback(lastReportedProgress, cancellationToken);
+            }
+
             await _portfolioFlowProjectionService.ComputeProjectionsAsync(productOwnerId, sprintIdList, cancellationToken);
         }
 

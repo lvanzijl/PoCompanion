@@ -22,24 +22,7 @@ public class CacheStateRepository : ICacheStateRepository
     /// <inheritdoc />
     public async Task<CacheStateDto> GetOrCreateCacheStateAsync(int productOwnerId, CancellationToken cancellationToken = default)
     {
-        var entity = await _context.ProductOwnerCacheStates
-            .OrderBy(e => e.Id)
-            .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
-
-        if (entity == null)
-        {
-            // Validate that the ProductOwner exists before creating cache state
-            await ValidateProductOwnerExistsAsync(productOwnerId, cancellationToken);
-
-            entity = new ProductOwnerCacheStateEntity
-            {
-                ProductOwnerId = productOwnerId,
-                SyncStatus = CacheSyncStatus.Idle
-            };
-            _context.ProductOwnerCacheStates.Add(entity);
-            await _context.SaveChangesAsync(cancellationToken);
-        }
-
+        var entity = await GetOrCreateEntityAsync(productOwnerId, cancellationToken);
         return MapToDto(entity);
     }
 
@@ -331,6 +314,24 @@ public class CacheStateRepository : ICacheStateRepository
                 SyncStatus = CacheSyncStatus.Idle
             };
             _context.ProductOwnerCacheStates.Add(entity);
+
+            try
+            {
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                _context.Entry(entity).State = EntityState.Detached;
+
+                entity = await _context.ProductOwnerCacheStates
+                    .OrderBy(e => e.Id)
+                    .FirstOrDefaultAsync(e => e.ProductOwnerId == productOwnerId, cancellationToken);
+
+                if (entity == null)
+                {
+                    throw;
+                }
+            }
         }
 
         return entity;

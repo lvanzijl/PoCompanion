@@ -32,6 +32,26 @@ public sealed class ProductPlanningBoardClientUiTests
     }
 
     [TestMethod]
+    public async Task ProductPlanningBoardClientService_GetBoardAsync_AppendsTeamAndSprintQuery()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        var service = CreateService((request, _) =>
+        {
+            capturedRequest = request;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = CreateBoardContent()
+            };
+        });
+
+        var result = await service.GetBoardAsync(7, teamId: 10, sprintId: 22);
+
+        Assert.IsTrue(result.IsSuccess);
+        Assert.IsNotNull(capturedRequest);
+        Assert.AreEqual("http://localhost/api/products/7/planning-board?teamId=10&sprintId=22", capturedRequest.RequestUri!.AbsoluteUri);
+    }
+
+    [TestMethod]
     public async Task ProductPlanningBoardClientService_ResetAsync_UsesResetEndpoint()
     {
         HttpRequestMessage? capturedRequest = null;
@@ -238,6 +258,25 @@ public sealed class ProductPlanningBoardClientUiTests
         StringAssert.Contains(renderModel.StatusDetail, "reported to TFS");
         Assert.IsNull(renderModel.LatestChangeTitle);
         Assert.IsNull(renderModel.LatestChangeDetail);
+    }
+
+    [TestMethod]
+    public void ProductPlanningBoardRenderModelFactory_Create_PreservesExecutionHint()
+    {
+        var board = CreateBoard() with
+        {
+            ExecutionHint = new ProductPlanningExecutionHintDto(
+                "spillover-increase",
+                "Execution signal: direct spillover increasing",
+                "Open Sprint Execution to inspect which committed work carried into the next sprint.",
+                10,
+                22)
+        };
+
+        var renderModel = ProductPlanningBoardRenderModelFactory.Create(board);
+
+        Assert.IsNotNull(renderModel.Board.ExecutionHint);
+        Assert.AreEqual("spillover-increase", renderModel.Board.ExecutionHint.AnomalyKey);
     }
 
     [TestMethod]

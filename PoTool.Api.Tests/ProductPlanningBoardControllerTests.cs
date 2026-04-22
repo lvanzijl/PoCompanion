@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PoTool.Api.Controllers;
+using PoTool.Api.Services;
 using PoTool.Core.Domain.Tests;
 using PoTool.Core.Planning;
 using PoTool.Shared.Planning;
@@ -20,7 +21,7 @@ public sealed class ProductPlanningBoardControllerTests
             CreateWorkItem(1501, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"),
             CreateWorkItem(1502, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"));
 
-        var result = await controller.GetPlanningBoard(7, CancellationToken.None);
+        var result = await controller.GetPlanningBoard(7, cancellationToken: CancellationToken.None);
 
         Assert.IsInstanceOfType<OkObjectResult>(result.Result);
         var board = (ProductPlanningBoardDto)((OkObjectResult)result.Result).Value!;
@@ -38,9 +39,10 @@ public sealed class ProductPlanningBoardControllerTests
                 new RecordingTfsClient(),
                 [],
                 new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>(),
-                CreateDefaultSprintsByTeam([10])));
+                CreateDefaultSprintsByTeam([10])),
+            new PassthroughExecutionHintService());
 
-        var result = await controller.GetPlanningBoard(999, CancellationToken.None);
+        var result = await controller.GetPlanningBoard(999, cancellationToken: CancellationToken.None);
 
         Assert.IsInstanceOfType<NotFoundResult>(result.Result);
     }
@@ -54,8 +56,8 @@ public sealed class ProductPlanningBoardControllerTests
             CreateWorkItem(1602, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
             CreateWorkItem(1603, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"));
 
-        await controller.MoveEpicBySprints(7, new ProductPlanningEpicDeltaRequest(1602, 2), CancellationToken.None);
-        var resetResult = await controller.ResetPlanningBoard(7, CancellationToken.None);
+        await controller.MoveEpicBySprints(7, new ProductPlanningEpicDeltaRequest(1602, 2), cancellationToken: CancellationToken.None);
+        var resetResult = await controller.ResetPlanningBoard(7, cancellationToken: CancellationToken.None);
 
         Assert.IsInstanceOfType<OkObjectResult>(resetResult.Result);
         var board = (ProductPlanningBoardDto)((OkObjectResult)resetResult.Result).Value!;
@@ -71,12 +73,12 @@ public sealed class ProductPlanningBoardControllerTests
             CreateWorkItem(1702, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
             CreateWorkItem(1703, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"));
 
-        var moveBoard = await Unwrap(controller.MoveEpicBySprints(7, new ProductPlanningEpicDeltaRequest(1702, 2), CancellationToken.None));
-        var adjustBoard = await Unwrap(controller.AdjustSpacingBefore(7, new ProductPlanningEpicDeltaRequest(1703, 1), CancellationToken.None));
-        var parallelBoard = await Unwrap(controller.RunInParallel(7, new ProductPlanningEpicRequest(1703), CancellationToken.None));
-        var returnBoard = await Unwrap(controller.ReturnToMain(7, new ProductPlanningEpicRequest(1703), CancellationToken.None));
-        var reorderBoard = await Unwrap(controller.ReorderEpic(7, new ReorderProductPlanningEpicRequest(1703, 2), CancellationToken.None));
-        var shiftBoard = await Unwrap(controller.ShiftPlan(7, new ProductPlanningEpicDeltaRequest(1702, 2), CancellationToken.None));
+        var moveBoard = await Unwrap(controller.MoveEpicBySprints(7, new ProductPlanningEpicDeltaRequest(1702, 2), cancellationToken: CancellationToken.None));
+        var adjustBoard = await Unwrap(controller.AdjustSpacingBefore(7, new ProductPlanningEpicDeltaRequest(1703, 1), cancellationToken: CancellationToken.None));
+        var parallelBoard = await Unwrap(controller.RunInParallel(7, new ProductPlanningEpicRequest(1703), cancellationToken: CancellationToken.None));
+        var returnBoard = await Unwrap(controller.ReturnToMain(7, new ProductPlanningEpicRequest(1703), cancellationToken: CancellationToken.None));
+        var reorderBoard = await Unwrap(controller.ReorderEpic(7, new ReorderProductPlanningEpicRequest(1703, 2), cancellationToken: CancellationToken.None));
+        var shiftBoard = await Unwrap(controller.ShiftPlan(7, new ProductPlanningEpicDeltaRequest(1702, 2), cancellationToken: CancellationToken.None));
 
         CollectionAssert.AreEqual(new[] { 1702, 1703 }, moveBoard.AffectedEpicIds.ToArray());
         Assert.AreEqual(4, adjustBoard.EpicItems.Single(static epic => epic.EpicId == 1703).ComputedStartSprintIndex);
@@ -121,9 +123,10 @@ public sealed class ProductPlanningBoardControllerTests
                             targetDate: sprints[10][4].EndUtc!.Value.AddDays(-1))
                     ]
                 },
-                sprints));
+                sprints),
+            new PassthroughExecutionHintService());
 
-        var board = await Unwrap(controller.ReconcileProjection(7, new ProductPlanningEpicRequest(1710), CancellationToken.None));
+        var board = await Unwrap(controller.ReconcileProjection(7, new ProductPlanningEpicRequest(1710), cancellationToken: CancellationToken.None));
 
         Assert.AreEqual(PlanningBoardDriftStatus.NoDrift, board.EpicItems.Single().DriftStatus);
         Assert.IsFalse(board.EpicItems.Single().CanReconcileProjection);
@@ -140,10 +143,10 @@ public sealed class ProductPlanningBoardControllerTests
             CreateWorkItem(1802, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
             CreateWorkItem(1803, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"));
 
-        await controller.MoveEpicBySprints(7, new ProductPlanningEpicDeltaRequest(1802, 2), CancellationToken.None);
-        await controller.RunInParallel(7, new ProductPlanningEpicRequest(1803), CancellationToken.None);
-        var persistedBoard = await Unwrap(controller.GetPlanningBoard(7, CancellationToken.None));
-        var resetBoard = await Unwrap(controller.ResetPlanningBoard(7, CancellationToken.None));
+        await controller.MoveEpicBySprints(7, new ProductPlanningEpicDeltaRequest(1802, 2), cancellationToken: CancellationToken.None);
+        await controller.RunInParallel(7, new ProductPlanningEpicRequest(1803), cancellationToken: CancellationToken.None);
+        var persistedBoard = await Unwrap(controller.GetPlanningBoard(7, cancellationToken: CancellationToken.None));
+        var resetBoard = await Unwrap(controller.ResetPlanningBoard(7, cancellationToken: CancellationToken.None));
 
         Assert.AreEqual(3, persistedBoard.EpicItems.Single(static epic => epic.EpicId == 1802).ComputedStartSprintIndex);
         Assert.AreEqual(1, persistedBoard.EpicItems.Single(static epic => epic.EpicId == 1803).TrackIndex);
@@ -159,10 +162,10 @@ public sealed class ProductPlanningBoardControllerTests
             CreateWorkItem(1901, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"),
             CreateWorkItem(1902, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"));
 
-        var unknownEpicBoard = await Unwrap(controller.RunInParallel(7, new ProductPlanningEpicRequest(999), CancellationToken.None));
-        var invalidReorderBoard = await Unwrap(controller.ReorderEpic(7, new ReorderProductPlanningEpicRequest(1901, 0), CancellationToken.None));
-        var invalidShiftBoard = await Unwrap(controller.ShiftPlan(7, new ProductPlanningEpicDeltaRequest(1901, 0), CancellationToken.None));
-        var invalidMoveBoard = await Unwrap(controller.MoveEpicBySprints(7, new ProductPlanningEpicDeltaRequest(1901, 0), CancellationToken.None));
+        var unknownEpicBoard = await Unwrap(controller.RunInParallel(7, new ProductPlanningEpicRequest(999), cancellationToken: CancellationToken.None));
+        var invalidReorderBoard = await Unwrap(controller.ReorderEpic(7, new ReorderProductPlanningEpicRequest(1901, 0), cancellationToken: CancellationToken.None));
+        var invalidShiftBoard = await Unwrap(controller.ShiftPlan(7, new ProductPlanningEpicDeltaRequest(1901, 0), cancellationToken: CancellationToken.None));
+        var invalidMoveBoard = await Unwrap(controller.MoveEpicBySprints(7, new ProductPlanningEpicDeltaRequest(1901, 0), cancellationToken: CancellationToken.None));
 
         CollectionAssert.AreEqual(new[] { "EpicNotFound" }, unknownEpicBoard.Issues.Select(static issue => issue.Code).ToArray());
         CollectionAssert.AreEqual(new[] { "InvalidOperationInput" }, invalidReorderBoard.Issues.Select(static issue => issue.Code).ToArray());
@@ -180,18 +183,19 @@ public sealed class ProductPlanningBoardControllerTests
                 new RecordingTfsClient(),
                 [],
                 new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>(),
-                CreateDefaultSprintsByTeam([10])));
+                CreateDefaultSprintsByTeam([10])),
+            new PassthroughExecutionHintService());
 
         var endpoints = new Func<Task<ActionResult<ProductPlanningBoardDto>>>[]
         {
-            () => controller.ResetPlanningBoard(999, CancellationToken.None),
-            () => controller.MoveEpicBySprints(999, new ProductPlanningEpicDeltaRequest(1, 1), CancellationToken.None),
-            () => controller.AdjustSpacingBefore(999, new ProductPlanningEpicDeltaRequest(1, 1), CancellationToken.None),
-            () => controller.RunInParallel(999, new ProductPlanningEpicRequest(1), CancellationToken.None),
-            () => controller.ReturnToMain(999, new ProductPlanningEpicRequest(1), CancellationToken.None),
-            () => controller.ReorderEpic(999, new ReorderProductPlanningEpicRequest(1, 1), CancellationToken.None),
-            () => controller.ShiftPlan(999, new ProductPlanningEpicDeltaRequest(1, 1), CancellationToken.None),
-            () => controller.ReconcileProjection(999, new ProductPlanningEpicRequest(1), CancellationToken.None)
+            () => controller.ResetPlanningBoard(999, cancellationToken: CancellationToken.None),
+            () => controller.MoveEpicBySprints(999, new ProductPlanningEpicDeltaRequest(1, 1), cancellationToken: CancellationToken.None),
+            () => controller.AdjustSpacingBefore(999, new ProductPlanningEpicDeltaRequest(1, 1), cancellationToken: CancellationToken.None),
+            () => controller.RunInParallel(999, new ProductPlanningEpicRequest(1), cancellationToken: CancellationToken.None),
+            () => controller.ReturnToMain(999, new ProductPlanningEpicRequest(1), cancellationToken: CancellationToken.None),
+            () => controller.ReorderEpic(999, new ReorderProductPlanningEpicRequest(1, 1), cancellationToken: CancellationToken.None),
+            () => controller.ShiftPlan(999, new ProductPlanningEpicDeltaRequest(1, 1), cancellationToken: CancellationToken.None),
+            () => controller.ReconcileProjection(999, new ProductPlanningEpicRequest(1), cancellationToken: CancellationToken.None)
         };
 
         foreach (var endpoint in endpoints)
@@ -237,9 +241,10 @@ public sealed class ProductPlanningBoardControllerTests
                             null,
                             DateTimeOffset.UtcNow)
                     ]
-                }));
+                }),
+            new PassthroughExecutionHintService());
 
-        var result = await controller.GetPlanningBoard(7, CancellationToken.None);
+        var result = await controller.GetPlanningBoard(7, cancellationToken: CancellationToken.None);
 
         Assert.IsInstanceOfType<ConflictObjectResult>(result.Result);
         var payload = ((ConflictObjectResult)result.Result).Value!;
@@ -282,9 +287,10 @@ public sealed class ProductPlanningBoardControllerTests
                             targetDate: sprints[10][2].EndUtc!.Value.AddDays(-1))
                     ]
                 },
-                sprints));
+                sprints),
+            new PassthroughExecutionHintService());
 
-        var result = await controller.ReconcileProjection(7, new ProductPlanningEpicRequest(1952), CancellationToken.None);
+        var result = await controller.ReconcileProjection(7, new ProductPlanningEpicRequest(1952), cancellationToken: CancellationToken.None);
 
         Assert.IsInstanceOfType<ConflictObjectResult>(result.Result);
         var payload = ((ConflictObjectResult)result.Result).Value!;
@@ -294,7 +300,7 @@ public sealed class ProductPlanningBoardControllerTests
 
     private static ProductPlanningBoardController CreateController(params WorkItemDto[] workItems)
     {
-        return new ProductPlanningBoardController(CreateService(workItems));
+        return new ProductPlanningBoardController(CreateService(workItems), new PassthroughExecutionHintService());
     }
 
     private static async Task<ProductPlanningBoardDto> Unwrap(Task<ActionResult<ProductPlanningBoardDto>> action)
@@ -302,5 +308,15 @@ public sealed class ProductPlanningBoardControllerTests
         var result = await action;
         Assert.IsInstanceOfType<OkObjectResult>(result.Result);
         return (ProductPlanningBoardDto)((OkObjectResult)result.Result).Value!;
+    }
+
+    private sealed class PassthroughExecutionHintService : IProductPlanningBoardExecutionHintService
+    {
+        public Task<ProductPlanningBoardDto> ApplyExecutionHintAsync(
+            ProductPlanningBoardDto board,
+            int? requestedTeamId,
+            int? requestedSprintId,
+            CancellationToken cancellationToken = default)
+            => Task.FromResult(board);
     }
 }

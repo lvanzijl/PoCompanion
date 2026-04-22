@@ -1,0 +1,167 @@
+@using PoTool.Client.Helpers
+@using PoTool.Client.Models
+@using PoTool.Shared.Planning
+@implements IDisposable
+@inject GlobalFilterRouteService GlobalFilterRouteService
+@inject GlobalFilterStore GlobalFilterStore
+@inject NavigationManager NavigationManager
+
+@if (_visibleHint is not null)
+{
+    <MudTooltip Text="@_visibleHint.Explanation"
+                Placement="Placement.Top"
+                Arrow="true"
+                Disabled="@string.IsNullOrWhiteSpace(_visibleHint.Explanation)">
+        <button type="button"
+                class="execution-reality-hint"
+                @onclick="NavigateAsync">
+            <span class="execution-reality-hint__text">@_visibleHint.Message</span>
+        </button>
+    </MudTooltip>
+}
+
+@code {
+    private const int ShowDebounceMilliseconds = 200;
+    private const int MinimumVisibleMilliseconds = 1500;
+
+    [Parameter]
+    public ProductPlanningExecutionHintDto? Hint { get; set; }
+
+    [Parameter]
+    public int? ProductId { get; set; }
+
+    [Parameter]
+    public int? ContextTeamId { get; set; }
+
+    private ProductPlanningExecutionHintDto? _visibleHint;
+    private string? _contextKey;
+    private DateTimeOffset? _visibleSinceUtc;
+    private CancellationTokenSource? _transitionCts;
+
+    protected override void OnParametersSet()
+    {
+        var nextContextKey = BuildContextKey();
+        var contextChanged = !string.Equals(_contextKey, nextContextKey, StringComparison.Ordinal);
+        _contextKey = nextContextKey;
+
+        if (contextChanged)
+        {
+            CancelPendingTransition();
+            _visibleHint = null;
+            _visibleSinceUtc = null;
+
+            if (Hint is not null)
+            {
+                ScheduleShow(Hint, nextContextKey);
+            }
+
+            return;
+        }
+
+        if (Equals(_visibleHint, Hint))
+        {
+            return;
+        }
+
+        CancelPendingTransition();
+
+        if (_visibleHint is null)
+        {
+            if (Hint is not null)
+            {
+                ScheduleShow(Hint, nextContextKey);
+            }
+
+            return;
+        }
+
+        ScheduleSwap(Hint, nextContextKey);
+    }
+
+    private async Task NavigateAsync()
+    {
+        if (_visibleHint is null)
+        {
+            return;
+        }
+
+        var route = ProductPlanningExecutionHintNavigation.ResolveRoute(_visibleHint);
+        var state = ProductPlanningExecutionHintNavigation.BuildTargetState(
+            _visibleHint,
+            GlobalFilterStore.GetState(),
+            ProductId);
+        var targetUri = await GlobalFilterRouteService.BuildUriAsync(
+            route,
+            state,
+            WorkspaceQueryContextHelper.ExtractAdditionalParameters(NavigationManager.Uri));
+
+        NavigationManager.NavigateTo(targetUri);
+    }
+
+    private string BuildContextKey()
+        => $"{ProductId?.ToString() ?? "none"}:{ContextTeamId?.ToString() ?? Hint?.TeamId.ToString() ?? "none"}";
+
+    private void ScheduleShow(ProductPlanningExecutionHintDto hint, string contextKey)
+    {
+        var cts = new CancellationTokenSource();
+        _transitionCts = cts;
+        _ = RunTransitionAsync(async token =>
+        {
+            await Task.Delay(ShowDebounceMilliseconds, token);
+            if (!string.Equals(_contextKey, contextKey, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _visibleHint = hint;
+            _visibleSinceUtc = DateTimeOffset.UtcNow;
+            await InvokeAsync(StateHasChanged);
+        }, cts.Token);
+    }
+
+    private void ScheduleSwap(ProductPlanningExecutionHintDto? nextHint, string contextKey)
+    {
+        var remainingDelay = _visibleSinceUtc.HasValue
+            ? Math.Max(0, MinimumVisibleMilliseconds - (int)(DateTimeOffset.UtcNow - _visibleSinceUtc.Value).TotalMilliseconds)
+            : 0;
+
+        var cts = new CancellationTokenSource();
+        _transitionCts = cts;
+        _ = RunTransitionAsync(async token =>
+        {
+            if (remainingDelay > 0)
+            {
+                await Task.Delay(remainingDelay, token);
+            }
+
+            if (!string.Equals(_contextKey, contextKey, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _visibleHint = nextHint;
+            _visibleSinceUtc = nextHint is null ? null : DateTimeOffset.UtcNow;
+            await InvokeAsync(StateHasChanged);
+        }, cts.Token);
+    }
+
+    private static async Task RunTransitionAsync(Func<CancellationToken, Task> transition, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await transition(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private void CancelPendingTransition()
+    {
+        _transitionCts?.Cancel();
+        _transitionCts?.Dispose();
+        _transitionCts = null;
+    }
+
+    public void Dispose() => CancelPendingTransition();
+}

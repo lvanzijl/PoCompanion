@@ -102,10 +102,10 @@ public partial class SprintQueryResponseDtoOfGetSprintTrendMetricsResponse
 public partial class SprintQueryResponseDtoOfSprintExecutionDto
 {
     [System.Text.Json.Serialization.JsonPropertyName("teamLabels")]
-    public System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<int, string>>? TeamLabels { get; set; }
+    public System.Collections.Generic.Dictionary<int, string>? TeamLabels { get; set; }
 
     [System.Text.Json.Serialization.JsonPropertyName("sprintLabels")]
-    public System.Collections.Generic.ICollection<System.Collections.Generic.KeyValuePair<int, string>>? SprintLabels { get; set; }
+    public System.Collections.Generic.Dictionary<int, string>? SprintLabels { get; set; }
 }
 
 public partial class SprintQueryResponseDtoOfWorkItemActivityDetailsDto

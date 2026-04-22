@@ -33,6 +33,16 @@ public sealed record PlanningBoardDiagnosticDto(
     bool CanReconcileProjection);
 
 /// <summary>
+/// Single execution hint surfaced on the planning board.
+/// </summary>
+public sealed record ProductPlanningExecutionHintDto(
+    string AnomalyKey,
+    string Message,
+    string Explanation,
+    int TeamId,
+    int SprintId);
+
+/// <summary>
 /// Read model for a single product planning board built from the planning engine.
 /// </summary>
 public sealed record ProductPlanningBoardDto(
@@ -43,7 +53,8 @@ public sealed record ProductPlanningBoardDto(
     IReadOnlyList<PlanningBoardIssueDto> Issues,
     IReadOnlyList<int> ChangedEpicIds,
     IReadOnlyList<int> AffectedEpicIds,
-    IReadOnlyList<PlanningBoardDiagnosticDto>? Diagnostics = null);
+    IReadOnlyList<PlanningBoardDiagnosticDto>? Diagnostics = null,
+    ProductPlanningExecutionHintDto? ExecutionHint = null);
 
 /// <summary>
 /// A track on the planning board.

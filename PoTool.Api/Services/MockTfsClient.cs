@@ -389,6 +389,11 @@ internal class MockTfsClient : ITfsClient
         CancellationToken cancellationToken = default)
     {
         var now = DateTimeOffset.UtcNow;
+        if (BattleshipExecutionAnomalySeedCatalog.TryCreateWorkItemUpdates(workItemId, now, out var anomalyUpdates))
+        {
+            return Task.FromResult(anomalyUpdates);
+        }
+
         IReadOnlyList<WorkItemUpdate> updates =
         [
             new WorkItemUpdate

@@ -1,0 +1,31 @@
+.execution-reality-hint {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid color-mix(in srgb, var(--mud-palette-info) 28%, var(--mud-palette-lines-default) 72%);
+    border-left: 4px solid color-mix(in srgb, var(--mud-palette-info) 68%, var(--mud-palette-primary) 32%);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--mud-palette-info) 5%, var(--mud-palette-surface) 95%);
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.execution-reality-hint:hover {
+    background: color-mix(in srgb, var(--mud-palette-info) 7%, var(--mud-palette-surface) 93%);
+}
+
+.execution-reality-hint:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--mud-palette-info) 72%, white 28%);
+    outline-offset: 2px;
+}
+
+.execution-reality-hint__text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}

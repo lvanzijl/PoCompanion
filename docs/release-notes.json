@@ -1,5 +1,29 @@
 [
   {
+    "date": "2026-04-22",
+    "type": "Fixed",
+    "title": "Sprint Execution now opens correctly from the Plan Board execution hint",
+    "impact": "The /home/delivery/execution workspace now loads successfully when opened from the Plan Board execution hint, preserves the requested sprint/team context for the seeded Battleship anomaly flow, and renders the Sprint Execution summary and unfinished-work diagnostics instead of failing after the navigation.",
+    "area": "Delivery / Sprint Execution",
+    "link": "/home/delivery/execution"
+  },
+  {
+    "date": "2026-04-22",
+    "type": "Fixed",
+    "title": "Sync gate now avoids duplicate cache-state startup failures and shows progress through sprint-trend computation",
+    "impact": "Startup sync now recovers safely when the initial cache-state row is created concurrently during first load, and the Sync Gate updates visible progress while the ComputeSprintTrends stage is working instead of appearing frozen at 0%, so first-run startup can continue through sync and return to the requested workspace more reliably.",
+    "area": "Startup / Sync Gate",
+    "link": "/sync-gate"
+  },
+  {
+    "date": "2026-04-22",
+    "type": "Changed",
+    "title": "Plan Board now shows one execution hint above sprint heat when recent delivery needs attention",
+    "impact": "The /planning/plan-board workspace now surfaces a single board-level `Execution signal:` strip directly above the sprint heat grid when the existing execution interpretation is in Watch or Investigate, routes that hint straight to Sprint Execution or Delivery Trends using the existing Phase 25 anomaly mapping, keeps Stable and insufficient-evidence states silent, and preserves the existing planning heat cards, labels, and chips as the dominant planning signal.",
+    "area": "Planning / Plan Board / Execution Reality Hint",
+    "link": "/planning/plan-board"
+  },
+  {
     "date": "2026-04-21",
     "type": "Changed",
     "title": "Plan Board now makes recent sprint-signal changes more visible without overstating calm states",

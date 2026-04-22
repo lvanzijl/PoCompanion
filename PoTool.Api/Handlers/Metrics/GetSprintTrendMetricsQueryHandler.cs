@@ -74,6 +74,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                         query.ProductOwnerId,
                         query.EffectiveFilter.SprintIds,
                         scopedProductIds,
+                        null,
                         cancellationToken);
 
                 _logger.LogInformation(
@@ -112,6 +113,7 @@ public sealed class GetSprintTrendMetricsQueryHandler : IQueryHandler<GetSprintT
                             query.ProductOwnerId,
                             query.EffectiveFilter.SprintIds,
                             scopedProductIds,
+                            null,
                             cancellationToken);
 
                     _logger.LogInformation(
