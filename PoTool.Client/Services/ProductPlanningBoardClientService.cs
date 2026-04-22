@@ -17,32 +17,75 @@ public sealed class ProductPlanningBoardClientService
         _logger = logger;
     }
 
-    public Task<ProductPlanningBoardClientResult> GetBoardAsync(int productId, CancellationToken cancellationToken = default)
-        => SendAsync<object?>(HttpMethod.Get, BuildBoardPath(productId), body: null, cancellationToken);
+    public Task<ProductPlanningBoardClientResult> GetBoardAsync(
+        int productId,
+        int? teamId = null,
+        int? sprintId = null,
+        CancellationToken cancellationToken = default)
+        => SendAsync<object?>(HttpMethod.Get, BuildBoardPath(productId, teamId, sprintId), body: null, cancellationToken);
 
-    public Task<ProductPlanningBoardClientResult> ResetAsync(int productId, CancellationToken cancellationToken = default)
-        => SendAsync<object?>(HttpMethod.Post, $"{BuildBoardPath(productId)}/reset", body: null, cancellationToken);
+    public Task<ProductPlanningBoardClientResult> ResetAsync(
+        int productId,
+        int? teamId = null,
+        int? sprintId = null,
+        CancellationToken cancellationToken = default)
+        => SendAsync<object?>(HttpMethod.Post, BuildOperationPath(productId, "reset", teamId, sprintId), body: null, cancellationToken);
 
-    public Task<ProductPlanningBoardClientResult> MoveEpicBySprintsAsync(int productId, ProductPlanningEpicDeltaRequest request, CancellationToken cancellationToken = default)
-        => SendAsync(HttpMethod.Post, $"{BuildBoardPath(productId)}/move", request, cancellationToken);
+    public Task<ProductPlanningBoardClientResult> MoveEpicBySprintsAsync(
+        int productId,
+        ProductPlanningEpicDeltaRequest request,
+        int? teamId = null,
+        int? sprintId = null,
+        CancellationToken cancellationToken = default)
+        => SendAsync(HttpMethod.Post, BuildOperationPath(productId, "move", teamId, sprintId), request, cancellationToken);
 
-    public Task<ProductPlanningBoardClientResult> AdjustSpacingBeforeAsync(int productId, ProductPlanningEpicDeltaRequest request, CancellationToken cancellationToken = default)
-        => SendAsync(HttpMethod.Post, $"{BuildBoardPath(productId)}/adjust-spacing", request, cancellationToken);
+    public Task<ProductPlanningBoardClientResult> AdjustSpacingBeforeAsync(
+        int productId,
+        ProductPlanningEpicDeltaRequest request,
+        int? teamId = null,
+        int? sprintId = null,
+        CancellationToken cancellationToken = default)
+        => SendAsync(HttpMethod.Post, BuildOperationPath(productId, "adjust-spacing", teamId, sprintId), request, cancellationToken);
 
-    public Task<ProductPlanningBoardClientResult> RunInParallelAsync(int productId, ProductPlanningEpicRequest request, CancellationToken cancellationToken = default)
-        => SendAsync(HttpMethod.Post, $"{BuildBoardPath(productId)}/run-in-parallel", request, cancellationToken);
+    public Task<ProductPlanningBoardClientResult> RunInParallelAsync(
+        int productId,
+        ProductPlanningEpicRequest request,
+        int? teamId = null,
+        int? sprintId = null,
+        CancellationToken cancellationToken = default)
+        => SendAsync(HttpMethod.Post, BuildOperationPath(productId, "run-in-parallel", teamId, sprintId), request, cancellationToken);
 
-    public Task<ProductPlanningBoardClientResult> ReturnToMainAsync(int productId, ProductPlanningEpicRequest request, CancellationToken cancellationToken = default)
-        => SendAsync(HttpMethod.Post, $"{BuildBoardPath(productId)}/return-to-main", request, cancellationToken);
+    public Task<ProductPlanningBoardClientResult> ReturnToMainAsync(
+        int productId,
+        ProductPlanningEpicRequest request,
+        int? teamId = null,
+        int? sprintId = null,
+        CancellationToken cancellationToken = default)
+        => SendAsync(HttpMethod.Post, BuildOperationPath(productId, "return-to-main", teamId, sprintId), request, cancellationToken);
 
-    public Task<ProductPlanningBoardClientResult> ReorderEpicAsync(int productId, ReorderProductPlanningEpicRequest request, CancellationToken cancellationToken = default)
-        => SendAsync(HttpMethod.Post, $"{BuildBoardPath(productId)}/reorder", request, cancellationToken);
+    public Task<ProductPlanningBoardClientResult> ReorderEpicAsync(
+        int productId,
+        ReorderProductPlanningEpicRequest request,
+        int? teamId = null,
+        int? sprintId = null,
+        CancellationToken cancellationToken = default)
+        => SendAsync(HttpMethod.Post, BuildOperationPath(productId, "reorder", teamId, sprintId), request, cancellationToken);
 
-    public Task<ProductPlanningBoardClientResult> ShiftPlanAsync(int productId, ProductPlanningEpicDeltaRequest request, CancellationToken cancellationToken = default)
-        => SendAsync(HttpMethod.Post, $"{BuildBoardPath(productId)}/shift-plan", request, cancellationToken);
+    public Task<ProductPlanningBoardClientResult> ShiftPlanAsync(
+        int productId,
+        ProductPlanningEpicDeltaRequest request,
+        int? teamId = null,
+        int? sprintId = null,
+        CancellationToken cancellationToken = default)
+        => SendAsync(HttpMethod.Post, BuildOperationPath(productId, "shift-plan", teamId, sprintId), request, cancellationToken);
 
-    public Task<ProductPlanningBoardClientResult> ReconcileProjectionAsync(int productId, ProductPlanningEpicRequest request, CancellationToken cancellationToken = default)
-        => SendAsync(HttpMethod.Post, $"{BuildBoardPath(productId)}/reconcile", request, cancellationToken);
+    public Task<ProductPlanningBoardClientResult> ReconcileProjectionAsync(
+        int productId,
+        ProductPlanningEpicRequest request,
+        int? teamId = null,
+        int? sprintId = null,
+        CancellationToken cancellationToken = default)
+        => SendAsync(HttpMethod.Post, BuildOperationPath(productId, "reconcile", teamId, sprintId), request, cancellationToken);
 
     private async Task<ProductPlanningBoardClientResult> SendAsync<TBody>(HttpMethod method, string requestUri, TBody? body, CancellationToken cancellationToken)
     {
@@ -137,7 +180,34 @@ public sealed class ProductPlanningBoardClientService
         return $"The planning board endpoint returned HTTP {(int)response.StatusCode} ({response.StatusCode}).";
     }
 
-    private static string BuildBoardPath(int productId) => $"/api/products/{productId}/planning-board";
+    private static string BuildBoardPath(int productId, int? teamId, int? sprintId)
+    {
+        return BuildPath($"/api/products/{productId}/planning-board", teamId, sprintId);
+    }
+
+    private static string BuildOperationPath(int productId, string operation, int? teamId, int? sprintId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(operation);
+        return BuildPath($"/api/products/{productId}/planning-board/{operation}", teamId, sprintId);
+    }
+
+    private static string BuildPath(string basePath, int? teamId, int? sprintId)
+    {
+        var queryParts = new List<string>(capacity: 2);
+        if (teamId.HasValue)
+        {
+            queryParts.Add($"teamId={teamId.Value}");
+        }
+
+        if (sprintId.HasValue)
+        {
+            queryParts.Add($"sprintId={sprintId.Value}");
+        }
+
+        return queryParts.Count == 0
+            ? basePath
+            : $"{basePath}?{string.Join("&", queryParts)}";
+    }
 }
 
 public sealed record ProductPlanningBoardClientResult(

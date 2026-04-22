@@ -375,7 +375,8 @@ public static class ApiServiceCollectionExtensions
         services.AddSingleton<IExecutionRealityCheckCdcSliceProjector, ExecutionRealityCheckCdcSliceProjector>();
         services.AddSingleton<IExecutionRealityCheckInterpretationService, ExecutionRealityCheckInterpretationService>();
         services.AddScoped<ExecutionRealityCheckCdcSliceService>();
-        services.AddScoped<ExecutionRealityCheckInterpretationLayerService>();
+        services.AddScoped<IExecutionRealityCheckInterpretationLayerService, ExecutionRealityCheckInterpretationLayerService>();
+        services.AddScoped<IProductPlanningBoardExecutionHintService, ProductPlanningBoardExecutionHintService>();
 
         // Register TFS configuration and client
         services.AddDataProtection();

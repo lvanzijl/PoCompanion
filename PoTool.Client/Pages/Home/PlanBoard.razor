@@ -1,6 +1,7 @@
 @page "/planning/plan-board"
 @page "/planning/{RouteProjectAlias}/plan-board"
 @using PoTool.Client.Components.Common
+@using PoTool.Client.Components.Planning
 @using PoTool.Client.Helpers
 @using PoTool.Client.Models
 @using PoTool.Shared.DataState
@@ -300,6 +301,9 @@
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
                             Background color indicates sprint planning strain in the current plan. Color strength indicates how settled that sprint still looks, not delivery certainty.
                         </MudText>
+                        <ExecutionRealityHint Hint="@renderModel.Board.ExecutionHint"
+                                              ProductId="@_selectedProductId"
+                                              ContextTeamId="@CurrentBoardTeamId" />
                         <div class="planning-board-sprint-signal-grid" style="@GetTrackGridStyle(renderModel.MaxSprintCount)">
                             @foreach (var sprint in renderModel.SprintColumns)
                             {
@@ -745,6 +749,8 @@
     private PlanningBoardImpactSummary? _latestImpactSummary;
 
     private int? _selectedProductId => GlobalProductSelectionHelper.ResolveSingleProductId(GlobalFilterStore.GetState(), _products);
+    private int? CurrentBoardTeamId => GlobalFilterStore.GetState().TeamId;
+    private int? CurrentBoardSprintId => GlobalFilterStore.GetState().Time.SprintId;
     private string? _boardFeedbackMessage => _boardFeedback?.Message;
     private Severity _boardFeedbackSeverity => _boardFeedback?.Severity ?? Severity.Info;
 
@@ -856,7 +862,10 @@
         _isBusy = true;
         try
         {
-            var result = await ProductPlanningBoardClientService.ResetAsync(_selectedProductId.Value);
+            var result = await ProductPlanningBoardClientService.ResetAsync(
+                _selectedProductId.Value,
+                CurrentBoardTeamId,
+                CurrentBoardSprintId);
             HandleBoardResult(
                 result,
                 "Undo all current board changes.",
@@ -877,7 +886,14 @@
             return;
         }
 
-        await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.MoveEpicBySprintsAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, state.MoveDelta)), "Move Epic");
+        await ExecuteEpicOperationAsync(
+            epicId,
+            () => ProductPlanningBoardClientService.MoveEpicBySprintsAsync(
+                _selectedProductId!.Value,
+                new ProductPlanningEpicDeltaRequest(epicId, state.MoveDelta),
+                CurrentBoardTeamId,
+                CurrentBoardSprintId),
+            "Move Epic");
     }
 
     private async Task ExecuteAdjustSpacingAsync(int epicId)
@@ -894,7 +910,14 @@
             return;
         }
 
-        await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.ShiftPlanAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, state.ShiftDelta)), "Shift following work");
+        await ExecuteEpicOperationAsync(
+            epicId,
+            () => ProductPlanningBoardClientService.ShiftPlanAsync(
+                _selectedProductId!.Value,
+                new ProductPlanningEpicDeltaRequest(epicId, state.ShiftDelta),
+                CurrentBoardTeamId,
+                CurrentBoardSprintId),
+            "Shift following work");
     }
 
     private async Task ExecuteReorderAsync(int epicId)
@@ -906,19 +929,44 @@
             return;
         }
 
-        await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.ReorderEpicAsync(_selectedProductId!.Value, new ReorderProductPlanningEpicRequest(epicId, state.ReorderTarget)), "Update order");
+        await ExecuteEpicOperationAsync(
+            epicId,
+            () => ProductPlanningBoardClientService.ReorderEpicAsync(
+                _selectedProductId!.Value,
+                new ReorderProductPlanningEpicRequest(epicId, state.ReorderTarget),
+                CurrentBoardTeamId,
+                CurrentBoardSprintId),
+            "Update order");
     }
 
     private async Task ExecuteRunInParallelAsync(int epicId)
-        => await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.RunInParallelAsync(_selectedProductId!.Value, new ProductPlanningEpicRequest(epicId)), "Create parallel work");
+        => await ExecuteEpicOperationAsync(
+            epicId,
+            () => ProductPlanningBoardClientService.RunInParallelAsync(
+                _selectedProductId!.Value,
+                new ProductPlanningEpicRequest(epicId),
+                CurrentBoardTeamId,
+                CurrentBoardSprintId),
+            "Create parallel work");
 
     private async Task ExecuteReturnToMainAsync(int epicId)
-        => await ExecuteEpicOperationAsync(epicId, () => ProductPlanningBoardClientService.ReturnToMainAsync(_selectedProductId!.Value, new ProductPlanningEpicRequest(epicId)), "Return to main plan");
+        => await ExecuteEpicOperationAsync(
+            epicId,
+            () => ProductPlanningBoardClientService.ReturnToMainAsync(
+                _selectedProductId!.Value,
+                new ProductPlanningEpicRequest(epicId),
+                CurrentBoardTeamId,
+                CurrentBoardSprintId),
+            "Return to main plan");
 
     private async Task ExecuteReconcileProjectionAsync(int epicId)
         => await ExecuteEpicOperationAsync(
             epicId,
-            () => ProductPlanningBoardClientService.ReconcileProjectionAsync(_selectedProductId!.Value, new ProductPlanningEpicRequest(epicId)),
+            () => ProductPlanningBoardClientService.ReconcileProjectionAsync(
+                _selectedProductId!.Value,
+                new ProductPlanningEpicRequest(epicId),
+                CurrentBoardTeamId,
+                CurrentBoardSprintId),
             "Update reporting data",
             new BoardFeedback("Reporting data in TFS was updated from the plan shown on this board.", Severity.Success),
             isMaintenance: true);
@@ -950,7 +998,11 @@
 
         var success = await ExecuteEpicOperationAsync(
             epicId,
-            () => ProductPlanningBoardClientService.AdjustSpacingBeforeAsync(_selectedProductId!.Value, new ProductPlanningEpicDeltaRequest(epicId, delta)),
+            () => ProductPlanningBoardClientService.AdjustSpacingBeforeAsync(
+                _selectedProductId!.Value,
+                new ProductPlanningEpicDeltaRequest(epicId, delta),
+                CurrentBoardTeamId,
+                CurrentBoardSprintId),
             "Move Epic",
             new BoardFeedback("Epic moved. Following work shifted automatically where needed.", Severity.Success));
 
@@ -1042,7 +1094,10 @@
 
         try
         {
-            var result = await ProductPlanningBoardClientService.GetBoardAsync(productId);
+            var result = await ProductPlanningBoardClientService.GetBoardAsync(
+                productId,
+                CurrentBoardTeamId,
+                CurrentBoardSprintId);
             HandleBoardResult(result, "The planning board could not be loaded right now.", operationContext: null, successFeedback);
         }
         finally

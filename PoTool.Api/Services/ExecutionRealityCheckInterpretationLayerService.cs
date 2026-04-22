@@ -5,7 +5,19 @@ namespace PoTool.Api.Services;
 /// <summary>
 /// Composes the Phase 23c execution CDC slice with the Phase 24 interpretation layer.
 /// </summary>
-public sealed class ExecutionRealityCheckInterpretationLayerService
+public interface IExecutionRealityCheckInterpretationLayerService
+{
+    Task<ExecutionRealityCheckInterpretation> BuildAsync(
+        int productOwnerId,
+        int anchorSprintId,
+        IReadOnlyList<int>? effectiveProductIds = null,
+        CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Composes the Phase 23c execution CDC slice with the Phase 24 interpretation layer.
+/// </summary>
+public sealed class ExecutionRealityCheckInterpretationLayerService : IExecutionRealityCheckInterpretationLayerService
 {
     private readonly ExecutionRealityCheckCdcSliceService _cdcSliceService;
     private readonly IExecutionRealityCheckInterpretationService _interpretationService;
