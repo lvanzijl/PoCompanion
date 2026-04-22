@@ -284,9 +284,9 @@ public sealed class BattleshipExecutionAnomalyMockScenarioTests
 
             for (var index = 1; index < orderedEpics.Length; index++)
             {
-                Assert.IsLessThanOrEqualTo(
-                    orderedEpics[index - 1].EndSprintIndexExclusive,
+                Assert.IsGreaterThanOrEqualTo(
                     orderedEpics[index].ComputedStartSprintIndex,
+                    orderedEpics[index - 1].EndSprintIndexExclusive,
                     $"Track {track.TrackIndex} contains overlapping epics '{orderedEpics[index - 1].EpicId}' and '{orderedEpics[index].EpicId}'.");
             }
         }
