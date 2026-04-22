@@ -1,5 +1,6 @@
 using PoTool.Core.Contracts;
 using PoTool.Core.WorkItems;
+using PoTool.Shared.Settings;
 using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Services.MockData;
@@ -27,9 +28,9 @@ internal static class BattleshipExecutionAnomalySeedCatalog
         new(5, 3, 1),
         new(6, 3, 1),
         new(7, 3, 1),
-        new(8, 1, 3),
-        new(9, 1, 3),
-        new(10, 1, 3)
+        new(8, 0, 4),
+        new(9, 0, 4),
+        new(10, 0, 4)
     ];
 
     private static readonly IReadOnlyDictionary<int, ScenarioWorkItemPlan> PlansByWorkItemId = BuildPlans();
