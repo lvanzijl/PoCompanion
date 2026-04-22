@@ -16,7 +16,7 @@
                 @if (Metadata.HasMaterialDifferences)
                 {
                     <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Outlined">
-                        Requested ≠ applied
+                        @GetDifferenceSummaryLabel(Metadata)
                     </MudChip>
                 }
             </MudStack>
@@ -62,4 +62,9 @@
 @code {
     [Parameter]
     public CanonicalFilterNoticeModel? Metadata { get; set; }
+
+    private static string GetDifferenceSummaryLabel(CanonicalFilterNoticeModel metadata)
+        => metadata.ChangedDifferences.Any(difference => string.Equals(difference.Label, "Time", StringComparison.Ordinal))
+            ? "Closest matching sprint context shown"
+            : "Closest matching context shown";
 }

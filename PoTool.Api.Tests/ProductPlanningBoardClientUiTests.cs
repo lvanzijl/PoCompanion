@@ -267,8 +267,8 @@ public sealed class ProductPlanningBoardClientUiTests
         {
             ExecutionHint = new ProductPlanningExecutionHintDto(
                 "spillover-increase",
-                "Execution signal: direct spillover increasing",
-                "Open Sprint Execution to inspect which committed work carried into the next sprint.",
+                "Execution signal: committed work carried forward in the last completed sprint",
+                "The last completed sprint carried committed work into the next sprint. Open Sprint Execution to see unfinished work.",
                 10,
                 22)
         };

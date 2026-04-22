@@ -17,6 +17,16 @@
     background: color-mix(in srgb, var(--mud-palette-info) 7%, var(--mud-palette-surface) 93%);
 }
 
+.execution-reality-hint__text {
+    display: block;
+    width: 100%;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .execution-reality-hint:focus-visible {
     outline: 2px solid color-mix(in srgb, var(--mud-palette-info) 72%, white 28%);
     outline-offset: 2px;

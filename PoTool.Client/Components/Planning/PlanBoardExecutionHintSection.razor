@@ -1,0 +1,30 @@
+@using PoTool.Client.Models
+@using PoTool.Shared.Planning
+
+<MudStack Spacing="1">
+    <MudText Typo="Typo.subtitle2">Sprint heat</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">
+        @ProductPlanningBoardUxText.SprintHeatSummary
+    </MudText>
+    <ExecutionRealityHint Hint="@Hint"
+                          ProductId="@ProductId"
+                          ContextTeamId="@ContextTeamId" />
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+</MudStack>
+
+@code {
+    [Parameter]
+    public ProductPlanningExecutionHintDto? Hint { get; set; }
+
+    [Parameter]
+    public int? ProductId { get; set; }
+
+    [Parameter]
+    public int? ContextTeamId { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
