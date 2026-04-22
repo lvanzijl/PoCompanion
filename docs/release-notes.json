@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-04-22",
+    "type": "Changed",
+    "title": "Plan Board execution hint now appears earlier and explains recent delivery issues more directly",
+    "impact": "When the /planning/plan-board workspace detects the existing execution anomaly signal, it now surfaces the single `Execution signal:` hint in the sprint-heat section before the full sprint grid finishes loading, uses clearer recent-sprint wording plus a compact context anchor, keeps the hover copy short and immediately actionable, preserves the existing click destination to Sprint Execution or Delivery Trends, and keeps non-anomaly product contexts silent.",
+    "area": "Planning / Plan Board / Execution Reality Hint",
+    "link": "/planning/plan-board"
+  },
+  {
+    "date": "2026-04-22",
     "type": "Fixed",
     "title": "Sprint Execution now opens correctly from the Plan Board execution hint",
     "impact": "The /home/delivery/execution workspace now loads successfully when opened from the Plan Board execution hint, preserves the requested sprint/team context for the seeded Battleship anomaly flow, and renders the Sprint Execution summary and unfinished-work diagnostics instead of failing after the navigation.",
