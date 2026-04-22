@@ -14,6 +14,7 @@ using PoTool.Api.Services.Sync;
 using PoTool.Client.Models;
 using PoTool.Core.Configuration;
 using PoTool.Core.Contracts;
+using PoTool.Core.Planning;
 using PoTool.Core.Domain.Cdc.ExecutionRealityCheck;
 using PoTool.Core.Domain.Cdc.Sprints;
 using PoTool.Core.Domain.Estimation;
@@ -21,6 +22,7 @@ using PoTool.Core.WorkItems;
 using PoTool.Shared.Onboarding;
 using PoTool.Shared.Planning;
 using PoTool.Shared.Settings;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Tests.Unit.Services.MockData;
 
@@ -130,6 +132,72 @@ public sealed class BattleshipExecutionAnomalyMockScenarioTests
             "The surfaced planning-board hover copy should remain a single short sentence.");
     }
 
+    [TestMethod]
+    public async Task BattleshipMockScenario_SeedsDeterministicPlanningBoards_ForTwoProducts()
+    {
+        await using var provider = await CreateSqliteServiceProviderAsync();
+        var seedService = provider.GetRequiredService<MockConfigurationSeedHostedService>();
+        await seedService.StartAsync(CancellationToken.None);
+
+        await using var scope = provider.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<PoToolDbContext>();
+        var mockDataFacade = scope.ServiceProvider.GetRequiredService<BattleshipMockDataFacade>();
+        var hierarchy = mockDataFacade.GetMockHierarchy();
+
+        var products = await context.Products
+            .Include(product => product.BacklogRoots)
+            .Include(product => product.ProductTeamLinks)
+            .Where(product => product.Name == BattleshipPlanningBoardSeedCatalog.PrimaryProductName ||
+                              product.Name == BattleshipPlanningBoardSeedCatalog.SecondaryProductName)
+            .OrderBy(product => product.Name)
+            .ToListAsync();
+
+        Assert.HasCount(2, products, "Expected the active mock dataset to keep two planning products visible.");
+
+        var intents = await context.ProductPlanningIntents
+            .Where(intent => products.Select(product => product.Id).Contains(intent.ProductId))
+            .OrderBy(intent => intent.ProductId)
+            .ThenBy(intent => intent.StartSprintStartDateUtc)
+            .ThenBy(intent => intent.EpicId)
+            .ToListAsync();
+
+        Assert.IsGreaterThanOrEqualTo(intents.Count, 20, "Expected deterministic planning intents for both seeded products.");
+
+        var service = new ProductPlanningBoardService(
+            new ProductRepository(context),
+            new MockHierarchyWorkItemReadProvider(hierarchy),
+            new InMemoryProductPlanningSessionStore(),
+            new ProductPlanningIntentStore(context),
+            new SprintRepository(context),
+            mockDataFacade);
+
+        var primaryProduct = products.Single(product => product.Name == BattleshipPlanningBoardSeedCatalog.PrimaryProductName);
+        var secondaryProduct = products.Single(product => product.Name == BattleshipPlanningBoardSeedCatalog.SecondaryProductName);
+        var primaryBoard = await service.BuildPlanningBoardAsync(primaryProduct.Id);
+        var secondaryBoard = await service.BuildPlanningBoardAsync(secondaryProduct.Id);
+
+        Assert.IsNotNull(primaryBoard);
+        Assert.IsNotNull(secondaryBoard);
+        Assert.AreEqual(primaryProduct.Name, primaryBoard!.ProductName);
+        Assert.AreEqual(secondaryProduct.Name, secondaryBoard!.ProductName);
+        Assert.HasCount(6, primaryBoard.EpicItems, "Crew Safety Operations should expose the six deterministic roadmap epics.");
+        Assert.IsGreaterThanOrEqualTo(primaryBoard.Tracks.Count, 3, "The primary planning board should require multiple parallel tracks.");
+        AssertNoSameTrackOverlaps(primaryBoard);
+        AssertNoSameTrackOverlaps(secondaryBoard);
+        AssertEpicsFitSeededSprintRange(primaryBoard, sprintCount: 12);
+        AssertEpicsFitSeededSprintRange(secondaryBoard, sprintCount: 12);
+
+        var primaryStates = Enumerable.Range(0, 6)
+            .Select(index => ResolvePlanningState(primaryBoard, index))
+            .ToArray();
+        CollectionAssert.AreEqual(
+            new[] { "healthy", "near-limit", "overcommitted", "near-limit", "provisional", "healthy" },
+            primaryStates);
+
+        var renderModel = ProductPlanningBoardRenderModelFactory.Create(primaryBoard);
+        Assert.IsGreaterThanOrEqualTo(renderModel.SprintColumns.Count, 6, "The seeded planning board should render at least six sprint heat columns.");
+    }
+
     private static async Task RunSyncStagesAsync(ServiceProvider provider)
     {
         await using var setupScope = provider.CreateAsyncScope();
@@ -202,6 +270,78 @@ public sealed class BattleshipExecutionAnomalyMockScenarioTests
         string anomalyKey)
     {
         return interpretation.Anomalies.Single(anomaly => anomaly.AnomalyKey == anomalyKey);
+    }
+
+    private static void AssertNoSameTrackOverlaps(ProductPlanningBoardDto board)
+    {
+        foreach (var track in board.Tracks)
+        {
+            var orderedEpics = board.EpicItems
+                .Where(epic => epic.TrackIndex == track.TrackIndex)
+                .OrderBy(epic => epic.ComputedStartSprintIndex)
+                .ThenBy(epic => epic.RoadmapOrder)
+                .ToArray();
+
+            for (var index = 1; index < orderedEpics.Length; index++)
+            {
+                Assert.IsLessThanOrEqualTo(
+                    orderedEpics[index - 1].EndSprintIndexExclusive,
+                    orderedEpics[index].ComputedStartSprintIndex,
+                    $"Track {track.TrackIndex} contains overlapping epics '{orderedEpics[index - 1].EpicId}' and '{orderedEpics[index].EpicId}'.");
+            }
+        }
+    }
+
+    private static void AssertEpicsFitSeededSprintRange(ProductPlanningBoardDto board, int sprintCount)
+    {
+        Assert.IsTrue(board.EpicItems.All(epic => epic.PlannedStartSprintIndex >= 0 && epic.EndSprintIndexExclusive <= sprintCount));
+    }
+
+    private static string ResolvePlanningState(ProductPlanningBoardDto board, int sprintIndex)
+    {
+        var activeEpics = board.EpicItems
+            .Where(epic => epic.ComputedStartSprintIndex <= sprintIndex && epic.EndSprintIndexExclusive > sprintIndex)
+            .ToArray();
+
+        if (activeEpics.Length == 0)
+        {
+            return "provisional";
+        }
+
+        var trackCount = activeEpics.Select(static epic => epic.TrackIndex).Distinct().Count();
+        if (trackCount >= 3 || activeEpics.Length >= 3)
+        {
+            return "overcommitted";
+        }
+
+        return trackCount >= 2 || activeEpics.Length >= 2
+            ? "near-limit"
+            : "healthy";
+    }
+
+    private sealed class MockHierarchyWorkItemReadProvider : IWorkItemReadProvider
+    {
+        private readonly IReadOnlyCollection<WorkItemDto> _hierarchy;
+
+        public MockHierarchyWorkItemReadProvider(IReadOnlyCollection<WorkItemDto> hierarchy)
+        {
+            _hierarchy = hierarchy;
+        }
+
+        public Task<IEnumerable<WorkItemDto>> GetByRootIdsAsync(int[] rootWorkItemIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IEnumerable<WorkItemDto>>(WorkItemHierarchyHelper.FilterDescendants(rootWorkItemIds, _hierarchy));
+
+        public Task<IEnumerable<WorkItemDto>> GetAllAsync(CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IEnumerable<WorkItemDto>> GetFilteredAsync(string filter, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<IEnumerable<WorkItemDto>> GetByAreaPathsAsync(List<string> areaPaths, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<WorkItemDto?> GetByTfsIdAsync(int tfsId, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
     }
 
     private static async Task<ServiceProvider> CreateSqliteServiceProviderAsync()

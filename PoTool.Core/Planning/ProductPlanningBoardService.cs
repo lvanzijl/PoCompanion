@@ -364,9 +364,13 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
                 cancellationToken);
         }
 
-        var baseState = stateEpics.Count == 0
+        var seededEpics = stateEpics.Count == 0
+            ? Array.Empty<PlanningEpicState>()
+            : AssignDeterministicTracks(stateEpics);
+
+        var baseState = seededEpics.Length == 0
             ? PlanningState.Empty
-            : _recomputeService.RecomputeFrom(new PlanningState(stateEpics), 0);
+            : _recomputeService.RecomputeFrom(new PlanningState(seededEpics), 0);
 
         var intentByEpicId = persistedIntents
             .Concat(recoveredIntents)
@@ -493,6 +497,53 @@ public sealed class ProductPlanningBoardService : IProductPlanningBoardService
             epic.DurationInSprints,
             RecoveryStatus: null,
             UpdatedAtUtc: updatedAtUtc);
+    }
+
+    private static PlanningEpicState[] AssignDeterministicTracks(IReadOnlyList<PlanningEpicState> epics)
+    {
+        ArgumentNullException.ThrowIfNull(epics);
+
+        if (epics.Count == 0)
+        {
+            return Array.Empty<PlanningEpicState>();
+        }
+
+        var trackAvailability = new List<int>();
+        var assigned = new PlanningEpicState[epics.Count];
+
+        for (var index = 0; index < epics.Count; index++)
+        {
+            var epic = epics[index];
+            var roadmapFloor = index == 0
+                ? 0
+                : assigned[index - 1].ComputedStartSprintIndex;
+            var desiredStart = Math.Max(epic.PlannedStartSprintIndex, roadmapFloor);
+            var assignedTrack = 0;
+
+            while (assignedTrack < trackAvailability.Count &&
+                   trackAvailability[assignedTrack] > desiredStart)
+            {
+                assignedTrack++;
+            }
+
+            var computedStart = desiredStart;
+            if (assignedTrack == trackAvailability.Count)
+            {
+                trackAvailability.Add(computedStart + epic.DurationInSprints);
+            }
+            else
+            {
+                trackAvailability[assignedTrack] = computedStart + epic.DurationInSprints;
+            }
+
+            assigned[index] = epic with
+            {
+                TrackIndex = assignedTrack,
+                ComputedStartSprintIndex = computedStart
+            };
+        }
+
+        return assigned;
     }
 
     private static PlanningProjectionStatus TryCreatePlanningDateWriteRequest(

@@ -132,6 +132,47 @@ public sealed class ProductPlanningBoardServiceTests
     }
 
     [TestMethod]
+    public async Task BuildPlanningBoardAsync_DeterministicallyAssignsMinimalTracks_FromPersistedSprintPlacements()
+    {
+        var intentStore = new InMemoryProductPlanningIntentStore();
+        var sprints = CreateDefaultSprintsByTeam([10], sprintCount: 10);
+        intentStore.Seed(
+            new ProductPlanningIntentRecord(7, 9501, sprints[10][0].StartUtc!.Value.UtcDateTime.Date, 1, null, DateTime.UtcNow),
+            new ProductPlanningIntentRecord(7, 9502, sprints[10][1].StartUtc!.Value.UtcDateTime.Date, 3, null, DateTime.UtcNow),
+            new ProductPlanningIntentRecord(7, 9503, sprints[10][1].StartUtc!.Value.UtcDateTime.Date, 2, null, DateTime.UtcNow),
+            new ProductPlanningIntentRecord(7, 9504, sprints[10][2].StartUtc!.Value.UtcDateTime.Date, 2, null, DateTime.UtcNow),
+            new ProductPlanningIntentRecord(7, 9505, sprints[10][5].StartUtc!.Value.UtcDateTime.Date, 4, null, DateTime.UtcNow));
+
+        var service = CreateService(
+            new InMemoryProductPlanningSessionStore(),
+            intentStore,
+            new RecordingTfsClient(),
+            [CreateProduct(7, "Roadmap Product", [100], [10])],
+            new Dictionary<int, IReadOnlyList<PoTool.Shared.WorkItems.WorkItemDto>>
+            {
+                [100] =
+                [
+                    CreateWorkItem(100, "Objective", "Root Objective", null, null, null),
+                    CreateWorkItem(9501, "Epic", "Roadmap Epic 1", 100, 1d, "roadmap"),
+                    CreateWorkItem(9502, "Epic", "Roadmap Epic 2", 100, 2d, "roadmap"),
+                    CreateWorkItem(9503, "Epic", "Roadmap Epic 3", 100, 3d, "roadmap"),
+                    CreateWorkItem(9504, "Epic", "Roadmap Epic 4", 100, 4d, "roadmap"),
+                    CreateWorkItem(9505, "Epic", "Roadmap Epic 5", 100, 5d, "roadmap")
+                ]
+            },
+            sprints);
+
+        var board = await service.BuildPlanningBoardAsync(7);
+
+        Assert.IsNotNull(board);
+        CollectionAssert.AreEqual(new[] { 0, 0, 1, 2, 0 }, board.EpicItems.Select(static epic => epic.TrackIndex).ToArray());
+        Assert.HasCount(3, board.Tracks);
+        CollectionAssert.AreEqual(new[] { 9501, 9502, 9505 }, board.Tracks.Single(static track => track.TrackIndex == 0).EpicIds.ToArray());
+        CollectionAssert.AreEqual(new[] { 9503 }, board.Tracks.Single(static track => track.TrackIndex == 1).EpicIds.ToArray());
+        CollectionAssert.AreEqual(new[] { 9504 }, board.Tracks.Single(static track => track.TrackIndex == 2).EpicIds.ToArray());
+    }
+
+    [TestMethod]
     public async Task ExecuteReorderAndShiftPlanAsync_ReturnUpdatedRoadmapOrderAndSuffixShape()
     {
         var service = CreateService(
@@ -171,7 +212,8 @@ public sealed class ProductPlanningBoardServiceTests
         var nextRead = await service.GetPlanningBoardAsync(7);
 
         Assert.IsNotNull(resetBoard);
-        CollectionAssert.AreEqual(new[] { 0, 3, 4 }, resetBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        CollectionAssert.AreEqual(new[] { 0, 3, 3 }, resetBoard.EpicItems.Select(static epic => epic.ComputedStartSprintIndex).ToArray());
+        Assert.AreEqual(1, resetBoard.EpicItems.Single(static epic => epic.EpicId == 1103).TrackIndex);
         Assert.IsEmpty(resetBoard.ChangedEpicIds);
         Assert.IsEmpty(resetBoard.AffectedEpicIds);
 

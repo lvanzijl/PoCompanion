@@ -3,11 +3,14 @@ using Microsoft.Extensions.Hosting;
 using PoTool.Api.Persistence;
 using PoTool.Api.Persistence.Entities;
 using PoTool.Api.Persistence.Entities.Onboarding;
+using PoTool.Api.Repositories;
 using PoTool.Api.Services.Onboarding;
+using PoTool.Core.Planning;
 using PoTool.Core.Domain.DeliveryTrends.Models;
 using PoTool.Core.WorkItems;
 using PoTool.Shared.Onboarding;
 using PoTool.Shared.Settings;
+using PoTool.Shared.WorkItems;
 
 namespace PoTool.Api.Services.MockData;
 
@@ -124,6 +127,8 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             cancellationToken,
             "persisting mock core configuration");
 
+        await EnsureMockSprintsAsync(context, teamsByAreaPath.Values, now, cancellationToken);
+        await EnsureMockPlanningBoardDataAsync(context, hierarchy, mockDataFacade, now, cancellationToken);
         await EnsureMockTfsConfigurationAsync(context, now, cancellationToken);
         await EnsureMockTriageTagsAsync(context, now, cancellationToken);
         await EnsureActiveProfileAsync(context, seedPlan.ActiveProfileName, cancellationToken);
@@ -570,6 +575,88 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
             context,
             cancellationToken,
             "setting active mock profile");
+    }
+
+    private async Task EnsureMockSprintsAsync(
+        PoToolDbContext context,
+        IEnumerable<TeamEntity> teams,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var sprintRepository = new SprintRepository(context);
+        var iterations = BattleshipSprintSeedCatalog.CreateTeamIterations(MockProjectName, now);
+
+        foreach (var team in teams.OrderBy(static team => team.Id))
+        {
+            await sprintRepository.UpsertSprintsForTeamAsync(team.Id, iterations, cancellationToken);
+        }
+    }
+
+    private async Task EnsureMockPlanningBoardDataAsync(
+        PoToolDbContext context,
+        IReadOnlyCollection<WorkItemDto> hierarchy,
+        BattleshipMockDataFacade mockDataFacade,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(hierarchy);
+        ArgumentNullException.ThrowIfNull(mockDataFacade);
+
+        var sprintByNumber = BattleshipSprintSeedCatalog.CreateTeamIterations(MockProjectName, now)
+            .ToDictionary(ParseSprintNumber);
+        var targetProductNames = new[]
+        {
+            BattleshipPlanningBoardSeedCatalog.PrimaryProductName,
+            BattleshipPlanningBoardSeedCatalog.SecondaryProductName
+        };
+
+        var targetProducts = await context.Products
+            .Include(product => product.BacklogRoots)
+            .Where(product => targetProductNames.Contains(product.Name))
+            .OrderBy(product => product.Name)
+            .ToListAsync(cancellationToken);
+
+        if (targetProducts.Count != targetProductNames.Length)
+        {
+            throw new InvalidOperationException(
+                "Mock planning-board seeding requires both Battleship planning products to be present.");
+        }
+
+        var intentStore = new ProductPlanningIntentStore(context);
+        foreach (var product in targetProducts)
+        {
+            var productRoots = product.BacklogRoots
+                .Select(static root => root.WorkItemTfsId)
+                .OrderBy(static id => id)
+                .ToArray();
+            var epicSeeds = BattleshipPlanningBoardSeedCatalog.CreateProductSeeds(product.Name, productRoots, hierarchy);
+            var intents = epicSeeds
+                .Select(seed => MapToPlanningIntent(product.Id, seed, sprintByNumber, now))
+                .ToArray();
+
+            await intentStore.UpsertForProductAsync(product.Id, intents, cancellationToken);
+            await intentStore.DeleteMissingEpicsAsync(
+                product.Id,
+                epicSeeds.Select(static seed => seed.EpicId).ToArray(),
+                cancellationToken);
+
+            foreach (var seed in epicSeeds)
+            {
+                var targetDate = ResolveTargetDate(seed, sprintByNumber);
+                var updated = await mockDataFacade.UpdateWorkItemPlanningDatesAsync(
+                    seed.EpicId,
+                    DateOnly.FromDateTime(sprintByNumber[seed.StartSprintNumber].StartDate!.Value.UtcDateTime),
+                    targetDate,
+                    cancellationToken);
+
+                if (!updated)
+                {
+                    throw new InvalidOperationException(
+                        $"Mock planning-board seeding could not align Battleship epic '{seed.EpicId}' with its deterministic planning dates.");
+                }
+            }
+        }
     }
 
     private async Task EnsureMockPortfolioSnapshotsAsync(
@@ -1334,6 +1421,57 @@ public sealed class MockConfigurationSeedHostedService : IHostedService
     {
         var value = $"{prefix}-{workItem.TfsId}: {workItem.Title}";
         return value.Length <= 180 ? value : value[..180];
+    }
+
+    private static ProductPlanningIntentRecord MapToPlanningIntent(
+        int productId,
+        BattleshipPlanningBoardSeedCatalog.BattleshipPlanningEpicSeed seed,
+        IReadOnlyDictionary<int, TeamIterationDto> sprintByNumber,
+        DateTimeOffset updatedAtUtc)
+    {
+        if (!sprintByNumber.TryGetValue(seed.StartSprintNumber, out var startSprint) || startSprint.StartDate is null)
+        {
+            throw new InvalidOperationException(
+                $"Mock planning-board seeding is missing a dated Battleship sprint for Sprint {seed.StartSprintNumber}.");
+        }
+
+        var finalSprintNumber = seed.StartSprintNumber + seed.DurationInSprints - 1;
+        if (!sprintByNumber.TryGetValue(finalSprintNumber, out var finalSprint) || finalSprint.FinishDate is null)
+        {
+            throw new InvalidOperationException(
+                $"Mock planning-board seeding cannot resolve Sprint {finalSprintNumber} for epic '{seed.EpicId}'.");
+        }
+
+        return new ProductPlanningIntentRecord(
+            productId,
+            seed.EpicId,
+            startSprint.StartDate.Value.UtcDateTime.Date,
+            seed.DurationInSprints,
+            null,
+            updatedAtUtc.UtcDateTime);
+    }
+
+    private static DateOnly ResolveTargetDate(
+        BattleshipPlanningBoardSeedCatalog.BattleshipPlanningEpicSeed seed,
+        IReadOnlyDictionary<int, TeamIterationDto> sprintByNumber)
+    {
+        var finalSprintNumber = seed.StartSprintNumber + seed.DurationInSprints - 1;
+        if (!sprintByNumber.TryGetValue(finalSprintNumber, out var finalSprint) || finalSprint.FinishDate is null)
+        {
+            throw new InvalidOperationException(
+                $"Mock planning-board seeding cannot resolve the final dated sprint for epic '{seed.EpicId}'.");
+        }
+
+        return DateOnly.FromDateTime(finalSprint.FinishDate.Value.UtcDateTime.AddDays(-1));
+    }
+
+    private static int ParseSprintNumber(TeamIterationDto iteration)
+    {
+        ArgumentNullException.ThrowIfNull(iteration);
+
+        return int.TryParse(iteration.Name.Replace("Sprint ", string.Empty, StringComparison.OrdinalIgnoreCase), out var sprintNumber)
+            ? sprintNumber
+            : throw new InvalidOperationException($"Unable to parse Battleship sprint number from iteration '{iteration.Name}'.");
     }
 
     private sealed record MockProfileSeed(
